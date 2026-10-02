@@ -36,6 +36,17 @@ jobs:
           printf '%s' "$FIREBASE_CONFIG_JSON" > firebase_config.json
           jq -e . firebase_config.json > /dev/null
 
+      - name: Firebase 키 검증 (구글 서버에 실제로 유효한지 확인)
+        run: |
+          bad=0
+          for name in WEB_API_KEY ANDROID_API_KEY; do
+            key=$(jq -r ".$name" firebase_config.json)
+            code=$(curl -s -o /dev/null -w '%{http_code}' "https://identitytoolkit.googleapis.com/v1/projects?key=$key")
+            echo "$name: ${key:0:8}...${key: -4} (길이 ${#key}) -> HTTP $code"
+            if [ "$code" != 200 ]; then echo "::error::$name 이 Google에서 거절됨 (HTTP $code). FIREBASE_CONFIG_JSON 시크릿을 확인해줘."; bad=1; fi
+          done
+          exit $bad
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
