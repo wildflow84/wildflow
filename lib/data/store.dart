@@ -253,7 +253,7 @@ class Store extends ChangeNotifier {
       ));
       return i;
     }
-    if (i.repeat == Repeat.none) {
+    if (!i.isRecurring) {
       await save(i.copyWith(done: !i.done, lastDoneBy: uid, lastDoneAt: now));
       return null;
     }

@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 
 import '../data/store.dart';
 import '../models/item.dart' as m;
-import '../models/item.dart' show Item, ItemType, Repeat, RepeatDelete, dateOnly, hasEndTime;
+import '../models/item.dart' show Item, ItemType, RepeatDelete, dateOnly, hasEndTime, repeatFor;
+import '../models/recurrence.dart';
 import 'category_manager.dart';
 import 'color_picker.dart';
 import 'date_picker.dart';
+import 'recurrence_editor.dart';
 import 'time_picker.dart';
 
 Future<void> showEditSheet(BuildContext context,
@@ -47,18 +49,31 @@ class _EditSheetState extends State<_EditSheet> {
   late m.Visibility _vis;
   late bool _visTouched = widget.item != null; // 직접 바꾸면 카테고리 기본값으로 덮어쓰지 않는다
   late int? _color = widget.item?.color; // null이면 카테고리 색
-  late Repeat _repeat = widget.item?.repeat ?? Repeat.none;
+  // 반복: 빠른 선택(구글 캘린더처럼 시작 날짜에서 값이 정해짐) 또는 맞춤 규칙
+  late RepeatPreset _preset = presetOf(widget.item?.effectiveRule, widget.item?.start ?? _start);
+  late Recurrence? _custom = widget.item?.effectiveRule;
   late int _rollEvery = widget.item?.rollEvery ?? 0; // 0이면 이동형 반복 아님
   late m.RollUnit _rollUnit = widget.item?.rollUnit ?? m.RollUnit.day;
   late bool _rollFromCompletion = widget.item?.rollFromCompletion ?? true;
 
-  static const _repeatLabels = {
-    Repeat.none: '반복 안 함',
-    Repeat.daily: '매일',
-    Repeat.weekly: '매주',
-    Repeat.monthly: '매월',
-    Repeat.yearly: '매년',
-  };
+  /// 현재 선택한 반복 규칙 (없으면 반복 안 함)
+  Recurrence? get _rule => _preset == RepeatPreset.none
+      ? null
+      : _preset == RepeatPreset.custom
+          ? _custom
+          : presetRule(_preset, _start);
+
+  Future<void> _editCustom() async {
+    final r = await showRecurrenceEditor(context,
+        start: _start, initial: _rule ?? presetRule(RepeatPreset.weekly, _start));
+    if (r != null) {
+      setState(() {
+        _custom = r;
+        _preset = RepeatPreset.custom;
+        _end = null;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -137,12 +152,16 @@ class _EditSheetState extends State<_EditSheet> {
   Future<void> _save() async {
     if (_title.text.trim().isEmpty) return;
     final s = context.read<Store>();
+    // 이동형 반복이 켜진 할 일은 일반 반복을 쓰지 않는다
+    final rule = _type == ItemType.todo && _rollEvery > 0 ? null : _rule;
+    // 구글처럼, 시작일이 반복 규칙과 안 맞으면 첫 발생일로 옮긴다 (예: 매월 15일인데 시작이 2일이면 15일부터)
+    var startDate = rule == null ? dateOnly(_start) : rule.firstOnOrAfter(_start);
     final startDt = _allDay
-        ? dateOnly(_start)
-        : DateTime(_start.year, _start.month, _start.day, _startTime.hour, _startTime.minute);
-    DateTime? endDt = _end;
+        ? startDate
+        : DateTime(startDate.year, startDate.month, startDate.day, _startTime.hour, _startTime.minute);
+    DateTime? endDt = rule == null ? _end : null;
     if (!_allDay && _endTime != null && _type == ItemType.event) {
-      final d = _end ?? _start;
+      final d = endDt ?? startDate;
       endDt = DateTime(d.year, d.month, d.day, _endTime!.hour, _endTime!.minute);
       if (endDt.isBefore(startDt)) {
         ScaffoldMessenger.of(context)
@@ -156,7 +175,7 @@ class _EditSheetState extends State<_EditSheet> {
       type: _type,
       title: _title.text.trim(),
       note: _note.text.trim(),
-      location: _location.text.trim(),
+      location: _type == ItemType.event ? _location.text.trim() : '', // 위치는 일정만
       start: startDt,
       allDay: _allDay,
       end: endDt,
@@ -165,7 +184,9 @@ class _EditSheetState extends State<_EditSheet> {
       color: _color,
       clearColor: _color == null,
       visibility: _vis,
-      repeat: _type == ItemType.todo && _rollEvery > 0 ? Repeat.none : _repeat,
+      repeat: repeatFor(rule),
+      rule: rule,
+      clearRule: rule == null,
       rollEvery: _type == ItemType.todo ? _rollEvery : 0,
       rollUnit: _rollUnit,
       rollFromCompletion: _rollFromCompletion,
@@ -205,7 +226,7 @@ class _EditSheetState extends State<_EditSheet> {
             const SizedBox(height: 12),
             Row(children: [
               Expanded(child: OutlinedButton(onPressed: () => _pick(false), child: Text('${_type == ItemType.todo ? '마감 ' : ''}${df.format(_start)}'))),
-              if (_type == ItemType.event && _repeat == Repeat.none) ...[
+              if (_type == ItemType.event && _rule == null) ...[
                 const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('~')),
                 Expanded(
                     child: OutlinedButton(
@@ -263,16 +284,17 @@ class _EditSheetState extends State<_EditSheet> {
                 ],
               ]),
             const SizedBox(height: 12),
-            TextField(
-              controller: _location,
-              decoration: const InputDecoration(
-                labelText: '위치 (선택)',
-                hintText: '장소 이름이나 주소',
-                prefixIcon: Icon(Icons.place_outlined),
-                border: OutlineInputBorder(),
+            if (_type == ItemType.event) ...[
+              TextField(
+                controller: _location,
+                decoration: const InputDecoration(
+                  labelText: '위치 (선택)',
+                  hintText: '장소 이름이나 주소',
+                  prefixIcon: Icon(Icons.place_outlined),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
+            ],
             Row(children: [
               const Text('카테고리', style: TextStyle(color: Colors.white70)),
               const SizedBox(width: 8),
@@ -320,20 +342,58 @@ class _EditSheetState extends State<_EditSheet> {
                     child: const Text('카테고리 색으로')),
             ]),
             const SizedBox(height: 8),
-            DropdownButtonFormField<Repeat>(
-              initialValue: _repeat,
-              decoration: const InputDecoration(labelText: '반복', border: OutlineInputBorder()),
-              items: [
-                for (final e in _repeatLabels.entries)
-                  DropdownMenuItem(value: e.key, child: Text(e.value)),
-              ],
-              onChanged: _rollEvery > 0
-                  ? null
-                  : (v) => setState(() {
-                        _repeat = v!;
-                        if (v != Repeat.none) _end = null;
-                      }),
-            ),
+            Builder(builder: (context) {
+              final choices = presetChoices(_start);
+              final valid = choices.any((c) => c.$1 == _preset);
+              return DropdownButtonFormField<RepeatPreset>(
+                key: ValueKey('${_preset.name}|${_start.toIso8601String()}'),
+                initialValue: valid ? _preset : null,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: '반복'),
+                items: [
+                  for (final c in choices)
+                    DropdownMenuItem(
+                      value: c.$1,
+                      child: Text(
+                        c.$1 == RepeatPreset.custom && _preset == RepeatPreset.custom && _custom != null
+                            ? '맞춤: ${_custom!.describe(_start)}'
+                            : c.$2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: _rollEvery > 0
+                    ? null
+                    : (v) async {
+                        if (v == RepeatPreset.custom) {
+                          await _editCustom();
+                        } else if (v != null) {
+                          setState(() {
+                            _preset = v;
+                            if (v != RepeatPreset.none) _end = null;
+                          });
+                        }
+                      },
+              );
+            }),
+            if (_rule != null && _rollEvery == 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(children: [
+                  if (_preset == RepeatPreset.custom) ...[
+                    const Icon(Icons.repeat, size: 16, color: Colors.white54),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(_rule!.describe(_start),
+                          style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                    ),
+                    TextButton(onPressed: _editCustom, child: const Text('편집')),
+                  ] else ...[
+                    const Spacer(),
+                    TextButton(onPressed: _editCustom, child: const Text('종료 조건 · 세부 설정')),
+                  ],
+                ]),
+              ),
             if (_type == ItemType.todo) ...[
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
@@ -343,7 +403,7 @@ class _EditSheetState extends State<_EditSheet> {
                 value: _rollEvery > 0,
                 onChanged: (v) => setState(() {
                   _rollEvery = v ? 1 : 0;
-                  if (v) _repeat = Repeat.none;
+                  if (v) _preset = RepeatPreset.none;
                 }),
               ),
               if (_rollEvery > 0) ...[
@@ -425,7 +485,7 @@ class _EditSheetState extends State<_EditSheet> {
                   onPressed: () async {
                     final s = context.read<Store>();
                     final item = widget.item!;
-                    if (item.repeat == Repeat.none) {
+                    if (!item.isRecurring) {
                       await s.delete(item);
                     } else {
                       final scope = await _askDeleteScope(item);

@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'recurrence.dart';
+
 enum ItemType { event, todo }
 
 enum Visibility { shared, private }
@@ -29,7 +31,11 @@ class Item {
   final int? color; // 항목별 색 (null이면 카테고리 색)
   final Visibility visibility;
   final String ownerUid;
+  /// 이전 버전의 단순 반복(매일/매주/매월/매년). [rule]이 있으면 rule이 우선하고, 이 값은 호환용으로 같이 저장한다.
   final Repeat repeat;
+
+  /// 구글 캘린더 방식의 반복 규칙 (간격, 요일, 매월 N일/마지막 날/n번째 요일, 종료 조건).
+  final Recurrence? rule;
 
   /// 반복의 마지막 날(포함). null이면 끝없이 반복. "이 날짜 이후 삭제"로 설정된다.
   final DateTime? repeatUntil;
@@ -49,6 +55,11 @@ class Item {
 
   bool get isRolling => rollEvery > 0;
 
+  /// 실제로 적용되는 반복 규칙. 옛 데이터(repeat만 있는 항목)는 같은 의미의 규칙으로 바꿔서 쓴다.
+  Recurrence? get effectiveRule => rule ?? legacyRule(repeat, start);
+
+  bool get isRecurring => effectiveRule != null;
+
   String get category => categories.first;
 
   const Item({
@@ -67,6 +78,7 @@ class Item {
     this.color,
     this.visibility = Visibility.shared,
     this.repeat = Repeat.none,
+    this.rule,
     this.repeatUntil,
     this.exceptions = const [],
     this.rollEvery = 0,
@@ -92,6 +104,8 @@ class Item {
     bool clearColor = false,
     Visibility? visibility,
     Repeat? repeat,
+    Recurrence? rule,
+    bool clearRule = false,
     DateTime? repeatUntil,
     bool clearRepeatUntil = false,
     List<String>? exceptions,
@@ -117,6 +131,7 @@ class Item {
         color: clearColor ? null : (color ?? this.color),
         visibility: visibility ?? this.visibility,
         repeat: repeat ?? this.repeat,
+        rule: clearRule ? null : (rule ?? this.rule),
         repeatUntil: clearRepeatUntil ? null : (repeatUntil ?? this.repeatUntil),
         exceptions: exceptions ?? this.exceptions,
         rollEvery: rollEvery ?? this.rollEvery,
@@ -142,6 +157,7 @@ class Item {
         'visibility': visibility.name,
         'ownerUid': ownerUid,
         'repeat': repeat.name,
+        'rule': rule?.toMap(),
         'repeatUntil': repeatUntil == null ? null : Timestamp.fromDate(repeatUntil!),
         'exceptions': exceptions,
         'rollEvery': rollEvery,
@@ -171,6 +187,7 @@ class Item {
       visibility: byName(Visibility.values, m['visibility'], Visibility.shared),
       ownerUid: m['ownerUid'] ?? '',
       repeat: byName(Repeat.values, m['repeat'], Repeat.none),
+      rule: m['rule'] is Map ? Recurrence.fromMap(Map<String, dynamic>.from(m['rule'] as Map)) : null,
       repeatUntil: (m['repeatUntil'] as Timestamp?)?.toDate(),
       exceptions: List<String>.from(m['exceptions'] ?? const []),
       rollEvery: (m['rollEvery'] as num?)?.toInt() ?? 0,
@@ -198,30 +215,49 @@ bool occursOn(Item item, DateTime day) {
   final d = dateOnly(day);
   final s = dateOnly(item.start);
   if (d.isBefore(s)) return false;
-  if (item.repeat != Repeat.none) {
+  final rule = item.effectiveRule;
+  if (rule != null) {
     if (item.repeatUntil != null && d.isAfter(dateOnly(item.repeatUntil!))) return false;
     if (item.exceptions.contains(dateKey(d))) return false;
+    return rule.occursOn(item.start, d);
   }
-  switch (item.repeat) {
+  final e = item.end == null ? s : dateOnly(item.end!);
+  return !d.isAfter(e);
+}
+
+/// 이전 버전의 단순 반복을 같은 의미의 규칙으로: 매월은 시작일의 날짜(없는 달은 말일), 매년도 말일 조정.
+Recurrence? legacyRule(Repeat r, DateTime start) {
+  switch (r) {
     case Repeat.none:
-      final e = item.end == null ? s : dateOnly(item.end!);
-      return !d.isAfter(e);
+      return null;
     case Repeat.daily:
-      return true;
+      return const Recurrence(freq: Freq.daily);
     case Repeat.weekly:
-      return d.difference(s).inDays % 7 == 0;
+      return Recurrence(freq: Freq.weekly, weekdays: [start.weekday]);
     case Repeat.monthly:
-      // 31일 같은 날짜는 해당 달 말일로 보정
-      final last = DateTime(d.year, d.month + 1, 0).day;
-      return d.day == (s.day > last ? last : s.day);
+      return Recurrence(freq: Freq.monthly, monthDays: [start.day], clampMonthEnd: true);
     case Repeat.yearly:
-      return d.month == s.month && d.day == s.day;
+      return const Recurrence(freq: Freq.yearly, clampMonthEnd: true);
   }
 }
 
-bool isDoneOn(Item item, DateTime day) => item.repeat == Repeat.none
-    ? item.done
-    : item.doneDates.contains(dateKey(day));
+/// 호환용 repeat 값
+Repeat repeatFor(Recurrence? r) {
+  if (r == null) return Repeat.none;
+  switch (r.freq) {
+    case Freq.daily:
+      return Repeat.daily;
+    case Freq.weekly:
+      return Repeat.weekly;
+    case Freq.monthly:
+      return Repeat.monthly;
+    case Freq.yearly:
+      return Repeat.yearly;
+  }
+}
+
+bool isDoneOn(Item item, DateTime day) =>
+    item.isRecurring ? item.doneDates.contains(dateKey(day)) : item.done;
 
 
 DateTime _addRoll(DateTime d, int every, RollUnit unit) {
@@ -281,7 +317,7 @@ String? timeLabel(Item i) {
   if (i.type == ItemType.todo) return '$s까지'; // 할 일의 시각은 시작이 아니라 마감
   if (!hasEndTime(i)) return s;
   final e = i.end!;
-  final sameDay = i.repeat != Repeat.none || dateOnly(e) == dateOnly(i.start);
+  final sameDay = i.isRecurring || dateOnly(e) == dateOnly(i.start);
   return sameDay ? '$s–${_hhmm(e)}' : '$s → ${e.month}/${e.day} ${_hhmm(e)}';
 }
 
@@ -299,7 +335,7 @@ String? chipTimeLabel(Item i) {
 
 /// 할 일이 마감을 넘겼는지. 시각이 있으면 그 시각 기준, 없으면 날짜가 오늘 이전일 때.
 bool isOverdue(Item i, DateTime now) {
-  if (i.type != ItemType.todo || i.repeat != Repeat.none) return false;
+  if (i.type != ItemType.todo || i.isRecurring) return false;
   return i.allDay ? dateOnly(i.start).isBefore(dateOnly(now)) : i.start.isBefore(now);
 }
 

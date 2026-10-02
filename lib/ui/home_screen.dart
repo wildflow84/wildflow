@@ -9,7 +9,7 @@ import '../models/kr_calendar.dart';
 import '../models/lunar.dart';
 import '../models/map_links.dart';
 import '../models/item.dart' as m;
-import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, isDoneOn, isOverdue, moveItemByDays, nextRollDate, rollLabel, timeLabel, chipTimeLabel;
+import '../models/item.dart' show Item, ItemType, dateOnly, isDoneOn, isOverdue, moveItemByDays, nextRollDate, rollLabel, timeLabel, chipTimeLabel;
 import 'category_manager.dart';
 import 'date_picker.dart';
 import 'settings_screen.dart';
@@ -497,7 +497,7 @@ class _DayCell extends StatelessWidget {
       onTap: canEdit ? () => onTapItem(i, day) : () => onTap(day),
       child: chip,
     );
-    if (!canEdit || i.repeat != Repeat.none) return tappable;
+    if (!canEdit || i.isRecurring) return tappable;
     return LongPressDraggable<_DragData>(
       data: _DragData(i, day),
       delay: const Duration(milliseconds: 180),
@@ -650,13 +650,6 @@ class _DayList extends StatelessWidget {
   }
 }
 
-const _repeatName = {
-  Repeat.daily: '매일',
-  Repeat.weekly: '매주',
-  Repeat.monthly: '매월',
-  Repeat.yearly: '매년',
-};
-
 /// 항목 부가정보 한 조각 (아이콘 또는 색 점 + 글자). 긴 글자는 말줄임.
 class _Meta extends StatelessWidget {
   final IconData? icon;
@@ -722,16 +715,17 @@ class _ItemTile extends StatelessWidget {
         padding: const EdgeInsets.only(top: 3),
         child: Wrap(spacing: 12, runSpacing: 3, children: [
           if (timeLabel(item) != null) _Meta(icon: Icons.schedule, text: timeLabel(item)!),
-          if (item.location.isNotEmpty) _Meta(icon: Icons.place_outlined, text: item.location),
+          if (item.type == ItemType.event && item.location.isNotEmpty)
+            _Meta(icon: Icons.place_outlined, text: item.location),
           for (final c in s.categoriesOf(item)) _Meta(dot: c.color, text: c.name),
           if (item.isRolling) _Meta(icon: Icons.autorenew, text: rollLabel(item)),
-          if (item.repeat != Repeat.none) _Meta(icon: Icons.repeat, text: _repeatName[item.repeat]!),
+          if (item.isRecurring) _Meta(icon: Icons.repeat, text: item.effectiveRule!.describe(item.start)),
           if (item.visibility == m.Visibility.private) const _Meta(icon: Icons.lock_outline, text: '나만'),
           if (!mine) _Meta(icon: Icons.person_outline, text: s.ownerName(item)),
           if (item.note.isNotEmpty) _Meta(icon: Icons.notes, text: item.note),
         ]),
       ),
-      trailing: item.location.isEmpty
+      trailing: item.type != ItemType.event || item.location.isEmpty
           ? null
           : PopupMenuButton<MapApp>(
               tooltip: '지도에서 보기',
@@ -759,8 +753,8 @@ class _TodoTab extends StatelessWidget {
     final todos = s.visibleItems.where((i) => i.type == ItemType.todo).toList()
       ..sort((a, b) => a.start.compareTo(b.start));
     final open = todos.where((i) {
-      final d = i.repeat == Repeat.none ? i.start : today;
-      return !isDoneOn(i, d) && (i.repeat != Repeat.none ? m.occursOn(i, today) : true);
+      final d = !i.isRecurring ? i.start : today;
+      return !isDoneOn(i, d) && (i.isRecurring ? m.occursOn(i, today) : true);
     }).toList();
     final now = DateTime.now();
     final overdue = open.where((i) => isOverdue(i, now)).toList();
@@ -775,7 +769,7 @@ class _TodoTab extends StatelessWidget {
             for (final i in list)
               _ItemTile(
                   item: i,
-                  day: i.repeat == Repeat.none ? dateOnly(i.start) : today),
+                  day: !i.isRecurring ? dateOnly(i.start) : today),
           ]);
 
     return Align(

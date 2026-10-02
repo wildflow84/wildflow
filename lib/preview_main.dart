@@ -13,6 +13,8 @@ import 'ui/category_dialog.dart';
 import 'ui/category_manager.dart';
 import 'ui/color_picker.dart';
 import 'ui/date_picker.dart';
+import 'ui/recurrence_editor.dart';
+import 'models/recurrence.dart';
 import 'ui/login_screen.dart';
 import 'ui/space_screen.dart';
 import 'ui/edit_sheet.dart';
@@ -75,6 +77,16 @@ Widget _start() {
       return const LoginScreen();
     case 'space':
       return const SpaceScreen();
+    case 'recur':
+      return _Opener((c) => showRecurrenceEditor(c,
+          start: DateTime(2026, 10, 30),
+          initial: const Recurrence(freq: Freq.monthly, monthDays: [1, 15, -1], clampMonthEnd: true)));
+    case 'recur-week':
+      return _Opener((c) => showRecurrenceEditor(c, start: DateTime(2026, 10, 7)));
+    case 'recur-nth':
+      return _Opener((c) => showRecurrenceEditor(c,
+          start: DateTime(2026, 10, 13),
+          initial: const Recurrence(freq: Freq.monthly, nth: 2, nthWeekday: 2, count: 12)));
     case 'edit-weekly':
       return _Opener((c) => showEditSheet(c,
           day: DateTime(2026, 10, 14),
