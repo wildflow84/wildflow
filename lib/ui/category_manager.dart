@@ -31,7 +31,7 @@ class CategoryManagerScreen extends StatelessWidget {
         const Padding(
           padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: Text(
-            '항목에는 카테고리를 여러 개 붙일 수 있고, 첫 번째로 고른 카테고리가 대표 색이 돼. 끌어서 순서를 바꾸고, 눌러서 수정해.',
+            '항목에는 카테고리를 하나 붙이고, 그 색으로 표시돼. 끌어서 순서를 바꾸고, 눌러서 수정해.',
             style: TextStyle(color: Colors.white60, fontSize: 12),
           ),
         ),

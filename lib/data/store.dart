@@ -216,6 +216,13 @@ class Store extends ChangeNotifier {
 
   String ownerName(Item i) => names[i.ownerUid] ?? '';
 
+  /// 만든 사람 표시용 이름 (이름을 아직 모르면 나/상대)
+  String ownerLabel(Item i) {
+    final n = names[i.ownerUid];
+    if (n != null && n.isNotEmpty) return n;
+    return i.ownerUid == uid ? '나' : '상대';
+  }
+
   Future<void> save(Item i) async {
     if (_previewUid != null) {
       // 미리보기(Firebase 없음): 로컬 목록만 갱신

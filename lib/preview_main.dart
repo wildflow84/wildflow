@@ -33,6 +33,8 @@ Future<void> main() async {
   final items = [
     ev('오키나와 여행', DateTime(2026, 10, 14), e: DateTime(2026, 10, 17), c: 'travel'),
     ev('Arsenal vs Leeds', DateTime(2026, 10, 10), c: 'family'),
+    ev('출장 (판교→부산)', DateTime(2026, 10, 10), e: DateTime(2026, 10, 14), c: 'work'),
+    ev('대희 방학 캠프', DateTime(2026, 10, 12), e: DateTime(2026, 10, 15), c: 'kid', owner: 'mina'),
     ev('Arsenal vs Everton', DateTime(2026, 10, 24), c: 'family'),
     ev('정기점검', DateTime(2026, 10, 7, 15, 0), e: DateTime(2026, 10, 7, 16, 30), c: 'work', timed: true),
     ev('정기점검', DateTime(2026, 10, 21), c: 'work'),

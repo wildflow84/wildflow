@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -13,6 +15,7 @@ import '../models/item.dart' show Item, ItemType, dateOnly, isDoneOn, isOverdue,
 import 'category_manager.dart';
 import 'date_picker.dart';
 import 'settings_screen.dart';
+import 'snack.dart';
 import 'edit_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -26,6 +29,8 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _selected = dateOnly(DateTime.now());
   int _tab = 0;
+  bool _dragging = false; // 일정을 끌고 있는 동안: 달력 양 끝에 월 이동 영역을 보여준다
+  double _swipeDx = 0;
 
   /// 원하는 날짜로 바로 이동 (1901~2200)
   Future<void> _jump(BuildContext context) async {
@@ -56,15 +61,49 @@ class _HomeScreenState extends State<HomeScreen> {
     final s = context.watch<Store>();
     final wide = MediaQuery.sizeOf(context).width > 900;
 
-    final calendar = _MonthGrid(
+    final grid = _MonthGrid(
       month: _month,
       selected: _selected,
+      dragging: _dragging,
+      onDragStarted: () => setState(() => _dragging = true),
       onBlankTap: (d) {
         setState(() => _selected = d);
         _quickAdd(context, d, wide);
       },
       onItemTap: (item, d) => showEditSheet(context, item: item, day: d),
       onMove: _moveItem,
+    );
+
+    // 달력을 좌우로 밀면(마우스 드래그, 터치 스와이프) 월이 넘어간다.
+    // 일정을 끌고 있을 때는 양 끝 영역에 대고 있으면 월이 계속 넘어가 다른 달로 옮길 수 있다.
+    final calendar = Listener(
+      onPointerUp: (_) {
+        if (_dragging) setState(() => _dragging = false);
+      },
+      onPointerCancel: (_) {
+        if (_dragging) setState(() => _dragging = false);
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragStart: (_) => _swipeDx = 0,
+        onHorizontalDragUpdate: (d) => _swipeDx += d.delta.dx,
+        onHorizontalDragEnd: (d) {
+          final v = d.primaryVelocity ?? 0;
+          if (_swipeDx < -80 || v < -400) {
+            _shift(1);
+          } else if (_swipeDx > 80 || v > 400) {
+            _shift(-1);
+          }
+          _swipeDx = 0;
+        },
+        child: Stack(children: [
+          Positioned.fill(child: grid),
+          if (_dragging) ...[
+            Positioned(left: 0, top: 30, bottom: 0, width: 44, child: _EdgeZone(left: true, onFlip: () => _shift(-1))),
+            Positioned(right: 0, top: 30, bottom: 0, width: 44, child: _EdgeZone(left: false, onFlip: () => _shift(1))),
+          ],
+        ]),
+      ),
     );
 
     return Scaffold(
@@ -222,11 +261,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final delta = dayNumber(to) - dayNumber(from);
     if (delta == 0) return;
     await s.save(moveItemByDays(item, delta));
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(SnackBar(
-      content: Text('"${item.title}" → ${DateFormat('M월 d일 (E)', 'ko').format(to)}로 이동'),
-      action: SnackBarAction(label: '되돌리기', onPressed: () => s.save(item)),
-    ));
+    showTimedSnack(
+      messenger,
+      '"${item.title}" → ${DateFormat('M월 d일 (E)', 'ko').format(to)}로 이동',
+      actionLabel: '되돌리기',
+      onAction: () => s.save(item),
+    );
   }
 
   void _openDaySheet(BuildContext context, DateTime d) {
@@ -305,14 +345,86 @@ class _SharedToggle extends StatelessWidget {
   }
 }
 
+/// 일정을 끌고 있을 때 달력 양 끝에 나타나는 월 이동 영역. 위에 대고 있으면 월이 넘어간다.
+class _EdgeZone extends StatefulWidget {
+  final bool left;
+  final VoidCallback onFlip;
+  const _EdgeZone({required this.left, required this.onFlip});
+
+  @override
+  State<_EdgeZone> createState() => _EdgeZoneState();
+}
+
+class _EdgeZoneState extends State<_EdgeZone> {
+  Timer? _timer;
+  bool _hover = false;
+
+  void _enter() {
+    if (_hover) return;
+    setState(() => _hover = true);
+    _timer?.cancel();
+    _timer = Timer(const Duration(milliseconds: 450), () {
+      widget.onFlip();
+      _timer = Timer.periodic(const Duration(milliseconds: 900), (_) => widget.onFlip());
+    });
+  }
+
+  void _leave() {
+    _timer?.cancel();
+    if (mounted) setState(() => _hover = false);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return DragTarget<_DragData>(
+      onWillAcceptWithDetails: (_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _enter();
+        });
+        return true;
+      },
+      onLeave: (_) => _leave(),
+      onAcceptWithDetails: (_) => _leave(), // 여기에 놓으면 아무것도 바꾸지 않는다
+      builder: (context, candidates, _) => AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: widget.left ? Alignment.centerLeft : Alignment.centerRight,
+            end: widget.left ? Alignment.centerRight : Alignment.centerLeft,
+            colors: [accent.withValues(alpha: _hover ? 0.55 : 0.28), accent.withValues(alpha: 0)],
+          ),
+        ),
+        child: Align(
+          alignment: widget.left ? Alignment.centerLeft : Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Icon(widget.left ? Icons.chevron_left : Icons.chevron_right, size: 28, color: Colors.white),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MonthGrid extends StatelessWidget {
   final DateTime month, selected;
+  final bool dragging;
+  final VoidCallback onDragStarted;
   final ValueChanged<DateTime> onBlankTap;
   final void Function(Item item, DateTime day) onItemTap;
   final void Function(Item item, DateTime from, DateTime to) onMove;
   const _MonthGrid({
     required this.month,
     required this.selected,
+    required this.dragging,
+    required this.onDragStarted,
     required this.onBlankTap,
     required this.onItemTap,
     required this.onMove,
@@ -350,26 +462,168 @@ class _MonthGrid extends StatelessWidget {
       Expanded(
         child: Column(children: [
           for (var w = 0; w < weeks; w++)
-            Expanded(
-              child: Row(children: [
-                for (var d = 0; d < 7; d++)
-                  Expanded(
-                    child: _DayCell(
-                      day: gridStart.add(Duration(days: w * 7 + d)),
-                      inMonth: gridStart.add(Duration(days: w * 7 + d)).month == month.month,
-                      isToday: gridStart.add(Duration(days: w * 7 + d)) == today,
-                      isSelected: gridStart.add(Duration(days: w * 7 + d)) == selected,
-                      items: s.itemsOn(gridStart.add(Duration(days: w * 7 + d))),
-                      onTap: onBlankTap,
-                      onTapItem: onItemTap,
-                      onDropItem: onMove,
-                    ),
-                  ),
-              ]),
-            ),
+            Expanded(child: _weekRow(context, s, gridStart.add(Duration(days: w * 7)), today)),
         ]),
       ),
     ]);
+  }
+
+  /// 한 주: 날짜 칸 7개 + 여러 날에 걸친 일정을 이어진 바로 (구글 캘린더처럼)
+  Widget _weekRow(BuildContext context, Store s, DateTime ws, DateTime today) {
+    final we = ws.add(const Duration(days: 6));
+    final wsn = dayNumber(ws);
+
+    // 이번 주와 겹치는 기간 일정 -> 조각
+    final segs = <_Seg>[];
+    for (final i in s.visibleItems.where(isSpanning)) {
+      final sd = dateOnly(i.start), ed = dateOnly(i.end!);
+      if (ed.isBefore(ws) || sd.isAfter(we)) continue;
+      final from = sd.isBefore(ws) ? ws : sd;
+      final to = ed.isAfter(we) ? we : ed;
+      segs.add(_Seg(i, dayNumber(from) - wsn, dayNumber(to) - wsn, !sd.isBefore(ws), !ed.isAfter(we), from));
+    }
+    segs.sort((a, b) {
+      final c = a.c0.compareTo(b.c0);
+      if (c != 0) return c;
+      final l = (b.c1 - b.c0).compareTo(a.c1 - a.c0);
+      return l != 0 ? l : a.item.title.compareTo(b.item.title);
+    });
+    // 겹치지 않게 줄(lane) 배정
+    final lanes = <List<_Seg>>[];
+    for (final g in segs) {
+      var placed = false;
+      for (final lane in lanes) {
+        if (lane.last.c1 < g.c0) {
+          lane.add(g);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) lanes.add([g]);
+    }
+
+    return LayoutBuilder(builder: (context, c) {
+      final cellW = c.maxWidth / 7;
+      return Stack(children: [
+        Row(children: [
+          for (var d = 0; d < 7; d++)
+            Expanded(
+              child: Builder(builder: (context) {
+                final day = ws.add(Duration(days: d));
+                return _DayCell(
+                  day: day,
+                  inMonth: day.month == month.month,
+                  isToday: day == today,
+                  isSelected: day == selected,
+                  items: s.itemsOn(day).where((i) => !isSpanning(i)).toList(),
+                  laneCount: lanes.length,
+                  onTap: onBlankTap,
+                  onTapItem: onItemTap,
+                  onDropItem: onMove,
+                  onDragStarted: onDragStarted,
+                );
+              }),
+            ),
+        ]),
+        for (var li = 0; li < lanes.length; li++)
+          for (final g in lanes[li])
+            Positioned(
+              left: g.c0 * cellW + 1,
+              top: _barTop + li * _laneH,
+              width: (g.c1 - g.c0 + 1) * cellW - 2,
+              height: _laneH - 1,
+              // 끌고 있는 동안엔 바가 아래 날짜 칸으로의 놓기를 가로막지 않게 한다
+              child: IgnorePointer(
+                ignoring: dragging,
+                child: _SpanBar(
+                  seg: g,
+                  color: s.colorOf(g.item),
+                  ownerInitial: g.item.ownerUid == s.uid ? null : _initial(s.ownerLabel(g.item)),
+                  canEdit: g.item.ownerUid == s.uid || g.item.visibility == m.Visibility.shared,
+                  onTap: () => onItemTap(g.item, g.firstDay),
+                  onDragStarted: onDragStarted,
+                ),
+              ),
+            ),
+      ]);
+    });
+  }
+}
+
+/// 여러 날에 걸친 일정(반복 아님)인지
+bool isSpanning(Item i) =>
+    i.type == ItemType.event && !i.isRecurring && i.end != null && dateOnly(i.end!).isAfter(dateOnly(i.start));
+
+const double _barTop = 19; // 날짜 숫자 줄 아래
+const double _laneH = 14;
+
+class _Seg {
+  final Item item;
+  final int c0, c1; // 이번 주에서의 시작/끝 칸 (0=일 ... 6=토)
+  final bool startsHere, endsHere; // 실제 시작/끝이 이번 주인지 (아니면 이어지는 모양)
+  final DateTime firstDay;
+  _Seg(this.item, this.c0, this.c1, this.startsHere, this.endsHere, this.firstDay);
+}
+
+/// 이어진 일정 바. 앞뒤로 이어지는 쪽은 모서리를 각지게 해서 하나로 보이게 한다.
+class _SpanBar extends StatelessWidget {
+  final _Seg seg;
+  final Color color;
+  final String? ownerInitial;
+  final bool canEdit;
+  final VoidCallback onTap;
+  final VoidCallback onDragStarted;
+  const _SpanBar({
+    required this.seg,
+    required this.color,
+    required this.ownerInitial,
+    required this.canEdit,
+    required this.onTap,
+    required this.onDragStarted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bar = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.horizontal(
+          left: Radius.circular(seg.startsHere ? 4 : 0),
+          right: Radius.circular(seg.endsHere ? 4 : 0),
+        ),
+      ),
+      child: Row(children: [
+        if (!seg.startsHere) const Icon(Icons.arrow_left, size: 12, color: Colors.white70),
+        if (ownerInitial != null)
+          Container(
+            width: 11,
+            height: 11,
+            margin: const EdgeInsets.only(right: 3),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(3)),
+            child: Text(ownerInitial!,
+                style: const TextStyle(fontSize: 7, color: Colors.black87, fontWeight: FontWeight.bold)),
+          ),
+        if (seg.item.visibility == m.Visibility.private) const Icon(Icons.lock, size: 8),
+        Expanded(
+          child: Text(seg.item.title,
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9)),
+        ),
+        if (!seg.endsHere) const Icon(Icons.arrow_right, size: 12, color: Colors.white70),
+      ]),
+    );
+    final tappable = GestureDetector(behavior: HitTestBehavior.opaque, onTap: onTap, child: bar);
+    if (!canEdit) return tappable;
+    return LongPressDraggable<_DragData>(
+      data: _DragData(seg.item, seg.firstDay),
+      delay: const Duration(milliseconds: 180),
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      onDragStarted: onDragStarted,
+      feedback: Material(color: Colors.transparent, child: SizedBox(width: 150, height: _laneH, child: Opacity(opacity: 0.9, child: bar))),
+      childWhenDragging: Opacity(opacity: 0.3, child: bar),
+      child: tappable,
+    );
   }
 }
 
@@ -380,6 +634,8 @@ class _DayCell extends StatelessWidget {
   final ValueChanged<DateTime> onTap; // 빈 공간 탭
   final void Function(Item item, DateTime day) onTapItem;
   final void Function(Item item, DateTime from, DateTime to) onDropItem;
+  final VoidCallback onDragStarted;
+  final int laneCount; // 이 주에 이어진 일정 바가 차지하는 줄 수
   const _DayCell({
     required this.day,
     required this.inMonth,
@@ -389,6 +645,8 @@ class _DayCell extends StatelessWidget {
     required this.onTap,
     required this.onTapItem,
     required this.onDropItem,
+    required this.onDragStarted,
+    this.laneCount = 0,
   });
 
   /// 날짜 옆 음력 표기: 평일은 일, 초하루는 "월.1" (윤달은 앞에 윤)
@@ -443,7 +701,7 @@ class _DayCell extends StatelessWidget {
         child: Opacity(
           opacity: inMonth ? 1 : 0.4,
           child: LayoutBuilder(builder: (context, c) {
-            final room = ((c.maxHeight - 16) / 13).floor().clamp(0, 12);
+            final room = ((c.maxHeight - 16 - laneCount * _laneH) / 13).floor().clamp(0, 12);
             final overflow = lines.length > room;
             final shown = overflow ? room - 1 : lines.length;
             return Column(
@@ -468,6 +726,7 @@ class _DayCell extends StatelessWidget {
                         style: const TextStyle(fontSize: 9, color: Colors.white38)),
                   ),
                 ]),
+                if (laneCount > 0) SizedBox(height: laneCount * _laneH),
                 ...lines.take(shown.clamp(0, lines.length)),
                 if (overflow && room > 0)
                   Text('+${lines.length - shown}',
@@ -486,7 +745,7 @@ class _DayCell extends StatelessWidget {
     final chip = _Chip(
       text: i.allDay ? i.title : '${chipTimeLabel(i)} ${i.title}',
       color: s0.colorOf(i),
-      extraDots: [for (final c in s0.categoriesOf(i).skip(1)) c.color],
+      ownerInitial: i.ownerUid == s0.uid ? null : _initial(s0.ownerLabel(i)),
       isTodo: i.type == ItemType.todo,
       done: isDoneOn(i, day),
       isPrivate: i.visibility == m.Visibility.private,
@@ -502,6 +761,7 @@ class _DayCell extends StatelessWidget {
       data: _DragData(i, day),
       delay: const Duration(milliseconds: 180),
       dragAnchorStrategy: pointerDragAnchorStrategy,
+      onDragStarted: onDragStarted,
       feedback: Material(
         color: Colors.transparent,
         child: SizedBox(width: 130, child: Opacity(opacity: 0.9, child: chip)),
@@ -511,6 +771,8 @@ class _DayCell extends StatelessWidget {
     );
   }
 }
+
+String _initial(String name) => name.isEmpty ? '?' : String.fromCharCode(name.runes.first);
 
 class _DragData {
   final Item item;
@@ -537,7 +799,7 @@ class _Chip extends StatelessWidget {
   final String text;
   final Color color;
   final bool isTodo, done, isPrivate;
-  final List<Color> extraDots; // 두 번째 이후 카테고리 색
+  final String? ownerInitial; // 상대가 만든 항목이면 이름 첫 글자
   final bool isRolling;
   const _Chip({
     required this.text,
@@ -545,7 +807,7 @@ class _Chip extends StatelessWidget {
     this.isTodo = false,
     this.done = false,
     this.isPrivate = false,
-    this.extraDots = const [],
+    this.ownerInitial,
     this.isRolling = false,
   });
 
@@ -559,6 +821,16 @@ class _Chip extends StatelessWidget {
         borderRadius: BorderRadius.circular(3),
       ),
       child: Row(children: [
+        if (ownerInitial != null)
+          Container(
+            width: 11,
+            height: 11,
+            margin: const EdgeInsets.only(right: 2),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(3)),
+            child: Text(ownerInitial!,
+                style: const TextStyle(fontSize: 7, color: Colors.black87, fontWeight: FontWeight.bold)),
+          ),
         if (isTodo) Icon(done ? Icons.check_circle : Icons.radio_button_unchecked, size: 9),
         if (isPrivate) const Icon(Icons.lock, size: 8),
         if (isRolling) const Icon(Icons.autorenew, size: 9),
@@ -570,14 +842,6 @@ class _Chip extends StatelessWidget {
                   fontSize: 9,
                   decoration: done ? TextDecoration.lineThrough : null)),
         ),
-        for (final c in extraDots)
-          Container(
-            width: 6,
-            height: 6,
-            margin: const EdgeInsets.only(left: 2),
-            decoration: BoxDecoration(
-                color: c, shape: BoxShape.circle, border: Border.all(color: Colors.white70, width: 0.5)),
-          ),
       ]),
     );
   }
@@ -699,11 +963,12 @@ class _ItemTile extends StatelessWidget {
                       final prev = await s.toggleDone(item, day);
                       if (prev != null) {
                         final next = DateFormat('M월 d일 (E)', 'ko').format(nextRollDate(prev, DateTime.now()));
-                        messenger.hideCurrentSnackBar();
-                        messenger.showSnackBar(SnackBar(
-                          content: Text('"${item.title}" 완료 → $next(으)로 이동'),
-                          action: SnackBarAction(label: '되돌리기', onPressed: () => s.undoRoll(prev)),
-                        ));
+                        showTimedSnack(
+                          messenger,
+                          '"${item.title}" 완료 → $next(으)로 이동',
+                          actionLabel: '되돌리기',
+                          onAction: () => s.undoRoll(prev),
+                        );
                       }
                     }
                   : null)
@@ -717,11 +982,13 @@ class _ItemTile extends StatelessWidget {
           if (timeLabel(item) != null) _Meta(icon: Icons.schedule, text: timeLabel(item)!),
           if (item.type == ItemType.event && item.location.isNotEmpty)
             _Meta(icon: Icons.place_outlined, text: item.location),
-          for (final c in s.categoriesOf(item)) _Meta(dot: c.color, text: c.name),
+          _Meta(dot: s.categoriesOf(item).first.color, text: s.categoriesOf(item).first.name),
           if (item.isRolling) _Meta(icon: Icons.autorenew, text: rollLabel(item)),
           if (item.isRecurring) _Meta(icon: Icons.repeat, text: item.effectiveRule!.describe(item.start)),
           if (item.visibility == m.Visibility.private) const _Meta(icon: Icons.lock_outline, text: '나만'),
-          if (!mine) _Meta(icon: Icons.person_outline, text: s.ownerName(item)),
+          // 같이 보기 항목은 만든 사람을 보여준다
+          if (item.visibility == m.Visibility.shared)
+            _Meta(icon: Icons.person_outline, text: s.ownerLabel(item)),
           if (item.note.isNotEmpty) _Meta(icon: Icons.notes, text: item.note),
         ]),
       ),

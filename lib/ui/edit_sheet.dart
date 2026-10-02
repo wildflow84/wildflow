@@ -42,10 +42,12 @@ class _EditSheetState extends State<_EditSheet> {
   late TimeOfDay _startTime = widget.item != null && !widget.item!.allDay
       ? TimeOfDay(hour: widget.item!.start.hour, minute: widget.item!.start.minute)
       : const TimeOfDay(hour: 9, minute: 0);
+  // 직접 고르거나 지운 적이 없으면, 시작 시각을 바꿀 때 종료를 시작 + 1시간으로 맞춘다
+  late bool _endTouched = widget.item != null;
   late TimeOfDay? _endTime = widget.item != null && hasEndTime(widget.item!)
       ? TimeOfDay(hour: widget.item!.end!.hour, minute: widget.item!.end!.minute)
       : null;
-  late List<String> _cats; // 선택 순서 유지. 첫 번째가 대표(색상)
+  late List<String> _cats; // 항상 하나 (이전 버전에서 여러 개였던 항목은 첫 번째만 쓴다)
   late m.Visibility _vis;
   late bool _visTouched = widget.item != null; // 직접 바꾸면 카테고리 기본값으로 덮어쓰지 않는다
   late int? _color = widget.item?.color; // null이면 카테고리 색
@@ -82,19 +84,15 @@ class _EditSheetState extends State<_EditSheet> {
   void initState() {
     super.initState();
     final s = context.read<Store>();
-    _cats = [...(widget.item?.categories ?? [s.categories.first.id])];
+    _cats = [widget.item?.categories.first ?? s.categories.first.id];
     _vis = widget.item?.visibility ?? s.visibilityFor(_cats);
   }
 
-  /// 카테고리 선택/해제. 하나는 항상 남긴다.
-  void _toggleCategory(String id) {
+  /// 카테고리는 하나만 고른다.
+  void _selectCategory(String id) {
     final s = context.read<Store>();
     setState(() {
-      if (_cats.contains(id)) {
-        if (_cats.length > 1) _cats.remove(id);
-      } else {
-        _cats.add(id);
-      }
+      _cats = [id];
       if (!_visTouched) _vis = s.visibilityFor(_cats);
     });
   }
@@ -113,6 +111,10 @@ class _EditSheetState extends State<_EditSheet> {
       }
     });
   }
+
+  /// 시작 + 1시간 (23시대는 같은 날 23:59로 제한)
+  static TimeOfDay _plusHour(TimeOfDay t) =>
+      t.hour >= 23 ? const TimeOfDay(hour: 23, minute: 59) : TimeOfDay(hour: t.hour + 1, minute: t.minute);
 
   static String _hhmm(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
@@ -257,7 +259,10 @@ class _EditSheetState extends State<_EditSheet> {
                 dense: true,
                 title: const Text('종일'),
                 value: _allDay,
-                onChanged: (v) => setState(() => _allDay = v),
+                onChanged: (v) => setState(() {
+                  _allDay = v;
+                  if (!v && !_endTouched && _endTime == null) _endTime = _plusHour(_startTime);
+                }),
               ),
             if (!_allDay)
               Row(children: [
@@ -267,7 +272,12 @@ class _EditSheetState extends State<_EditSheet> {
                     label: Text('${_type == ItemType.todo ? '마감' : '시작'} ${_hhmm(_startTime)}'),
                     onPressed: () async {
                       final t = await _pickTime(_startTime);
-                      if (t != null) setState(() => _startTime = t);
+                      if (t != null) {
+                        setState(() {
+                          _startTime = t;
+                          if (_type == ItemType.event && !_endTouched) _endTime = _plusHour(t);
+                        });
+                      }
                     },
                   ),
                 ),
@@ -279,7 +289,12 @@ class _EditSheetState extends State<_EditSheet> {
                       label: Text(_endTime == null ? '종료(선택)' : '종료 ${_hhmm(_endTime!)}'),
                       onPressed: () async {
                         final t = await _pickTime(_endTime ?? _startTime);
-                        if (t != null) setState(() => _endTime = t);
+                        if (t != null) {
+                          setState(() {
+                            _endTime = t;
+                            _endTouched = true;
+                          });
+                        }
                       },
                     ),
                   ),
@@ -287,7 +302,10 @@ class _EditSheetState extends State<_EditSheet> {
                     IconButton(
                       tooltip: '종료 시각 지우기',
                       icon: const Icon(Icons.close, size: 18),
-                      onPressed: () => setState(() => _endTime = null),
+                      onPressed: () => setState(() {
+                        _endTime = null;
+                        _endTouched = true; // 일부러 지웠으면 다시 채우지 않는다
+                      }),
                     ),
                 ],
               ]),
@@ -303,20 +321,15 @@ class _EditSheetState extends State<_EditSheet> {
               ),
               const SizedBox(height: 12),
             ],
-            Row(children: [
-              const Text('카테고리', style: TextStyle(color: Colors.white70)),
-              const SizedBox(width: 8),
-              const Text('여러 개 선택 가능 · 첫 번째가 대표 색',
-                  style: TextStyle(color: Colors.white38, fontSize: 11)),
-            ]),
+            const Text('카테고리', style: TextStyle(color: Colors.white70)),
             const SizedBox(height: 6),
             Wrap(spacing: 8, runSpacing: 4, children: [
               for (final c in s.categories)
-                FilterChip(
+                ChoiceChip(
                   label: Text(c.name),
                   avatar: CircleAvatar(backgroundColor: c.color, radius: 6),
-                  selected: _cats.contains(c.id),
-                  onSelected: (_) => _toggleCategory(c.id),
+                  selected: _cats.first == c.id,
+                  onSelected: (_) => _selectCategory(c.id),
                 ),
               ActionChip(
                 avatar: const Icon(Icons.edit, size: 16),
@@ -487,6 +500,16 @@ class _EditSheetState extends State<_EditSheet> {
                       })
                   : null,
             ),
+            if (widget.item != null && widget.item!.visibility == m.Visibility.shared)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(children: [
+                  const Icon(Icons.person_outline, size: 14, color: Colors.white54),
+                  const SizedBox(width: 4),
+                  Text('만든 사람 · ${s.ownerLabel(widget.item!)}',
+                      style: const TextStyle(fontSize: 12, color: Colors.white60)),
+                ]),
+              ),
             if (!isOwner)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
