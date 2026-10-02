@@ -65,6 +65,12 @@ class SettingsScreen extends StatelessWidget {
             },
           ),
           ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('앱 버전'),
+            // CI가 빌드할 때 커밋 번호를 넣는다. 새로 배포됐는지 확인할 때 쓴다.
+            subtitle: Text(const String.fromEnvironment('APP_VERSION', defaultValue: '개발 빌드')),
+          ),
+          ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('로그아웃'),
             onTap: () {

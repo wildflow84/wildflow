@@ -94,10 +94,10 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: APK 빌드
-        run: flutter build apk --release --dart-define-from-file=firebase_config.json
+        run: flutter build apk --release --dart-define-from-file=firebase_config.json --dart-define=APP_VERSION=${GITHUB_SHA::7}
 
       - name: 웹 빌드
-        run: flutter build web --release --dart-define-from-file=firebase_config.json
+        run: flutter build web --release --dart-define-from-file=firebase_config.json --dart-define=APP_VERSION=${GITHUB_SHA::7}
 
       - uses: actions/upload-artifact@v4
         with:
