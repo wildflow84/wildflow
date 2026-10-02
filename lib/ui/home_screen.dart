@@ -8,7 +8,7 @@ import '../models/kr_calendar.dart';
 import '../models/lunar.dart';
 import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, isDoneOn;
-import 'categories.dart';
+import 'settings_screen.dart';
 import 'edit_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -102,6 +102,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
           PopupMenuButton<String>(
             onSelected: (v) {
+              if (v == 'settings') {
+                Navigator.push(
+                    context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+              }
               if (v == 'out') s.repo.signOut();
               if (v == 'code') {
                 Clipboard.setData(ClipboardData(text: s.spaceId!));
@@ -110,6 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(value: 'settings', child: Text('설정 (카테고리, 기본 공개 범위)')),
               PopupMenuItem(value: 'code', child: Text('초대 코드 복사')),
               PopupMenuItem(value: 'out', child: Text('로그아웃')),
             ],
@@ -268,8 +273,8 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cal = context.watch<Store>().cal;
-    final marks = cal.marksOn(day);
+    final s0 = context.watch<Store>();
+    final marks = s0.cal.marksOn(day);
     final isHoliday = marks.any((m) => m.isHoliday);
     final numColor = (day.weekday == DateTime.sunday || isHoliday)
         ? Colors.redAccent
@@ -285,7 +290,7 @@ class _DayCell extends StatelessWidget {
     for (final i in items) {
       lines.add(_Chip(
         text: i.title,
-        color: categoryOf(i.category).color,
+        color: s0.colorOf(i),
         isTodo: i.type == ItemType.todo,
         done: isDoneOn(i, day),
         isPrivate: i.visibility == m.Visibility.private,
@@ -508,13 +513,13 @@ class _ItemTile extends StatelessWidget {
     final s = context.read<Store>();
     final done = isDoneOn(item, day);
     final mine = item.ownerUid == s.uid;
-    final cat = categoryOf(item.category);
+    final itemColor = s.colorOf(item);
     return ListTile(
       leading: item.type == ItemType.todo
           ? Checkbox(
               value: done,
               onChanged: mine ? (_) => s.toggleDone(item, day) : null)
-          : Icon(Icons.circle, color: cat.color, size: 14),
+          : Icon(Icons.circle, color: itemColor, size: 14),
       title: Text(item.title,
           style: TextStyle(
               decoration: done ? TextDecoration.lineThrough : null)),

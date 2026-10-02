@@ -38,6 +38,11 @@ service cloud.firestore {
         allow read, write: if isMember();
       }
 
+      // 카테고리 정의는 공간 공용: 멤버 모두 읽고 쓴다.
+      match /categories/{categoryId} {
+        allow read, write: if isMember();
+      }
+
       match /items/{itemId} {
         // 공유 항목은 멤버 모두, 프라이빗은 소유자만 읽을 수 있다.
         allow read: if isMember()

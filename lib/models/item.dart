@@ -18,6 +18,7 @@ class Item {
   final bool done; // todo 전용 (반복 항목은 doneDates 사용)
   final List<String> doneDates; // 반복 todo의 완료 처리된 날짜 yyyy-MM-dd
   final String category;
+  final int? color; // 항목별 색 (null이면 카테고리 색)
   final Visibility visibility;
   final String ownerUid;
   final Repeat repeat;
@@ -34,6 +35,7 @@ class Item {
     this.done = false,
     this.doneDates = const [],
     this.category = 'default',
+    this.color,
     this.visibility = Visibility.shared,
     this.repeat = Repeat.none,
   });
@@ -49,6 +51,8 @@ class Item {
     bool? done,
     List<String>? doneDates,
     String? category,
+    int? color,
+    bool clearColor = false,
     Visibility? visibility,
     Repeat? repeat,
   }) =>
@@ -64,6 +68,7 @@ class Item {
         done: done ?? this.done,
         doneDates: doneDates ?? this.doneDates,
         category: category ?? this.category,
+        color: clearColor ? null : (color ?? this.color),
         visibility: visibility ?? this.visibility,
         repeat: repeat ?? this.repeat,
       );
@@ -78,6 +83,7 @@ class Item {
         'done': done,
         'doneDates': doneDates,
         'category': category,
+        'color': color,
         'visibility': visibility.name,
         'ownerUid': ownerUid,
         'repeat': repeat.name,
@@ -98,6 +104,7 @@ class Item {
       done: m['done'] ?? false,
       doneDates: List<String>.from(m['doneDates'] ?? const []),
       category: m['category'] ?? 'default',
+      color: (m['color'] as num?)?.toInt(),
       visibility: byName(Visibility.values, m['visibility'], Visibility.shared),
       ownerUid: m['ownerUid'] ?? '',
       repeat: byName(Repeat.values, m['repeat'], Repeat.none),

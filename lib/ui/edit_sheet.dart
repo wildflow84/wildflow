@@ -5,7 +5,8 @@ import 'package:provider/provider.dart';
 import '../data/store.dart';
 import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, Repeat, dateOnly;
-import 'categories.dart';
+import 'category_dialog.dart';
+import 'color_picker.dart';
 
 Future<void> showEditSheet(BuildContext context,
     {Item? item, DateTime? day, ItemType type = ItemType.event}) {
@@ -32,8 +33,10 @@ class _EditSheetState extends State<_EditSheet> {
   late final _note = TextEditingController(text: widget.item?.note);
   late DateTime _start = widget.item?.start ?? dateOnly(widget.day);
   late DateTime? _end = widget.item?.end;
-  late String _category = widget.item?.category ?? 'default';
-  late m.Visibility _vis = widget.item?.visibility ?? m.Visibility.shared;
+  late String _category;
+  late m.Visibility _vis;
+  late bool _visTouched = widget.item != null; // 직접 바꾸면 카테고리 기본값으로 덮어쓰지 않는다
+  late int? _color = widget.item?.color; // null이면 카테고리 색
   late Repeat _repeat = widget.item?.repeat ?? Repeat.none;
 
   static const _repeatLabels = {
@@ -44,13 +47,29 @@ class _EditSheetState extends State<_EditSheet> {
     Repeat.yearly: '매년',
   };
 
+  @override
+  void initState() {
+    super.initState();
+    final s = context.read<Store>();
+    _category = widget.item?.category ?? s.categories.first.id;
+    _vis = widget.item?.visibility ?? s.visibilityFor(_category);
+  }
+
+  void _selectCategory(String id) {
+    final s = context.read<Store>();
+    setState(() {
+      _category = id;
+      if (!_visTouched) _vis = s.visibilityFor(id);
+    });
+  }
+
   Future<void> _pick(bool isEnd) async {
     final init = isEnd ? (_end ?? _start) : _start;
     final d = await showDatePicker(
         context: context,
         initialDate: init,
-        firstDate: DateTime(2020),
-        lastDate: DateTime(2100));
+        firstDate: DateTime(1901),
+        lastDate: DateTime(2200, 12, 31));
     if (d == null) return;
     setState(() {
       if (isEnd) {
@@ -75,6 +94,8 @@ class _EditSheetState extends State<_EditSheet> {
       end: _end,
       clearEnd: _end == null,
       category: _category,
+      color: _color,
+      clearColor: _color == null,
       visibility: _vis,
       repeat: _repeat,
     ));
@@ -83,7 +104,9 @@ class _EditSheetState extends State<_EditSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<Store>();
     final df = DateFormat('y.M.d (E)', 'ko');
+    final catColor = s.categoryOf(_category).color;
     return Padding(
       padding: EdgeInsets.fromLTRB(
           16, 16, 16, MediaQuery.viewInsetsOf(context).bottom + 16),
@@ -118,16 +141,50 @@ class _EditSheetState extends State<_EditSheet> {
               ],
             ]),
             const SizedBox(height: 12),
-            Wrap(spacing: 8, children: [
-              for (final c in categories)
+            const Text('카테고리', style: TextStyle(color: Colors.white70)),
+            const SizedBox(height: 6),
+            Wrap(spacing: 8, runSpacing: 4, children: [
+              for (final c in s.categories)
                 ChoiceChip(
-                  label: Text(c.label),
+                  label: Text(c.name),
                   avatar: CircleAvatar(backgroundColor: c.color, radius: 6),
                   selected: _category == c.id,
-                  onSelected: (_) => setState(() => _category = c.id),
+                  onSelected: (_) => _selectCategory(c.id),
                 ),
+              ActionChip(
+                avatar: const Icon(Icons.add, size: 16),
+                label: const Text('새 카테고리'),
+                onPressed: () async {
+                  final id = await showCategoryDialog(context);
+                  if (id != null && mounted) _selectCategory(id);
+                },
+              ),
             ]),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            Row(children: [
+              const Text('색상', style: TextStyle(color: Colors.white70)),
+              const SizedBox(width: 12),
+              InkWell(
+                onTap: () async {
+                  final c = await pickColor(context, initial: _color ?? catColor.toARGB32());
+                  if (c != null) setState(() => _color = c);
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Row(children: [
+                    CircleAvatar(backgroundColor: _color != null ? Color(_color!) : catColor, radius: 11),
+                    const SizedBox(width: 8),
+                    Text(_color == null ? '카테고리 색' : '직접 지정'),
+                  ]),
+                ),
+              ),
+              if (_color != null)
+                TextButton(
+                    onPressed: () => setState(() => _color = null),
+                    child: const Text('카테고리 색으로')),
+            ]),
+            const SizedBox(height: 8),
             DropdownButtonFormField<Repeat>(
               initialValue: _repeat,
               decoration: const InputDecoration(labelText: '반복', border: OutlineInputBorder()),
@@ -140,14 +197,21 @@ class _EditSheetState extends State<_EditSheet> {
                 if (v != Repeat.none) _end = null;
               }),
             ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('프라이빗 (나만 보기)'),
-              secondary: Icon(_vis == m.Visibility.private ? Icons.lock : Icons.people),
-              value: _vis == m.Visibility.private,
-              onChanged: (v) => setState(
-                  () => _vis = v ? m.Visibility.private : m.Visibility.shared),
+            const SizedBox(height: 12),
+            SegmentedButton<m.Visibility>(
+              segments: const [
+                ButtonSegment(
+                    value: m.Visibility.private, icon: Icon(Icons.lock), label: Text('나만 보기')),
+                ButtonSegment(
+                    value: m.Visibility.shared, icon: Icon(Icons.people), label: Text('같이 보기')),
+              ],
+              selected: {_vis},
+              onSelectionChanged: (v) => setState(() {
+                _vis = v.first;
+                _visTouched = true;
+              }),
             ),
+            const SizedBox(height: 12),
             TextField(
               controller: _note,
               decoration: const InputDecoration(labelText: '메모', border: OutlineInputBorder()),

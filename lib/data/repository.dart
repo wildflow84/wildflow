@@ -4,13 +4,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+import '../models/category.dart';
 import '../models/item.dart';
 import '../models/kr_calendar.dart';
 
 /// Firestore 구조
-///   users/{uid}                 { spaceId, name }
+///   users/{uid}                 { spaceId, name, defaultVisibility }
 ///   spaces/{spaceId}            { members: [uid], names: {uid: name} }
 ///   spaces/{spaceId}/items/{id} Item.toMap()
+///   spaces/{spaceId}/categories/{id} Category.toMap()
 ///   spaces/{spaceId}/holidays/{id} { date, name, holiday }  (임시공휴일 등 사용자가 추가한 날)
 ///
 /// 프라이빗 보호는 firestore.rules가 서버에서 강제한다.
@@ -49,7 +51,7 @@ class Repository {
       'names': {u.uid: u.displayName ?? '나'},
     });
     batch.set(_db.collection('users').doc(u.uid),
-        {'spaceId': ref.id, 'name': u.displayName});
+        {'spaceId': ref.id, 'name': u.displayName}, SetOptions(merge: true));
     await batch.commit();
     return ref.id;
   }
@@ -63,7 +65,7 @@ class Repository {
       'names.${u.uid}': u.displayName ?? '상대',
     });
     await _db.collection('users').doc(u.uid).set(
-        {'spaceId': ref.id, 'name': u.displayName});
+        {'spaceId': ref.id, 'name': u.displayName}, SetOptions(merge: true));
   }
 
   Stream<Map<String, String>> memberNames(String spaceId) => _db
@@ -145,4 +147,49 @@ class Repository {
 
   Future<void> deleteCustomDay(String spaceId, String id) =>
       _db.collection('spaces').doc(spaceId).collection('holidays').doc(id).delete();
+
+  // ---- 카테고리 (공간 공용) ----
+  Stream<List<Category>> watchCategories(String spaceId) => _db
+      .collection('spaces')
+      .doc(spaceId)
+      .collection('categories')
+      .snapshots()
+      .map((s) => s.docs.map(Category.fromDoc).toList());
+
+  Future<String> saveCategory(String spaceId, Category c) async {
+    final col = _db.collection('spaces').doc(spaceId).collection('categories');
+    final ref = c.id.isEmpty ? col.doc() : col.doc(c.id);
+    await ref.set(c.toMap());
+    return ref.id;
+  }
+
+  Future<void> deleteCategory(String spaceId, String id) =>
+      _db.collection('spaces').doc(spaceId).collection('categories').doc(id).delete();
+
+  /// 서버에 카테고리가 하나도 없을 때만 기본 카테고리를 채운다. (캐시가 비어 있어도 덮어쓰지 않도록 서버 기준으로 확인)
+  Future<void> seedCategoriesIfEmpty(String spaceId) async {
+    final col = _db.collection('spaces').doc(spaceId).collection('categories');
+    final snap = await col.limit(1).get(const GetOptions(source: Source.server));
+    if (snap.docs.isNotEmpty) return;
+    final batch = _db.batch();
+    for (final c in defaultCategories) {
+      batch.set(col.doc(c.id), c.toMap());
+    }
+    await batch.commit();
+  }
+
+  // ---- 내 설정 ----
+  Stream<Visibility?> watchDefaultVisibility() => _db
+      .collection('users')
+      .doc(user!.uid)
+      .snapshots()
+      .map((s) {
+        final v = s.data()?['defaultVisibility'] as String?;
+        return v == null ? null : Visibility.values.firstWhere((e) => e.name == v, orElse: () => Visibility.shared);
+      });
+
+  Future<void> setDefaultVisibility(Visibility v) => _db
+      .collection('users')
+      .doc(user!.uid)
+      .set({'defaultVisibility': v.name}, SetOptions(merge: true));
 }

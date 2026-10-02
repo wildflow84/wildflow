@@ -9,7 +9,9 @@ import 'data/store.dart';
 import 'main.dart';
 import 'models/item.dart' as m;
 import 'models/item.dart' show Item, ItemType, Repeat;
+import 'ui/edit_sheet.dart';
 import 'ui/home_screen.dart';
+import 'ui/settings_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +40,34 @@ Future<void> main() async {
   runApp(ChangeNotifierProvider(
     create: (_) => Store.preview(Repository(),
         uid: 'me', names: {'me': '대희 아빠', 'mina': '민아'}, items: items),
-    child: const OurDayApp(home: HomeScreen()),
+    child: OurDayApp(home: _start()),
   ));
+}
+
+/// ?page=settings | edit 로 설정 화면/등록 시트를 바로 확인
+Widget _start() {
+  switch (Uri.base.queryParameters['page']) {
+    case 'settings':
+      return const SettingsScreen();
+    case 'edit':
+      return const _OpenEdit();
+  }
+  return const HomeScreen();
+}
+
+class _OpenEdit extends StatefulWidget {
+  const _OpenEdit();
+  @override
+  State<_OpenEdit> createState() => _OpenEditState();
+}
+
+class _OpenEditState extends State<_OpenEdit> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => showEditSheet(context, day: DateTime(2026, 10, 14)));
+  }
+
+  @override
+  Widget build(BuildContext context) => const HomeScreen();
 }

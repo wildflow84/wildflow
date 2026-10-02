@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' hide Category;
+import 'package:flutter/painting.dart' show Color;
 
+import '../models/category.dart';
 import '../models/item.dart';
+import '../models/item.dart' as m;
 import '../models/kr_calendar.dart';
 import 'repository.dart';
 import 'widget_sync.dart';
@@ -25,7 +28,7 @@ class Store extends ChangeNotifier {
   StreamSubscription? _authSub;
 
   String get uid => _previewUid ?? user!.uid;
-  StreamSubscription? _itemsSub, _namesSub, _customSub;
+  StreamSubscription? _itemsSub, _namesSub, _customSub, _catSub, _profileSub;
 
   User? user;
   String? spaceId;
@@ -34,6 +37,11 @@ class Store extends ChangeNotifier {
   List<Item> items = [];
   Map<String, String> names = {};
   List<CustomDay> customDays = [];
+  List<Category> categories = defaultCategories;
+
+  /// 새 항목의 기본 공개 범위 (설정에서 변경). 카테고리별 기본값이 있으면 그쪽이 우선.
+  m.Visibility defaultVisibility = m.Visibility.shared;
+  bool _seeded = false;
 
   /// 공휴일/절기/기념일 달력. 사용자가 추가한 임시공휴일이 바뀌면 새로 만든다.
   KrCalendar cal = KrCalendar();
@@ -73,6 +81,25 @@ class Store extends ChangeNotifier {
       error = '$e';
       notifyListeners();
     });
+    _catSub = repo.watchCategories(id).listen((list) {
+      if (list.isEmpty) {
+        if (!_seeded) {
+          _seeded = true;
+          repo.seedCategoriesIfEmpty(id).catchError((_) {});
+        }
+        categories = defaultCategories;
+      } else {
+        categories = [...list]..sort((a, b) {
+            final o = a.order.compareTo(b.order);
+            return o != 0 ? o : a.name.compareTo(b.name);
+          });
+      }
+      notifyListeners();
+    });
+    _profileSub = repo.watchDefaultVisibility().listen((v) {
+      defaultVisibility = v ?? m.Visibility.shared;
+      notifyListeners();
+    });
     _customSub = repo.watchCustomDays(id).listen((list) {
       customDays = list;
       cal = KrCalendar(custom: list);
@@ -88,6 +115,11 @@ class Store extends ChangeNotifier {
     await _itemsSub?.cancel();
     await _namesSub?.cancel();
     await _customSub?.cancel();
+    await _catSub?.cancel();
+    await _profileSub?.cancel();
+    _seeded = false;
+    categories = defaultCategories;
+    defaultVisibility = m.Visibility.shared;
     customDays = [];
     cal = KrCalendar();
   }
@@ -137,6 +169,26 @@ class Store extends ChangeNotifier {
       spaceId!, CustomDay(id: '', date: d, name: name, holiday: holiday));
 
   Future<void> deleteCustomDay(CustomDay c) => repo.deleteCustomDay(spaceId!, c.id);
+
+  Category categoryOf(String id) => categories.firstWhere((c) => c.id == id,
+      orElse: () => categories.isNotEmpty ? categories.first : defaultCategories.first);
+
+  /// 항목 색: 항목별 색 > 카테고리 색
+  Color colorOf(Item i) => i.color != null ? Color(i.color!) : categoryOf(i.category).color;
+
+  /// 새 항목의 공개 범위: 카테고리 기본값 > 내 기본 설정
+  m.Visibility visibilityFor(String categoryId) =>
+      categoryOf(categoryId).defaultVisibility ?? defaultVisibility;
+
+  Future<void> setDefaultVisibility(m.Visibility v) async {
+    defaultVisibility = v;
+    notifyListeners();
+    await repo.setDefaultVisibility(v);
+  }
+
+  Future<String> saveCategory(Category c) => repo.saveCategory(spaceId!, c);
+
+  Future<void> deleteCategory(Category c) => repo.deleteCategory(spaceId!, c.id);
 
   String ownerName(Item i) => names[i.ownerUid] ?? '';
 
