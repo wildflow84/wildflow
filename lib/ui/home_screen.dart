@@ -9,7 +9,7 @@ import '../models/kr_calendar.dart';
 import '../models/lunar.dart';
 import '../models/map_links.dart';
 import '../models/item.dart' as m;
-import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, isDoneOn, nextRollDate, rollLabel, timeLabel;
+import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, isDoneOn, isOverdue, nextRollDate, rollLabel, timeLabel, chipTimeLabel;
 import 'category_manager.dart';
 import 'settings_screen.dart';
 import 'edit_sheet.dart';
@@ -297,7 +297,7 @@ class _DayCell extends StatelessWidget {
     }
     for (final i in items) {
       lines.add(_Chip(
-        text: i.allDay ? i.title : '${timeLabel(i)!.substring(0, 5)} ${i.title}',
+        text: i.allDay ? i.title : '${chipTimeLabel(i)} ${i.title}',
         color: s0.colorOf(i),
         extraDots: [for (final c in s0.categoriesOf(i).skip(1)) c.color],
         isTodo: i.type == ItemType.todo,
@@ -601,7 +601,8 @@ class _TodoTab extends StatelessWidget {
       final d = i.repeat == Repeat.none ? i.start : today;
       return !isDoneOn(i, d) && (i.repeat != Repeat.none ? m.occursOn(i, today) : true);
     }).toList();
-    final overdue = open.where((i) => i.repeat == Repeat.none && i.start.isBefore(today)).toList();
+    final now = DateTime.now();
+    final overdue = open.where((i) => isOverdue(i, now)).toList();
     final upcoming = open.where((i) => !overdue.contains(i)).toList();
 
     Widget section(String title, List<Item> list) => list.isEmpty

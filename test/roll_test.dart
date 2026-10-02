@@ -9,6 +9,7 @@ String _d(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.da
 
 void main() {
   timeTests();
+  todoTimeTests();
   test('매일, 완료한 날 기준: 오늘 완료하면 내일', () {
     final i = _roll(DateTime(2026, 10, 2), 1, RollUnit.day);
     expect(_d(nextRollDate(i, DateTime(2026, 10, 2))), '2026-10-03');
@@ -90,5 +91,25 @@ void timeTests() {
     expect(occursOn(i, DateTime(2026, 10, 7)), true);
     expect(occursOn(i, DateTime(2026, 10, 9)), true);
     expect(occursOn(i, DateTime(2026, 10, 10)), false);
+  });
+}
+
+void todoTimeTests() {
+  Item todo({bool allDay = false, DateTime? start}) => Item(
+      id: 'x', type: ItemType.todo, title: '약', start: start ?? DateTime(2026, 10, 2, 8, 0),
+      allDay: allDay, ownerUid: 'me');
+
+  test('할 일의 시각은 마감: "08:00까지", 칩은 "~08:00"', () {
+    expect(timeLabel(todo()), '08:00까지');
+    expect(chipTimeLabel(todo()), '~08:00');
+    expect(timeLabel(todo(allDay: true)), isNull);
+  });
+
+  test('마감 시각이 지나면 지난 할 일, 종일이면 날짜가 지났을 때만', () {
+    final now = DateTime(2026, 10, 2, 10, 0);
+    expect(isOverdue(todo(), now), true); // 오늘 8시 마감, 지금 10시
+    expect(isOverdue(todo(start: DateTime(2026, 10, 2, 18, 0)), now), false);
+    expect(isOverdue(todo(allDay: true, start: DateTime(2026, 10, 2)), now), false); // 오늘 종일은 아직
+    expect(isOverdue(todo(allDay: true, start: DateTime(2026, 10, 1)), now), true);
   });
 }

@@ -249,6 +249,7 @@ bool hasEndTime(Item i) => !i.allDay && i.end != null && (i.end!.hour != 0 || i.
 String? timeLabel(Item i) {
   if (i.allDay) return null;
   final s = _hhmm(i.start);
+  if (i.type == ItemType.todo) return '$s까지'; // 할 일의 시각은 시작이 아니라 마감
   if (!hasEndTime(i)) return s;
   final e = i.end!;
   final sameDay = i.repeat != Repeat.none || dateOnly(e) == dateOnly(i.start);
@@ -259,4 +260,16 @@ String? timeLabel(Item i) {
 DateTime rollStart(Item item, DateTime today) {
   final d = nextRollDate(item, today);
   return item.allDay ? d : DateTime(d.year, d.month, d.day, item.start.hour, item.start.minute);
+}
+
+/// 캘린더 칸 칩 앞에 붙이는 짧은 시각. 일정은 "15:00", 할 일은 마감이라 "~15:00".
+String? chipTimeLabel(Item i) {
+  if (i.allDay) return null;
+  return i.type == ItemType.todo ? '~${_hhmm(i.start)}' : _hhmm(i.start);
+}
+
+/// 할 일이 마감을 넘겼는지. 시각이 있으면 그 시각 기준, 없으면 날짜가 오늘 이전일 때.
+bool isOverdue(Item i, DateTime now) {
+  if (i.type != ItemType.todo || i.repeat != Repeat.none) return false;
+  return i.allDay ? dateOnly(i.start).isBefore(dateOnly(now)) : i.start.isBefore(now);
 }

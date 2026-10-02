@@ -179,7 +179,7 @@ class _EditSheetState extends State<_EditSheet> {
             ),
             const SizedBox(height: 12),
             Row(children: [
-              Expanded(child: OutlinedButton(onPressed: () => _pick(false), child: Text(df.format(_start)))),
+              Expanded(child: OutlinedButton(onPressed: () => _pick(false), child: Text('${_type == ItemType.todo ? '마감 ' : ''}${df.format(_start)}'))),
               if (_type == ItemType.event && _repeat == Repeat.none) ...[
                 const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('~')),
                 Expanded(
@@ -189,19 +189,28 @@ class _EditSheetState extends State<_EditSheet> {
               ],
             ]),
             const SizedBox(height: 12),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: const Text('종일'),
-              value: _allDay,
-              onChanged: (v) => setState(() => _allDay = v),
-            ),
+            if (_type == ItemType.todo)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: const Text('마감 시각 지정'),
+                value: !_allDay,
+                onChanged: (v) => setState(() => _allDay = !v),
+              )
+            else
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: const Text('종일'),
+                value: _allDay,
+                onChanged: (v) => setState(() => _allDay = v),
+              ),
             if (!_allDay)
               Row(children: [
                 Expanded(
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.schedule, size: 18),
-                    label: Text('시작 ${_hhmm(_startTime)}'),
+                    label: Text('${_type == ItemType.todo ? '마감' : '시작'} ${_hhmm(_startTime)}'),
                     onPressed: () async {
                       final t = await _pickTime(_startTime);
                       if (t != null) setState(() => _startTime = t);
