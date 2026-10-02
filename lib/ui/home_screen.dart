@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/store.dart';
 import '../models/kr_calendar.dart';
 import '../models/lunar.dart';
+import '../models/map_links.dart';
 import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, isDoneOn, nextRollDate, rollLabel;
 import 'category_manager.dart';
@@ -562,10 +564,23 @@ class _ItemTile extends StatelessWidget {
         if (!mine) s.ownerName(item),
         s.categoriesOf(item).map((c) => c.name).join('·'),
         if (item.visibility == m.Visibility.private) '프라이빗',
+        if (item.location.isNotEmpty) '📍 ${item.location}',
         if (item.isRolling) '↻ ${rollLabel(item)} (완료하면 다음 일정으로)',
         if (item.repeat != Repeat.none) '반복',
         if (item.note.isNotEmpty) item.note,
       ].join(' · ')),
+      trailing: item.location.isEmpty
+          ? null
+          : PopupMenuButton<MapApp>(
+              tooltip: '지도에서 보기',
+              icon: const Icon(Icons.map_outlined, size: 20),
+              onSelected: (app) =>
+                  launchUrl(mapUri(app, item.location), mode: LaunchMode.externalApplication),
+              itemBuilder: (_) => [
+                for (final a in MapApp.values)
+                  PopupMenuItem(value: a, child: Text('${mapAppNames[a]}에서 열기')),
+              ],
+            ),
       onTap: canEdit ? () => showEditSheet(context, item: item, day: day) : null,
     );
   }

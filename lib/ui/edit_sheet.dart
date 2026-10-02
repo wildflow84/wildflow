@@ -31,6 +31,7 @@ class _EditSheetState extends State<_EditSheet> {
   late ItemType _type = widget.item?.type ?? widget.type;
   late final _title = TextEditingController(text: widget.item?.title);
   late final _note = TextEditingController(text: widget.item?.note);
+  late final _location = TextEditingController(text: widget.item?.location);
   late DateTime _start = widget.item?.start ?? dateOnly(widget.day);
   late DateTime? _end = widget.item?.end;
   late List<String> _cats; // 선택 순서 유지. 첫 번째가 대표(색상)
@@ -98,6 +99,7 @@ class _EditSheetState extends State<_EditSheet> {
       type: _type,
       title: _title.text.trim(),
       note: _note.text.trim(),
+      location: _location.text.trim(),
       start: _start,
       end: _end,
       clearEnd: _end == null,
@@ -153,6 +155,16 @@ class _EditSheetState extends State<_EditSheet> {
                         child: Text(_end == null ? '종료일(선택)' : df.format(_end!)))),
               ],
             ]),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _location,
+              decoration: const InputDecoration(
+                labelText: '위치 (선택)',
+                hintText: '장소 이름이나 주소',
+                prefixIcon: Icon(Icons.place_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
             const SizedBox(height: 12),
             Row(children: [
               const Text('카테고리', style: TextStyle(color: Colors.white70)),

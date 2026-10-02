@@ -15,6 +15,7 @@ class Item {
   final ItemType type;
   final String title;
   final String note;
+  final String location; // 위치(장소 이름/주소). 지도 앱으로 열 수 있다.
   final DateTime start; // 날짜만 쓰는 경우 00:00
   final DateTime? end; // 멀티데이 일정의 마지막 날 (포함)
   final bool allDay;
@@ -48,6 +49,7 @@ class Item {
     required this.start,
     required this.ownerUid,
     this.note = '',
+    this.location = '',
     this.end,
     this.allDay = true,
     this.done = false,
@@ -67,6 +69,7 @@ class Item {
     ItemType? type,
     String? title,
     String? note,
+    String? location,
     DateTime? start,
     DateTime? end,
     bool clearEnd = false,
@@ -90,6 +93,7 @@ class Item {
         type: type ?? this.type,
         title: title ?? this.title,
         note: note ?? this.note,
+        location: location ?? this.location,
         start: start ?? this.start,
         end: clearEnd ? null : (end ?? this.end),
         allDay: allDay ?? this.allDay,
@@ -110,6 +114,7 @@ class Item {
         'type': type.name,
         'title': title,
         'note': note,
+        'location': location,
         'start': Timestamp.fromDate(start),
         'end': end == null ? null : Timestamp.fromDate(end!),
         'allDay': allDay,
@@ -137,6 +142,7 @@ class Item {
       type: byName(ItemType.values, m['type'], ItemType.todo),
       title: m['title'] ?? '',
       note: m['note'] ?? '',
+      location: m['location'] ?? '',
       start: (m['start'] as Timestamp).toDate(),
       end: (m['end'] as Timestamp?)?.toDate(),
       allDay: m['allDay'] ?? true,
