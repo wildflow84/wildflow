@@ -237,3 +237,26 @@ String rollLabel(Item item) {
   }
   return '$e${unit[item.rollUnit]}마다';
 }
+
+
+String _hhmm(DateTime d) =>
+    '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
+/// 종료 시각이 설정되어 있는지 (종일이 아닐 때 종료 시각이 00:00이 아니면 설정된 것으로 본다)
+bool hasEndTime(Item i) => !i.allDay && i.end != null && (i.end!.hour != 0 || i.end!.minute != 0);
+
+/// 시간 표기. 종일이면 null. 예: "15:00", "15:00–16:30", "15:00 → 10/17 12:00"
+String? timeLabel(Item i) {
+  if (i.allDay) return null;
+  final s = _hhmm(i.start);
+  if (!hasEndTime(i)) return s;
+  final e = i.end!;
+  final sameDay = i.repeat != Repeat.none || dateOnly(e) == dateOnly(i.start);
+  return sameDay ? '$s–${_hhmm(e)}' : '$s → ${e.month}/${e.day} ${_hhmm(e)}';
+}
+
+/// 이동형 반복 완료 후의 새 시작 일시: 다음 날짜로 옮기되 시각은 유지한다.
+DateTime rollStart(Item item, DateTime today) {
+  final d = nextRollDate(item, today);
+  return item.allDay ? d : DateTime(d.year, d.month, d.day, item.start.hour, item.start.minute);
+}

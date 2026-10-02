@@ -9,7 +9,7 @@ import '../models/kr_calendar.dart';
 import '../models/lunar.dart';
 import '../models/map_links.dart';
 import '../models/item.dart' as m;
-import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, isDoneOn, nextRollDate, rollLabel;
+import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, isDoneOn, nextRollDate, rollLabel, timeLabel;
 import 'category_manager.dart';
 import 'settings_screen.dart';
 import 'edit_sheet.dart';
@@ -297,7 +297,7 @@ class _DayCell extends StatelessWidget {
     }
     for (final i in items) {
       lines.add(_Chip(
-        text: i.title,
+        text: i.allDay ? i.title : '${timeLabel(i)!.substring(0, 5)} ${i.title}',
         color: s0.colorOf(i),
         extraDots: [for (final c in s0.categoriesOf(i).skip(1)) c.color],
         isTodo: i.type == ItemType.todo,
@@ -561,6 +561,7 @@ class _ItemTile extends StatelessWidget {
           style: TextStyle(
               decoration: done ? TextDecoration.lineThrough : null)),
       subtitle: Text([
+        if (timeLabel(item) != null) '🕒 ${timeLabel(item)}',
         if (!mine) s.ownerName(item),
         s.categoriesOf(item).map((c) => c.name).join('·'),
         if (item.visibility == m.Visibility.private) '프라이빗',

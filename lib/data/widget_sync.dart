@@ -18,10 +18,12 @@ class WidgetSync {
         return a.start.compareTo(b.start);
       });
     final lines = todays.map((i) {
+      final t = timeLabel(i);
+      final title = t == null ? i.title : '$t ${i.title}';
       if (i.type == ItemType.todo) {
-        return '${isDoneOn(i, today) ? '☑' : '☐'} ${i.title}';
+        return '${isDoneOn(i, today) ? '☑' : '☐'} $title';
       }
-      return '• ${i.title}';
+      return '• $title';
     }).toList();
     try {
       await HomeWidget.saveWidgetData<String>(

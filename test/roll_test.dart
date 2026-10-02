@@ -8,6 +8,7 @@ Item _roll(DateTime start, int every, RollUnit unit, {bool fromCompletion = true
 String _d(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
 void main() {
+  timeTests();
   test('매일, 완료한 날 기준: 오늘 완료하면 내일', () {
     final i = _roll(DateTime(2026, 10, 2), 1, RollUnit.day);
     expect(_d(nextRollDate(i, DateTime(2026, 10, 2))), '2026-10-03');
@@ -57,5 +58,37 @@ void main() {
   test('이동형 여부', () {
     expect(_roll(DateTime(2026, 10, 2), 1, RollUnit.day).isRolling, true);
     expect(_roll(DateTime(2026, 10, 2), 0, RollUnit.day).isRolling, false);
+  });
+}
+
+void timeTests() {
+  Item timed({DateTime? end, bool allDay = false, Repeat repeat = Repeat.none, int roll = 0}) => Item(
+      id: 'x', type: ItemType.event, title: 't', start: DateTime(2026, 10, 7, 15, 0), end: end,
+      allDay: allDay, ownerUid: 'me', repeat: repeat, rollEvery: roll);
+
+  test('시간 표기', () {
+    expect(timeLabel(timed(allDay: true)), isNull);
+    expect(timeLabel(timed()), '15:00');
+    expect(timeLabel(timed(end: DateTime(2026, 10, 7, 16, 30))), '15:00–16:30');
+    expect(timeLabel(timed(end: DateTime(2026, 10, 9, 12, 0))), '15:00 → 10/9 12:00');
+    // 반복 일정은 종료 날짜와 무관하게 시각 범위만
+    expect(timeLabel(timed(end: DateTime(2026, 10, 7, 16, 0), repeat: Repeat.weekly)), '15:00–16:00');
+    // 종료가 날짜만(00:00)이면 종료 시각 없음
+    expect(timeLabel(timed(end: DateTime(2026, 10, 9))), '15:00');
+  });
+
+  test('이동형 반복은 다음 날짜로 옮기되 시각을 유지', () {
+    final i = timed(roll: 1);
+    final next = rollStart(i, DateTime(2026, 10, 7, 20, 0));
+    expect(next, DateTime(2026, 10, 8, 15, 0));
+    final allDay = timed(allDay: true, roll: 1);
+    expect(rollStart(allDay, DateTime(2026, 10, 7)), DateTime(2026, 10, 8));
+  });
+
+  test('시간 있는 일정도 날짜 기준으로 달력에 나타남', () {
+    final i = timed(end: DateTime(2026, 10, 9, 12, 0));
+    expect(occursOn(i, DateTime(2026, 10, 7)), true);
+    expect(occursOn(i, DateTime(2026, 10, 9)), true);
+    expect(occursOn(i, DateTime(2026, 10, 10)), false);
   });
 }

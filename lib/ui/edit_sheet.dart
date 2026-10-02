@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../data/store.dart';
 import '../models/item.dart' as m;
-import '../models/item.dart' show Item, ItemType, Repeat, dateOnly;
+import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, hasEndTime;
 import 'category_manager.dart';
 import 'color_picker.dart';
 
@@ -33,7 +33,14 @@ class _EditSheetState extends State<_EditSheet> {
   late final _note = TextEditingController(text: widget.item?.note);
   late final _location = TextEditingController(text: widget.item?.location);
   late DateTime _start = widget.item?.start ?? dateOnly(widget.day);
-  late DateTime? _end = widget.item?.end;
+  late DateTime? _end = widget.item?.end == null ? null : dateOnly(widget.item!.end!);
+  late bool _allDay = widget.item?.allDay ?? true;
+  late TimeOfDay _startTime = widget.item != null && !widget.item!.allDay
+      ? TimeOfDay(hour: widget.item!.start.hour, minute: widget.item!.start.minute)
+      : const TimeOfDay(hour: 9, minute: 0);
+  late TimeOfDay? _endTime = widget.item != null && hasEndTime(widget.item!)
+      ? TimeOfDay(hour: widget.item!.end!.hour, minute: widget.item!.end!.minute)
+      : null;
   late List<String> _cats; // 선택 순서 유지. 첫 번째가 대표(색상)
   late m.Visibility _vis;
   late bool _visTouched = widget.item != null; // 직접 바꾸면 카테고리 기본값으로 덮어쓰지 않는다
@@ -90,19 +97,45 @@ class _EditSheetState extends State<_EditSheet> {
     });
   }
 
+  static String _hhmm(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  Future<TimeOfDay?> _pickTime(TimeOfDay initial) => showTimePicker(
+        context: context,
+        initialTime: initial,
+        builder: (ctx, child) => MediaQuery(
+          data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        ),
+      );
+
   Future<void> _save() async {
     if (_title.text.trim().isEmpty) return;
     final s = context.read<Store>();
+    final startDt = _allDay
+        ? dateOnly(_start)
+        : DateTime(_start.year, _start.month, _start.day, _startTime.hour, _startTime.minute);
+    DateTime? endDt = _end;
+    if (!_allDay && _endTime != null && _type == ItemType.event) {
+      final d = _end ?? _start;
+      endDt = DateTime(d.year, d.month, d.day, _endTime!.hour, _endTime!.minute);
+      if (endDt.isBefore(startDt)) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('종료 시각이 시작보다 빨라')));
+        return;
+      }
+    }
     final base = widget.item ??
-        Item(id: '', type: _type, title: '', start: _start, ownerUid: s.uid);
+        Item(id: '', type: _type, title: '', start: startDt, ownerUid: s.uid);
     await s.save(base.copyWith(
       type: _type,
       title: _title.text.trim(),
       note: _note.text.trim(),
       location: _location.text.trim(),
-      start: _start,
-      end: _end,
-      clearEnd: _end == null,
+      start: startDt,
+      allDay: _allDay,
+      end: endDt,
+      clearEnd: endDt == null,
       categories: _cats,
       color: _color,
       clearColor: _color == null,
@@ -155,6 +188,46 @@ class _EditSheetState extends State<_EditSheet> {
                         child: Text(_end == null ? '종료일(선택)' : df.format(_end!)))),
               ],
             ]),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('종일'),
+              value: _allDay,
+              onChanged: (v) => setState(() => _allDay = v),
+            ),
+            if (!_allDay)
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.schedule, size: 18),
+                    label: Text('시작 ${_hhmm(_startTime)}'),
+                    onPressed: () async {
+                      final t = await _pickTime(_startTime);
+                      if (t != null) setState(() => _startTime = t);
+                    },
+                  ),
+                ),
+                if (_type == ItemType.event) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.schedule, size: 18),
+                      label: Text(_endTime == null ? '종료(선택)' : '종료 ${_hhmm(_endTime!)}'),
+                      onPressed: () async {
+                        final t = await _pickTime(_endTime ?? _startTime);
+                        if (t != null) setState(() => _endTime = t);
+                      },
+                    ),
+                  ),
+                  if (_endTime != null)
+                    IconButton(
+                      tooltip: '종료 시각 지우기',
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: () => setState(() => _endTime = null),
+                    ),
+                ],
+              ]),
             const SizedBox(height: 12),
             TextField(
               controller: _location,

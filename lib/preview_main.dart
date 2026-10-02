@@ -17,15 +17,15 @@ import 'ui/settings_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ko');
-  Item ev(String t, DateTime s, {DateTime? e, String c = 'default', Repeat r = Repeat.none, String owner = 'me', m.Visibility v = m.Visibility.shared}) =>
-      Item(id: t + s.toString(), type: ItemType.event, title: t, start: s, end: e, categories: [c], repeat: r, ownerUid: owner, visibility: v);
+  Item ev(String t, DateTime s, {DateTime? e, String c = 'default', Repeat r = Repeat.none, String owner = 'me', m.Visibility v = m.Visibility.shared, bool timed = false}) =>
+      Item(id: t + s.toString(), type: ItemType.event, title: t, start: s, end: e, categories: [c], repeat: r, ownerUid: owner, visibility: v, allDay: !timed, location: timed ? '판교 사옥' : '');
   Item todo(String t, DateTime s, {String c = 'default', Repeat r = Repeat.none, String owner = 'me', bool done = false, m.Visibility v = m.Visibility.shared, bool roll = false}) =>
       Item(id: t + s.toString(), type: ItemType.todo, title: t, start: s, categories: [c], repeat: r, ownerUid: owner, done: done, visibility: v, rollEvery: roll ? 1 : 0);
   final items = [
     ev('오키나와 여행', DateTime(2026, 10, 14), e: DateTime(2026, 10, 17), c: 'travel'),
     ev('Arsenal vs Leeds', DateTime(2026, 10, 10), c: 'family'),
     ev('Arsenal vs Everton', DateTime(2026, 10, 24), c: 'family'),
-    ev('정기점검', DateTime(2026, 10, 7), c: 'work'),
+    ev('정기점검', DateTime(2026, 10, 7, 15, 0), e: DateTime(2026, 10, 7, 16, 30), c: 'work', timed: true),
     ev('정기점검', DateTime(2026, 10, 21), c: 'work'),
     ev('민아 발주', DateTime(2026, 10, 9), c: 'family', owner: 'mina'),
     ev('대희 축구 교실', DateTime(2026, 10, 27), c: 'kid'),
@@ -52,6 +52,8 @@ Widget _start() {
       return const SettingsScreen();
     case 'edit':
       return const _OpenEdit();
+    case 'edit-timed':
+      return const _OpenEdit(timed: true);
     case 'edit-roll':
       return const _OpenEdit(roll: true);
     case 'categories':
@@ -61,8 +63,8 @@ Widget _start() {
 }
 
 class _OpenEdit extends StatefulWidget {
-  final bool roll;
-  const _OpenEdit({this.roll = false});
+  final bool roll, timed;
+  const _OpenEdit({this.roll = false, this.timed = false});
   @override
   State<_OpenEdit> createState() => _OpenEditState();
 }
@@ -76,7 +78,12 @@ class _OpenEditState extends State<_OpenEdit> {
           ? m.Item(
               id: 'r', type: ItemType.todo, title: '아침 약', start: DateTime(2026, 10, 2), ownerUid: 'me',
               categories: const ['family', 'kid'], rollEvery: 1, visibility: m.Visibility.private)
-          : null;
+          : widget.timed
+              ? m.Item(
+                  id: 't', type: ItemType.event, title: '정기점검', start: DateTime(2026, 10, 7, 15, 0),
+                  end: DateTime(2026, 10, 7, 16, 30), allDay: false, location: '판교 사옥', ownerUid: 'me',
+                  categories: const ['work'])
+              : null;
       showEditSheet(context, day: DateTime(2026, 10, 14), item: item);
     });
   }

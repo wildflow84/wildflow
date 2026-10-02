@@ -222,7 +222,7 @@ class Store extends ChangeNotifier {
   Future<Item?> toggleDone(Item i, DateTime day) async {
     final now = DateTime.now();
     if (i.isRolling) {
-      final next = nextRollDate(i, now);
+      final next = rollStart(i, now);
       final log = [...i.doneDates, dateKey(now)];
       await save(i.copyWith(
         start: next,
