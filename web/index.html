@@ -31,6 +31,28 @@
 
   <title>ourday</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    // 카카오 지도 JS SDK를 처음 검색할 때 불러와 장소를 검색한다 (JSON 문자열 반환)
+    window.ourdayKakaoSearch = function (key, query) {
+      return new Promise(function (resolve, reject) {
+        function run() {
+          kakao.maps.load(function () {
+            new kakao.maps.services.Places().keywordSearch(query, function (data, status) {
+              if (status === kakao.maps.services.Status.OK) resolve(JSON.stringify(data));
+              else if (status === kakao.maps.services.Status.ZERO_RESULT) resolve('[]');
+              else reject(new Error('kakao ' + status));
+            });
+          });
+        }
+        if (window.kakao && window.kakao.maps) return run();
+        var s = document.createElement('script');
+        s.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + encodeURIComponent(key) + '&libraries=services&autoload=false';
+        s.onload = run;
+        s.onerror = function () { reject(new Error('kakao sdk load failed')); };
+        document.head.appendChild(s);
+      });
+    };
+  </script>
 </head>
 <body>
   <!--

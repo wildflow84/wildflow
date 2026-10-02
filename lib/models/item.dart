@@ -21,6 +21,9 @@ class Item {
   final String title;
   final String note;
   final String location; // 위치(장소 이름/주소). 지도 앱으로 열 수 있다.
+  final double? lat; // 장소 검색으로 고른 좌표 (직접 입력한 위치는 null)
+  final double? lng;
+  final bool overseas; // 해외 장소 (출발 시간 계산에 쓸 서비스 구분)
   final DateTime start; // 날짜만 쓰는 경우 00:00
   final DateTime? end; // 멀티데이 일정의 마지막 날 (포함)
   final bool allDay;
@@ -74,6 +77,9 @@ class Item {
     required this.ownerUid,
     this.note = '',
     this.location = '',
+    this.lat,
+    this.lng,
+    this.overseas = false,
     this.end,
     this.allDay = true,
     this.done = false,
@@ -98,6 +104,10 @@ class Item {
     String? title,
     String? note,
     String? location,
+    double? lat,
+    double? lng,
+    bool clearCoords = false,
+    bool? overseas,
     DateTime? start,
     DateTime? end,
     bool clearEnd = false,
@@ -129,6 +139,9 @@ class Item {
         title: title ?? this.title,
         note: note ?? this.note,
         location: location ?? this.location,
+        lat: clearCoords ? null : (lat ?? this.lat),
+        lng: clearCoords ? null : (lng ?? this.lng),
+        overseas: clearCoords ? false : (overseas ?? this.overseas),
         start: start ?? this.start,
         end: clearEnd ? null : (end ?? this.end),
         allDay: allDay ?? this.allDay,
@@ -154,6 +167,9 @@ class Item {
         'title': title,
         'note': note,
         'location': location,
+        'lat': lat,
+        'lng': lng,
+        'overseas': overseas,
         'start': Timestamp.fromDate(start),
         'end': end == null ? null : Timestamp.fromDate(end!),
         'allDay': allDay,
@@ -186,6 +202,9 @@ class Item {
       title: m['title'] ?? '',
       note: m['note'] ?? '',
       location: m['location'] ?? '',
+      lat: (m['lat'] as num?)?.toDouble(),
+      lng: (m['lng'] as num?)?.toDouble(),
+      overseas: m['overseas'] ?? false,
       start: (m['start'] as Timestamp).toDate(),
       end: (m['end'] as Timestamp?)?.toDate(),
       allDay: m['allDay'] ?? true,

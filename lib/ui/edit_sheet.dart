@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../data/place_search.dart';
 import '../data/store.dart';
 import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, RepeatDelete, dateOnly, hasEndTime, repeatFor;
@@ -36,6 +39,15 @@ class _EditSheetState extends State<_EditSheet> {
   late final _title = TextEditingController(text: widget.item?.title);
   late final _note = TextEditingController(text: widget.item?.note);
   late final _location = TextEditingController(text: widget.item?.location);
+  // 장소 검색으로 고른 좌표 (위치 문구를 직접 고치면 해제)
+  late double? _lat = widget.item?.lat;
+  late double? _lng = widget.item?.lng;
+  late bool _overseas = widget.item?.overseas ?? false;
+  late String? _pickedLabel = widget.item?.lat != null ? widget.item!.location : null;
+  List<Place> _places = const [];
+  bool _searching = false;
+  String? _searchError;
+  Timer? _searchDebounce;
   late DateTime _start = widget.item?.start ?? dateOnly(widget.day);
   late DateTime? _end = widget.item?.end == null ? null : dateOnly(widget.item!.end!);
   late bool _allDay = widget.item?.allDay ?? true;
@@ -183,6 +195,10 @@ class _EditSheetState extends State<_EditSheet> {
       title: _title.text.trim(),
       note: _note.text.trim(),
       location: _type == ItemType.event ? _location.text.trim() : '', // 위치는 일정만
+      lat: _type == ItemType.event ? _lat : null,
+      lng: _type == ItemType.event ? _lng : null,
+      overseas: _type == ItemType.event && _overseas,
+      clearCoords: _type != ItemType.event || _lat == null,
       start: startDt,
       allDay: _allDay,
       end: endDt,
@@ -202,6 +218,56 @@ class _EditSheetState extends State<_EditSheet> {
       clearRollRule: rollRule == null,
     ));
     if (mounted) Navigator.pop(context);
+  }
+
+  void _onLocationChanged(String text) {
+    if (_pickedLabel != null && text != _pickedLabel) {
+      // 고른 장소 문구를 직접 고치면 좌표는 더 이상 맞지 않는다
+      _pickedLabel = null;
+      _lat = null;
+      _lng = null;
+      _overseas = false;
+    }
+    _searchDebounce?.cancel();
+    if (!placeSearchAvailable || text.trim().length < 2) {
+      setState(() {
+        _places = const [];
+        _searchError = null;
+      });
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () async {
+      setState(() => _searching = true);
+      try {
+        final r = await searchPlaces(text);
+        if (!mounted || _location.text != text) return;
+        setState(() {
+          _places = r.take(6).toList();
+          _searchError = null;
+        });
+      } catch (_) {
+        if (mounted) setState(() => _searchError = '장소 검색을 못 했어 (직접 입력해도 돼)');
+      } finally {
+        if (mounted) setState(() => _searching = false);
+      }
+    });
+  }
+
+  void _pickPlace(Place p) {
+    setState(() {
+      _pickedLabel = p.label;
+      _location.text = p.label;
+      _lat = p.lat;
+      _lng = p.lng;
+      _overseas = p.overseas;
+      _places = const [];
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
   }
 
   @override
@@ -313,12 +379,40 @@ class _EditSheetState extends State<_EditSheet> {
             if (_type == ItemType.event) ...[
               TextField(
                 controller: _location,
-                decoration: const InputDecoration(
+                onChanged: _onLocationChanged,
+                decoration: InputDecoration(
                   labelText: '위치 (선택)',
-                  hintText: '장소 이름이나 주소',
-                  prefixIcon: Icon(Icons.place_outlined),
+                  hintText: placeSearchAvailable ? '장소 이름이나 주소를 검색해' : '장소 이름이나 주소',
+                  prefixIcon: Icon(_lat != null ? Icons.place : Icons.place_outlined),
+                  suffixIcon: _searching
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))
+                      : null,
                 ),
               ),
+              if (_lat != null)
+                const Padding(
+                  padding: EdgeInsets.only(top: 4, left: 12),
+                  child: Text('📍 좌표가 저장됐어 (지도/출발 시간 계산용)',
+                      style: TextStyle(fontSize: 12, color: Colors.white54)),
+                ),
+              if (_searchError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, left: 12),
+                  child: Text(_searchError!, style: const TextStyle(fontSize: 12, color: Colors.orangeAccent)),
+                ),
+              for (final p in _places)
+                ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  leading: const Icon(Icons.place_outlined, size: 20),
+                  title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  subtitle: p.address.isEmpty
+                      ? null
+                      : Text(p.address, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  onTap: () => _pickPlace(p),
+                ),
               const SizedBox(height: 12),
             ],
             const Text('카테고리', style: TextStyle(color: Colors.white70)),
