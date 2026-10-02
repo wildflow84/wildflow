@@ -1,6 +1,6 @@
 {
-    "name": "ourday",
-    "short_name": "ourday",
+    "name": "순대희 캘린더",
+    "short_name": "순대희",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

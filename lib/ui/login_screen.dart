@@ -16,7 +16,7 @@ class LoginScreen extends StatelessWidget {
           children: [
             const Icon(Icons.calendar_month, size: 72),
             const SizedBox(height: 12),
-            Text('OurDay', style: Theme.of(context).textTheme.headlineMedium),
+            Text('순대희 캘린더', style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 4),
             const Text('우리 둘의 일정과 할 일'),
             const SizedBox(height: 32),

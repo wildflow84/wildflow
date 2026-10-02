@@ -1,4 +1,4 @@
-# OurDay
+# 순대희 캘린더
 
 대희 아빠 & 민아 전용 캘린더 + 할 일 앱. Flutter(Android + Web) / Firebase.
 
@@ -74,7 +74,7 @@ Firebase 웹/Android 키·앱 ID는 공개 값이라 `config/firebase_public.jso
 1. 대희 아빠가 Google 로그인 → "새 공간 만들기"
 2. 메뉴 → "초대 코드 복사" → 카톡으로 민아에게 전달
 3. 민아가 로그인 → 코드로 참여
-4. 홈화면 길게 눌러 위젯 → OurDay 추가
+4. 홈화면 길게 눌러 위젯 → 순대희 캘린더 추가
 
 ## TODO
 - 음력 공휴일(설날/추석/부처님오신날), 생일 음력 반복

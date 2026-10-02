@@ -28,7 +28,7 @@ class OurDayApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'OurDay',
+      title: '순대희 캘린더',
       debugShowCheckedModeBanner: false,
       locale: const Locale('ko'),
       supportedLocales: const [Locale('ko')],

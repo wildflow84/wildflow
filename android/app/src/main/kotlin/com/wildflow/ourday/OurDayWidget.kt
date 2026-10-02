@@ -17,7 +17,7 @@ class OurDayWidget : HomeWidgetProvider() {
     ) {
         appWidgetIds.forEach { id ->
             val views = RemoteViews(context.packageName, R.layout.ourday_widget).apply {
-                setTextViewText(R.id.widget_title, widgetData.getString("title", "OurDay"))
+                setTextViewText(R.id.widget_title, widgetData.getString("title", "순대희 캘린더"))
                 setTextViewText(R.id.widget_body, widgetData.getString("body", "앱을 열어서 로그인해줘"))
                 val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
                 val pi = PendingIntent.getActivity(
