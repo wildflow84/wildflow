@@ -7,7 +7,8 @@ import '../data/store.dart';
 import '../models/kr_calendar.dart';
 import '../models/lunar.dart';
 import '../models/item.dart' as m;
-import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, isDoneOn;
+import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, isDoneOn, nextRollDate, rollLabel;
+import 'category_manager.dart';
 import 'settings_screen.dart';
 import 'edit_sheet.dart';
 
@@ -106,6 +107,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(
                     context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
               }
+              if (v == 'categories') {
+                Navigator.push(
+                    context, MaterialPageRoute(builder: (_) => const CategoryManagerScreen()));
+              }
               if (v == 'out') s.repo.signOut();
               if (v == 'code') {
                 Clipboard.setData(ClipboardData(text: s.spaceId!));
@@ -114,7 +119,8 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 'settings', child: Text('설정 (카테고리, 기본 공개 범위)')),
+              PopupMenuItem(value: 'categories', child: Text('카테고리 관리')),
+              PopupMenuItem(value: 'settings', child: Text('설정 (기본 공개 범위 등)')),
               PopupMenuItem(value: 'code', child: Text('초대 코드 복사')),
               PopupMenuItem(value: 'out', child: Text('로그아웃')),
             ],
@@ -291,9 +297,11 @@ class _DayCell extends StatelessWidget {
       lines.add(_Chip(
         text: i.title,
         color: s0.colorOf(i),
+        extraDots: [for (final c in s0.categoriesOf(i).skip(1)) c.color],
         isTodo: i.type == ItemType.todo,
         done: isDoneOn(i, day),
         isPrivate: i.visibility == m.Visibility.private,
+        isRolling: i.isRolling,
       ));
     }
     for (final mk in marks.where((m) => !m.isHoliday)) {
@@ -371,12 +379,16 @@ class _Chip extends StatelessWidget {
   final String text;
   final Color color;
   final bool isTodo, done, isPrivate;
+  final List<Color> extraDots; // 두 번째 이후 카테고리 색
+  final bool isRolling;
   const _Chip({
     required this.text,
     required this.color,
     this.isTodo = false,
     this.done = false,
     this.isPrivate = false,
+    this.extraDots = const [],
+    this.isRolling = false,
   });
 
   @override
@@ -391,6 +403,7 @@ class _Chip extends StatelessWidget {
       child: Row(children: [
         if (isTodo) Icon(done ? Icons.check_circle : Icons.radio_button_unchecked, size: 9),
         if (isPrivate) const Icon(Icons.lock, size: 8),
+        if (isRolling) const Icon(Icons.autorenew, size: 9),
         Expanded(
           child: Text(text,
               maxLines: 1,
@@ -399,6 +412,14 @@ class _Chip extends StatelessWidget {
                   fontSize: 9,
                   decoration: done ? TextDecoration.lineThrough : null)),
         ),
+        for (final c in extraDots)
+          Container(
+            width: 6,
+            height: 6,
+            margin: const EdgeInsets.only(left: 2),
+            decoration: BoxDecoration(
+                color: c, shape: BoxShape.circle, border: Border.all(color: Colors.white70, width: 0.5)),
+          ),
       ]),
     );
   }
@@ -513,23 +534,39 @@ class _ItemTile extends StatelessWidget {
     final s = context.read<Store>();
     final done = isDoneOn(item, day);
     final mine = item.ownerUid == s.uid;
+    final canEdit = mine || item.visibility == m.Visibility.shared; // 같이 보기 항목은 같이 편집
     final itemColor = s.colorOf(item);
     return ListTile(
       leading: item.type == ItemType.todo
           ? Checkbox(
               value: done,
-              onChanged: mine ? (_) => s.toggleDone(item, day) : null)
+              onChanged: canEdit
+                  ? (_) async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final prev = await s.toggleDone(item, day);
+                      if (prev != null) {
+                        final next = DateFormat('M월 d일 (E)', 'ko').format(nextRollDate(prev, DateTime.now()));
+                        messenger.hideCurrentSnackBar();
+                        messenger.showSnackBar(SnackBar(
+                          content: Text('"${item.title}" 완료 → $next(으)로 이동'),
+                          action: SnackBarAction(label: '되돌리기', onPressed: () => s.undoRoll(prev)),
+                        ));
+                      }
+                    }
+                  : null)
           : Icon(Icons.circle, color: itemColor, size: 14),
       title: Text(item.title,
           style: TextStyle(
               decoration: done ? TextDecoration.lineThrough : null)),
       subtitle: Text([
         if (!mine) s.ownerName(item),
+        s.categoriesOf(item).map((c) => c.name).join('·'),
         if (item.visibility == m.Visibility.private) '프라이빗',
+        if (item.isRolling) '↻ ${rollLabel(item)} (완료하면 다음 일정으로)',
         if (item.repeat != Repeat.none) '반복',
         if (item.note.isNotEmpty) item.note,
       ].join(' · ')),
-      onTap: mine ? () => showEditSheet(context, item: item, day: day) : null,
+      onTap: canEdit ? () => showEditSheet(context, item: item, day: day) : null,
     );
   }
 }

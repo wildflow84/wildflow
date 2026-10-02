@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../data/store.dart';
 import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, Repeat, dateOnly;
-import 'category_dialog.dart';
+import 'category_manager.dart';
 import 'color_picker.dart';
 
 Future<void> showEditSheet(BuildContext context,
@@ -33,11 +33,14 @@ class _EditSheetState extends State<_EditSheet> {
   late final _note = TextEditingController(text: widget.item?.note);
   late DateTime _start = widget.item?.start ?? dateOnly(widget.day);
   late DateTime? _end = widget.item?.end;
-  late String _category;
+  late List<String> _cats; // 선택 순서 유지. 첫 번째가 대표(색상)
   late m.Visibility _vis;
   late bool _visTouched = widget.item != null; // 직접 바꾸면 카테고리 기본값으로 덮어쓰지 않는다
   late int? _color = widget.item?.color; // null이면 카테고리 색
   late Repeat _repeat = widget.item?.repeat ?? Repeat.none;
+  late int _rollEvery = widget.item?.rollEvery ?? 0; // 0이면 이동형 반복 아님
+  late m.RollUnit _rollUnit = widget.item?.rollUnit ?? m.RollUnit.day;
+  late bool _rollFromCompletion = widget.item?.rollFromCompletion ?? true;
 
   static const _repeatLabels = {
     Repeat.none: '반복 안 함',
@@ -51,15 +54,20 @@ class _EditSheetState extends State<_EditSheet> {
   void initState() {
     super.initState();
     final s = context.read<Store>();
-    _category = widget.item?.category ?? s.categories.first.id;
-    _vis = widget.item?.visibility ?? s.visibilityFor(_category);
+    _cats = [...(widget.item?.categories ?? [s.categories.first.id])];
+    _vis = widget.item?.visibility ?? s.visibilityFor(_cats);
   }
 
-  void _selectCategory(String id) {
+  /// 카테고리 선택/해제. 하나는 항상 남긴다.
+  void _toggleCategory(String id) {
     final s = context.read<Store>();
     setState(() {
-      _category = id;
-      if (!_visTouched) _vis = s.visibilityFor(id);
+      if (_cats.contains(id)) {
+        if (_cats.length > 1) _cats.remove(id);
+      } else {
+        _cats.add(id);
+      }
+      if (!_visTouched) _vis = s.visibilityFor(_cats);
     });
   }
 
@@ -93,11 +101,14 @@ class _EditSheetState extends State<_EditSheet> {
       start: _start,
       end: _end,
       clearEnd: _end == null,
-      category: _category,
+      categories: _cats,
       color: _color,
       clearColor: _color == null,
       visibility: _vis,
-      repeat: _repeat,
+      repeat: _type == ItemType.todo && _rollEvery > 0 ? Repeat.none : _repeat,
+      rollEvery: _type == ItemType.todo ? _rollEvery : 0,
+      rollUnit: _rollUnit,
+      rollFromCompletion: _rollFromCompletion,
     ));
     if (mounted) Navigator.pop(context);
   }
@@ -106,7 +117,9 @@ class _EditSheetState extends State<_EditSheet> {
   Widget build(BuildContext context) {
     final s = context.watch<Store>();
     final df = DateFormat('y.M.d (E)', 'ko');
-    final catColor = s.categoryOf(_category).color;
+    final catColor = s.categoryOf(_cats.first).color;
+    // 상대가 만든 같이 보기 항목은 내용은 같이 고치되, 공개 범위는 만든 사람만 바꾼다.
+    final isOwner = widget.item == null || widget.item!.ownerUid == s.uid;
     return Padding(
       padding: EdgeInsets.fromLTRB(
           16, 16, 16, MediaQuery.viewInsetsOf(context).bottom + 16),
@@ -141,23 +154,26 @@ class _EditSheetState extends State<_EditSheet> {
               ],
             ]),
             const SizedBox(height: 12),
-            const Text('카테고리', style: TextStyle(color: Colors.white70)),
+            Row(children: [
+              const Text('카테고리', style: TextStyle(color: Colors.white70)),
+              const SizedBox(width: 8),
+              const Text('여러 개 선택 가능 · 첫 번째가 대표 색',
+                  style: TextStyle(color: Colors.white38, fontSize: 11)),
+            ]),
             const SizedBox(height: 6),
             Wrap(spacing: 8, runSpacing: 4, children: [
               for (final c in s.categories)
-                ChoiceChip(
+                FilterChip(
                   label: Text(c.name),
                   avatar: CircleAvatar(backgroundColor: c.color, radius: 6),
-                  selected: _category == c.id,
-                  onSelected: (_) => _selectCategory(c.id),
+                  selected: _cats.contains(c.id),
+                  onSelected: (_) => _toggleCategory(c.id),
                 ),
               ActionChip(
-                avatar: const Icon(Icons.add, size: 16),
-                label: const Text('새 카테고리'),
-                onPressed: () async {
-                  final id = await showCategoryDialog(context);
-                  if (id != null && mounted) _selectCategory(id);
-                },
+                avatar: const Icon(Icons.edit, size: 16),
+                label: const Text('카테고리 편집'),
+                onPressed: () => Navigator.push(
+                    context, MaterialPageRoute(builder: (_) => const CategoryManagerScreen())),
               ),
             ]),
             const SizedBox(height: 8),
@@ -192,11 +208,68 @@ class _EditSheetState extends State<_EditSheet> {
                 for (final e in _repeatLabels.entries)
                   DropdownMenuItem(value: e.key, child: Text(e.value)),
               ],
-              onChanged: (v) => setState(() {
-                _repeat = v!;
-                if (v != Repeat.none) _end = null;
-              }),
+              onChanged: _rollEvery > 0
+                  ? null
+                  : (v) => setState(() {
+                        _repeat = v!;
+                        if (v != Repeat.none) _end = null;
+                      }),
             ),
+            if (_type == ItemType.todo) ...[
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('완료하면 다음 일정으로 이동'),
+                subtitle: const Text('캘린더에는 하나만 보이고, 완료하면 날짜가 자동으로 넘어가. 약 먹기 같은 매일 확인용.',
+                    style: TextStyle(fontSize: 12)),
+                value: _rollEvery > 0,
+                onChanged: (v) => setState(() {
+                  _rollEvery = v ? 1 : 0;
+                  if (v) _repeat = Repeat.none;
+                }),
+              ),
+              if (_rollEvery > 0) ...[
+                Row(children: [
+                  const Text('매'),
+                  const SizedBox(width: 8),
+                  DropdownButton<int>(
+                    value: _rollEvery,
+                    items: [for (var n = 1; n <= 31; n++) DropdownMenuItem(value: n, child: Text('$n'))],
+                    onChanged: (v) => setState(() => _rollEvery = v!),
+                  ),
+                  const SizedBox(width: 8),
+                  DropdownButton<m.RollUnit>(
+                    value: _rollUnit,
+                    items: const [
+                      DropdownMenuItem(value: m.RollUnit.day, child: Text('일')),
+                      DropdownMenuItem(value: m.RollUnit.week, child: Text('주')),
+                      DropdownMenuItem(value: m.RollUnit.month, child: Text('개월')),
+                      DropdownMenuItem(value: m.RollUnit.year, child: Text('년')),
+                    ],
+                    onChanged: (v) => setState(() => _rollUnit = v!),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('마다'),
+                ]),
+                const SizedBox(height: 8),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(value: true, label: Text('완료한 날 기준')),
+                    ButtonSegment(value: false, label: Text('예정일 기준')),
+                  ],
+                  selected: {_rollFromCompletion},
+                  onSelectionChanged: (v) => setState(() => _rollFromCompletion = v.first),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    _rollFromCompletion
+                        ? '늦게 완료해도 완료한 날부터 다시 세어. (약 먹기에 알맞아)'
+                        : '늦게 완료해도 원래 주기를 유지해. (월세, 정기 점검에 알맞아)',
+                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  ),
+                ),
+              ],
+            ],
             const SizedBox(height: 12),
             SegmentedButton<m.Visibility>(
               segments: const [
@@ -206,11 +279,21 @@ class _EditSheetState extends State<_EditSheet> {
                     value: m.Visibility.shared, icon: Icon(Icons.people), label: Text('같이 보기')),
               ],
               selected: {_vis},
-              onSelectionChanged: (v) => setState(() {
-                _vis = v.first;
-                _visTouched = true;
-              }),
+              onSelectionChanged: isOwner
+                  ? (v) => setState(() {
+                        _vis = v.first;
+                        _visTouched = true;
+                      })
+                  : null,
             ),
+            if (!isOwner)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '${s.ownerName(widget.item!)}이(가) 만든 같이 보기 항목이라 공개 범위는 만든 사람만 바꿀 수 있어.',
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+              ),
             const SizedBox(height: 12),
             TextField(
               controller: _note,
@@ -218,7 +301,7 @@ class _EditSheetState extends State<_EditSheet> {
             ),
             const SizedBox(height: 16),
             Row(children: [
-              if (widget.item != null)
+              if (widget.item != null && isOwner)
                 TextButton(
                   onPressed: () async {
                     await context.read<Store>().delete(widget.item!);

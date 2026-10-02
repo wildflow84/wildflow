@@ -173,12 +173,26 @@ class Store extends ChangeNotifier {
   Category categoryOf(String id) => categories.firstWhere((c) => c.id == id,
       orElse: () => categories.isNotEmpty ? categories.first : defaultCategories.first);
 
-  /// 항목 색: 항목별 색 > 카테고리 색
-  Color colorOf(Item i) => i.color != null ? Color(i.color!) : categoryOf(i.category).color;
+  /// 항목의 카테고리들 (삭제된 카테고리는 빼고, 하나도 없으면 첫 카테고리)
+  List<Category> categoriesOf(Item i) {
+    final list = [
+      for (final id in i.categories)
+        for (final c in categories)
+          if (c.id == id) c
+    ];
+    return list.isEmpty ? [categoryOf(i.category)] : list;
+  }
 
-  /// 새 항목의 공개 범위: 카테고리 기본값 > 내 기본 설정
-  m.Visibility visibilityFor(String categoryId) =>
-      categoryOf(categoryId).defaultVisibility ?? defaultVisibility;
+  /// 항목 색: 항목별 색 > 대표(첫 번째) 카테고리 색
+  Color colorOf(Item i) => i.color != null ? Color(i.color!) : categoriesOf(i).first.color;
+
+  /// 새 항목의 공개 범위: 선택한 카테고리 중 하나라도 "나만"이면 나만 > 카테고리 기본값 > 내 기본 설정
+  m.Visibility visibilityFor(List<String> categoryIds) {
+    final defaults = [for (final id in categoryIds) categoryOf(id).defaultVisibility];
+    if (defaults.contains(m.Visibility.private)) return m.Visibility.private;
+    if (defaults.contains(m.Visibility.shared)) return m.Visibility.shared;
+    return defaultVisibility;
+  }
 
   Future<void> setDefaultVisibility(m.Visibility v) async {
     defaultVisibility = v;
@@ -188,6 +202,14 @@ class Store extends ChangeNotifier {
 
   Future<String> saveCategory(Category c) => repo.saveCategory(spaceId!, c);
 
+  /// 드래그로 바꾼 순서를 저장
+  Future<void> reorderCategories(List<Category> ordered) {
+    final updated = [for (var i = 0; i < ordered.length; i++) ordered[i].copyWith(order: i)];
+    categories = updated;
+    notifyListeners();
+    return repo.saveCategories(spaceId!, updated);
+  }
+
   Future<void> deleteCategory(Category c) => repo.deleteCategory(spaceId!, c.id);
 
   String ownerName(Item i) => names[i.ownerUid] ?? '';
@@ -195,13 +217,35 @@ class Store extends ChangeNotifier {
   Future<void> save(Item i) => repo.save(spaceId!, i);
   Future<void> delete(Item i) => repo.delete(spaceId!, i.id);
 
-  Future<void> toggleDone(Item i, DateTime day) {
-    if (i.repeat == Repeat.none) return save(i.copyWith(done: !i.done));
+  /// 완료 토글. 이동형 반복은 완료 대신 날짜가 다음 일정으로 넘어간다.
+  /// 되돌리기용으로 변경 전 항목을 돌려준다 (이동형일 때만).
+  Future<Item?> toggleDone(Item i, DateTime day) async {
+    final now = DateTime.now();
+    if (i.isRolling) {
+      final next = nextRollDate(i, now);
+      final log = [...i.doneDates, dateKey(now)];
+      await save(i.copyWith(
+        start: next,
+        done: false,
+        doneDates: log.length > 60 ? log.sublist(log.length - 60) : log, // 최근 60회만
+        lastDoneBy: uid,
+        lastDoneAt: now,
+      ));
+      return i;
+    }
+    if (i.repeat == Repeat.none) {
+      await save(i.copyWith(done: !i.done, lastDoneBy: uid, lastDoneAt: now));
+      return null;
+    }
     final k = dateKey(day);
     final dd = [...i.doneDates];
     dd.contains(k) ? dd.remove(k) : dd.add(k);
-    return save(i.copyWith(doneDates: dd));
+    await save(i.copyWith(doneDates: dd, lastDoneBy: uid, lastDoneAt: now));
+    return null;
   }
+
+  /// 이동형 완료 되돌리기
+  Future<void> undoRoll(Item previous) => save(previous);
 
   @override
   void dispose() {

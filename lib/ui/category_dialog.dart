@@ -64,20 +64,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
         if (widget.edit != null)
           TextButton(
             onPressed: () async {
-              final ok = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: Text('"${widget.edit!.name}" 삭제'),
-                  content: const Text('이 카테고리의 항목은 지워지지 않고, 기본 색으로 표시돼.'),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('취소')),
-                    FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('삭제')),
-                  ],
-                ),
-              );
-              if (ok == true) {
-                await s.deleteCategory(widget.edit!);
-                if (context.mounted) Navigator.pop(context);
+              if (await confirmDeleteCategory(context, widget.edit!) && context.mounted) {
+                Navigator.pop(context);
               }
             },
             child: const Text('삭제', style: TextStyle(color: Colors.redAccent)),
@@ -102,4 +90,23 @@ class _CategoryDialogState extends State<_CategoryDialog> {
       ],
     );
   }
+}
+
+/// 삭제 확인 후 삭제. 삭제했으면 true.
+Future<bool> confirmDeleteCategory(BuildContext context, Category c) async {
+  final s = context.read<Store>();
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text('"${c.name}" 삭제'),
+      content: const Text('이 카테고리가 붙은 항목은 지워지지 않아. 다른 카테고리가 있으면 그걸로, 없으면 기본 색으로 보여.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('취소')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('삭제')),
+      ],
+    ),
+  );
+  if (ok != true) return false;
+  await s.deleteCategory(c);
+  return true;
 }

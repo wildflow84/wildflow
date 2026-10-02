@@ -163,6 +163,15 @@ class Repository {
     return ref.id;
   }
 
+  Future<void> saveCategories(String spaceId, List<Category> list) async {
+    final col = _db.collection('spaces').doc(spaceId).collection('categories');
+    final batch = _db.batch();
+    for (final c in list) {
+      batch.set(col.doc(c.id), c.toMap());
+    }
+    await batch.commit();
+  }
+
   Future<void> deleteCategory(String spaceId, String id) =>
       _db.collection('spaces').doc(spaceId).collection('categories').doc(id).delete();
 

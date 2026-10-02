@@ -9,6 +9,7 @@ import 'data/store.dart';
 import 'main.dart';
 import 'models/item.dart' as m;
 import 'models/item.dart' show Item, ItemType, Repeat;
+import 'ui/category_manager.dart';
 import 'ui/edit_sheet.dart';
 import 'ui/home_screen.dart';
 import 'ui/settings_screen.dart';
@@ -17,9 +18,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ko');
   Item ev(String t, DateTime s, {DateTime? e, String c = 'default', Repeat r = Repeat.none, String owner = 'me', m.Visibility v = m.Visibility.shared}) =>
-      Item(id: t + s.toString(), type: ItemType.event, title: t, start: s, end: e, category: c, repeat: r, ownerUid: owner, visibility: v);
-  Item todo(String t, DateTime s, {String c = 'default', Repeat r = Repeat.none, String owner = 'me', bool done = false, m.Visibility v = m.Visibility.shared}) =>
-      Item(id: t + s.toString(), type: ItemType.todo, title: t, start: s, category: c, repeat: r, ownerUid: owner, done: done, visibility: v);
+      Item(id: t + s.toString(), type: ItemType.event, title: t, start: s, end: e, categories: [c], repeat: r, ownerUid: owner, visibility: v);
+  Item todo(String t, DateTime s, {String c = 'default', Repeat r = Repeat.none, String owner = 'me', bool done = false, m.Visibility v = m.Visibility.shared, bool roll = false}) =>
+      Item(id: t + s.toString(), type: ItemType.todo, title: t, start: s, categories: [c], repeat: r, ownerUid: owner, done: done, visibility: v, rollEvery: roll ? 1 : 0);
   final items = [
     ev('오키나와 여행', DateTime(2026, 10, 14), e: DateTime(2026, 10, 17), c: 'travel'),
     ev('Arsenal vs Leeds', DateTime(2026, 10, 10), c: 'family'),
@@ -33,8 +34,8 @@ Future<void> main() async {
     todo('퇴직연금 매수', DateTime(2026, 9, 29), c: 'money', r: Repeat.monthly),
     todo('연금복권 구매', DateTime(2026, 10, 1), c: 'money', r: Repeat.weekly),
     todo('면도기 청소', DateTime(2026, 10, 2), done: true),
-    todo('아침 약', DateTime(2026, 10, 2), r: Repeat.daily, v: m.Visibility.private),
-    todo('저녁 약', DateTime(2026, 10, 2), r: Repeat.daily, v: m.Visibility.private),
+    todo('아침 약', DateTime(2026, 10, 2), c: 'family', v: m.Visibility.private, roll: true),
+    todo('저녁 약', DateTime(2026, 10, 2), c: 'family', v: m.Visibility.private, roll: true),
     todo('대희 증여세', DateTime(2026, 10, 30), c: 'kid'),
   ];
   runApp(ChangeNotifierProvider(
@@ -51,12 +52,17 @@ Widget _start() {
       return const SettingsScreen();
     case 'edit':
       return const _OpenEdit();
+    case 'edit-roll':
+      return const _OpenEdit(roll: true);
+    case 'categories':
+      return const CategoryManagerScreen();
   }
   return const HomeScreen();
 }
 
 class _OpenEdit extends StatefulWidget {
-  const _OpenEdit();
+  final bool roll;
+  const _OpenEdit({this.roll = false});
   @override
   State<_OpenEdit> createState() => _OpenEditState();
 }
@@ -65,7 +71,14 @@ class _OpenEditState extends State<_OpenEdit> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => showEditSheet(context, day: DateTime(2026, 10, 14)));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final item = widget.roll
+          ? m.Item(
+              id: 'r', type: ItemType.todo, title: '아침 약', start: DateTime(2026, 10, 2), ownerUid: 'me',
+              categories: const ['family', 'kid'], rollEvery: 1, visibility: m.Visibility.private)
+          : null;
+      showEditSheet(context, day: DateTime(2026, 10, 14), item: item);
+    });
   }
 
   @override

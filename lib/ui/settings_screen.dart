@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../data/store.dart';
 import '../models/item.dart' as m;
-import 'category_dialog.dart';
+import 'category_manager.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -40,22 +40,13 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const _Header('카테고리'),
-          for (final c in s.categories)
-            ListTile(
-              leading: CircleAvatar(backgroundColor: c.color, radius: 12),
-              title: Text(c.name),
-              subtitle: Text(c.defaultVisibility == null
-                  ? '기본 공개 범위: 내 설정 따름'
-                  : c.defaultVisibility == m.Visibility.private
-                      ? '항상 나만 보기'
-                      : '항상 같이 보기'),
-              trailing: const Icon(Icons.edit, size: 18),
-              onTap: () => showCategoryDialog(context, edit: c),
-            ),
           ListTile(
-            leading: const Icon(Icons.add_circle_outline),
-            title: const Text('카테고리 추가'),
-            onTap: () => showCategoryDialog(context),
+            leading: const Icon(Icons.label_outline),
+            title: const Text('카테고리 관리'),
+            subtitle: Text('${s.categories.length}개 · 추가, 수정, 삭제, 순서 변경'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const CategoryManagerScreen())),
           ),
           const Divider(height: 32),
           const _Header('공유 공간'),

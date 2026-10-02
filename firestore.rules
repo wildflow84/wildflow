@@ -50,9 +50,17 @@ service cloud.firestore {
 
         allow create: if isMember() && request.resource.data.ownerUid == request.auth.uid;
 
-        // 수정/삭제는 소유자만 (소유자 변경 불가)
-        allow update: if isMember() && resource.data.ownerUid == request.auth.uid
-          && request.resource.data.ownerUid == request.auth.uid;
+        // 수정: 소유자는 모두 가능. 같이 보기(shared) 항목은 상대도 고칠 수 있지만
+        // 소유자와 공개 범위는 바꿀 수 없다. (공개 범위 변경으로 상대 항목이 사라지는 것을 막음)
+        allow update: if isMember() && (
+          (resource.data.ownerUid == request.auth.uid
+            && request.resource.data.ownerUid == request.auth.uid)
+          || (resource.data.visibility == 'shared'
+            && request.resource.data.visibility == 'shared'
+            && request.resource.data.ownerUid == resource.data.ownerUid)
+        );
+
+        // 삭제는 소유자만
         allow delete: if isMember() && resource.data.ownerUid == request.auth.uid;
       }
     }
