@@ -666,6 +666,16 @@ class _DayCell extends StatelessWidget {
     return l.day == 1 ? '${l.leap ? '윤' : ''}${l.month}.1' : '${l.day}';
   }
 
+  String? _backdropFor(Store s) {
+    for (final i in s.visibleItems) {
+      if (i.type == ItemType.event && i.photoUrl != null && i.end != null && !i.isRecurring) {
+        final a = dateOnly(i.start), b = dateOnly(i.end!);
+        if (b.isAfter(a) && !day.isBefore(a) && !day.isAfter(b)) return i.photoUrl;
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final s0 = context.watch<Store>();
@@ -676,6 +686,8 @@ class _DayCell extends StatelessWidget {
         : day.weekday == DateTime.saturday
             ? Colors.lightBlueAccent
             : null;
+
+    final backdrop = _backdropFor(s0);
 
     // 공휴일 → 내 일정/할 일 → 절기·기념일 순으로 채우고, 넘치면 +N
     final lines = <Widget>[];
@@ -699,6 +711,14 @@ class _DayCell extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: candidates.isNotEmpty ? Colors.lightGreenAccent.withValues(alpha: 0.12) : null,
+          // 사진이 있는 여러 날 일정(여행 등)이 걸친 날은 그 장소 사진을 옅게 깐다
+          image: backdrop == null
+              ? null
+              : DecorationImage(
+                  image: NetworkImage(backdrop),
+                  fit: BoxFit.cover,
+                  opacity: 0.28,
+                  onError: (_, _) {}),
           border: Border.all(
               color: candidates.isNotEmpty
                   ? Colors.lightGreenAccent
@@ -963,7 +983,7 @@ class _ItemTile extends StatelessWidget {
     final mine = item.ownerUid == s.uid;
     final canEdit = mine || item.visibility == m.Visibility.shared; // 같이 보기 항목은 같이 편집
     final itemColor = s.colorOf(item);
-    return ListTile(
+    final tile = ListTile(
       leading: item.type == ItemType.todo
           ? Checkbox(
               value: done,
@@ -1016,6 +1036,19 @@ class _ItemTile extends StatelessWidget {
             ),
       onTap: canEdit ? () => showEditSheet(context, item: item, day: day) : null,
     );
+    if (item.type != ItemType.event || item.photoUrl == null) return tile;
+    // 위치 사진이 있으면 구글 캘린더처럼 일정 위에 배너로 보여준다
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.network(item.photoUrl!,
+              height: 96, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink()),
+        ),
+      ),
+      tile,
+    ]);
   }
 }
 

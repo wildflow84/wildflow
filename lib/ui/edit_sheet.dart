@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../data/place_photo.dart';
 import '../data/place_search.dart';
 import '../data/store.dart';
 import '../models/item.dart' as m;
@@ -48,6 +49,8 @@ class _EditSheetState extends State<_EditSheet> {
   bool _searching = false;
   String? _searchError;
   Timer? _searchDebounce;
+  Timer? _photoDebounce;
+  late String? _photoUrl = widget.item?.photoUrl;
   late DateTime _start = widget.item?.start ?? dateOnly(widget.day);
   late DateTime? _end = widget.item?.end == null ? null : dateOnly(widget.item!.end!);
   late bool _allDay = widget.item?.allDay ?? true;
@@ -199,6 +202,8 @@ class _EditSheetState extends State<_EditSheet> {
       lng: _type == ItemType.event ? _lng : null,
       overseas: _type == ItemType.event && _overseas,
       clearCoords: _type != ItemType.event || _lat == null,
+      photoUrl: _type == ItemType.event ? _photoUrl : null,
+      clearPhoto: _type != ItemType.event || _photoUrl == null,
       start: startDt,
       allDay: _allDay,
       end: endDt,
@@ -228,6 +233,7 @@ class _EditSheetState extends State<_EditSheet> {
       _lng = null;
       _overseas = false;
     }
+    _schedulePhoto(text);
     _searchDebounce?.cancel();
     if (!placeSearchAvailable || text.trim().length < 2) {
       setState(() {
@@ -253,7 +259,22 @@ class _EditSheetState extends State<_EditSheet> {
     });
   }
 
+  /// 위치 문구가 바뀌면 잠시 뒤 그 장소의 사진을 찾아 미리 보여준다 (못 찾으면 사진 없음)
+  void _schedulePhoto(String text) {
+    _photoDebounce?.cancel();
+    if (text.trim().length < 2) {
+      if (_photoUrl != null) setState(() => _photoUrl = null);
+      return;
+    }
+    _photoDebounce = Timer(const Duration(milliseconds: 800), () async {
+      final url = await fetchPlacePhoto(text);
+      if (!mounted || _location.text != text) return;
+      setState(() => _photoUrl = url);
+    });
+  }
+
   void _pickPlace(Place p) {
+    _schedulePhoto(p.label);
     setState(() {
       _pickedLabel = p.label;
       _location.text = p.label;
@@ -267,6 +288,7 @@ class _EditSheetState extends State<_EditSheet> {
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _photoDebounce?.cancel();
     super.dispose();
   }
 
@@ -401,6 +423,28 @@ class _EditSheetState extends State<_EditSheet> {
                 Padding(
                   padding: const EdgeInsets.only(top: 4, left: 12),
                   child: Text(_searchError!, style: const TextStyle(fontSize: 12, color: Colors.orangeAccent)),
+                ),
+              if (_photoUrl != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Stack(children: [
+                      Image.network(_photoUrl!,
+                          height: 120, width: double.infinity, fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const SizedBox.shrink()),
+                      Positioned(
+                        right: 4,
+                        top: 4,
+                        child: IconButton.filledTonal(
+                          tooltip: '사진 빼기',
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.close, size: 16),
+                          onPressed: () => setState(() => _photoUrl = null),
+                        ),
+                      ),
+                    ]),
+                  ),
                 ),
               for (final p in _places)
                 ListTile(

@@ -23,6 +23,7 @@ class Item {
   final String location; // 위치(장소 이름/주소). 지도 앱으로 열 수 있다.
   final double? lat; // 장소 검색으로 고른 좌표 (직접 입력한 위치는 null)
   final double? lng;
+  final String? photoUrl; // 위치 사진 (위키백과 등에서 찾은 주소)
   final bool overseas; // 해외 장소 (출발 시간 계산에 쓸 서비스 구분)
   final DateTime start; // 날짜만 쓰는 경우 00:00
   final DateTime? end; // 멀티데이 일정의 마지막 날 (포함)
@@ -80,6 +81,7 @@ class Item {
     this.lat,
     this.lng,
     this.overseas = false,
+    this.photoUrl,
     this.end,
     this.allDay = true,
     this.done = false,
@@ -108,6 +110,8 @@ class Item {
     double? lng,
     bool clearCoords = false,
     bool? overseas,
+    String? photoUrl,
+    bool clearPhoto = false,
     DateTime? start,
     DateTime? end,
     bool clearEnd = false,
@@ -142,6 +146,7 @@ class Item {
         lat: clearCoords ? null : (lat ?? this.lat),
         lng: clearCoords ? null : (lng ?? this.lng),
         overseas: clearCoords ? false : (overseas ?? this.overseas),
+        photoUrl: clearPhoto ? null : (photoUrl ?? this.photoUrl),
         start: start ?? this.start,
         end: clearEnd ? null : (end ?? this.end),
         allDay: allDay ?? this.allDay,
@@ -170,6 +175,7 @@ class Item {
         'lat': lat,
         'lng': lng,
         'overseas': overseas,
+        'photoUrl': photoUrl,
         'start': Timestamp.fromDate(start),
         'end': end == null ? null : Timestamp.fromDate(end!),
         'allDay': allDay,
@@ -205,6 +211,7 @@ class Item {
       lat: (m['lat'] as num?)?.toDouble(),
       lng: (m['lng'] as num?)?.toDouble(),
       overseas: m['overseas'] ?? false,
+      photoUrl: m['photoUrl'] as String?,
       start: (m['start'] as Timestamp).toDate(),
       end: (m['end'] as Timestamp?)?.toDate(),
       allDay: m['allDay'] ?? true,
