@@ -1,0 +1,10 @@
+{
+  "PROJECT_ID": "soondaehui",
+  "MESSAGING_SENDER_ID": "915456483126",
+  "AUTH_DOMAIN": "soondaehui.firebaseapp.com",
+  "STORAGE_BUCKET": "soondaehui.firebasestorage.app",
+  "WEB_API_KEY": "AIzaSyC8XnK7iMapc-UHnYCnhIY11NwuI29qvVA",
+  "WEB_APP_ID": "1:915456483126:web:44a6bdbf44ebc047889d97",
+  "ANDROID_API_KEY": "AIzaSyCX5l6hMiWhZRBsd7LVt2I-UTW_ceZMCEU",
+  "ANDROID_APP_ID": "1:915456483126:android:65f1e9c4773ae602889d97"
+}

@@ -30,9 +30,10 @@ firestore.rules               공유·프라이빗 보안 규칙
 7. 프로젝트 설정 → **서비스 계정** → "새 비공개 키 생성" → 받은 JSON 파일 내용을 복사
 
 ### 2. GitHub Secrets (저장소 Settings → Secrets and variables → Actions)
+Firebase 웹/Android 키·앱 ID는 공개 값이라 `config/firebase_public.json`에 커밋한다 (복붙 오류 방지). 진짜 비밀만 시크릿으로 둔다.
+
 | 이름 | 값 |
 |---|---|
-| `FIREBASE_CONFIG_JSON` | 아래 JSON |
 | `KEYSTORE_PASSPHRASE` | 16자 이상 랜덤 문자열 (서명 키 암호. 따로 보관할 것) |
 | `FIREBASE_SERVICE_ACCOUNT` | 7번의 서비스 계정 JSON 전체 |
 

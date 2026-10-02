@@ -16,7 +16,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
       KEYSTORE_PASSPHRASE: ${{ secrets.KEYSTORE_PASSPHRASE }}
       FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
     steps:
@@ -25,7 +24,7 @@ jobs:
       - name: 필수 시크릿 확인
         run: |
           missing=0
-          for v in FIREBASE_CONFIG_JSON KEYSTORE_PASSPHRASE; do
+          for v in KEYSTORE_PASSPHRASE; do
             if [ -z "${!v}" ]; then echo "::error::GitHub Secret $v 가 없어. README의 시크릿 등록 단계를 확인해줘."; missing=1; fi
           done
           [ ${#KEYSTORE_PASSPHRASE} -ge 16 ] || { echo "::error::KEYSTORE_PASSPHRASE는 16자 이상이어야 해 (공개 저장소라 약하면 위험)."; missing=1; }
@@ -33,7 +32,8 @@ jobs:
 
       - name: Firebase 설정 파일 생성
         run: |
-          printf '%s' "$FIREBASE_CONFIG_JSON" > firebase_config.json
+          # Firebase 웹/Android 키는 공개 값이라 config/firebase_public.json 에 커밋해서 쓴다 (복붙 오류 방지)
+          cp config/firebase_public.json firebase_config.json
           jq -e . firebase_config.json > /dev/null
 
       - name: Firebase 키 검증 (구글 서버에 실제로 유효한지 확인)
@@ -43,7 +43,7 @@ jobs:
             key=$(jq -r ".$name" firebase_config.json)
             code=$(curl -s -o /dev/null -w '%{http_code}' "https://identitytoolkit.googleapis.com/v1/projects?key=$key")
             echo "$name: ${key:0:8}...${key: -4} (길이 ${#key}) -> HTTP $code"
-            if [ "$code" != 200 ]; then echo "::error::$name 이 Google에서 거절됨 (HTTP $code). FIREBASE_CONFIG_JSON 시크릿을 확인해줘."; bad=1; fi
+            if [ "$code" != 200 ]; then echo "::error::$name 이 Google에서 거절됨 (HTTP $code). config/firebase_public.json 값을 확인해줘."; bad=1; fi
           done
           exit $bad
 
