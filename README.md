@@ -17,32 +17,46 @@ android/.../OurDayWidget.kt   홈화면 위젯
 firestore.rules               공유·프라이빗 보안 규칙
 ```
 
-## Firebase 설정 (최초 1회, 내 PC에서)
-```bash
-npm i -g firebase-tools && dart pub global activate flutterfire_cli
-firebase login
-firebase projects:create ourday-xxxx            # 또는 콘솔에서 생성
-flutterfire configure --project=ourday-xxxx --platforms=android,web
-```
-`flutterfire configure`가 `lib/firebase_options.dart`를 만들고 `google-services.json`을 추가해줘.
+## 설정 (PC에 아무것도 설치하지 않고, 웹 브라우저만으로)
+빌드와 배포는 GitHub Actions(`.github/workflows/build-deploy.yml`)가 한다. 이 저장소는 **공개**라서 설정값과 키는 전부 GitHub Secrets에 넣는다.
 
-콘솔에서 해야 할 것:
-1. Authentication → 로그인 방법 → **Google** 사용 설정
-2. Firestore Database 생성 (프로덕션 모드)
-3. 안드로이드 로그인용 **SHA-1 지문** 등록: `cd android && ./gradlew signingReport`
-   → Project settings → Android 앱에 추가 후 `flutterfire configure` 재실행
+### 1. Firebase 프로젝트 (https://console.firebase.google.com)
+1. 프로젝트 만들기 (Analytics는 꺼도 됨)
+2. 빌드 → **Authentication** → 시작하기 → 로그인 방법 → **Google** 사용 설정
+3. 빌드 → **Firestore Database** → 만들기 (프로덕션 모드, 위치 `asia-northeast3` 서울)
+4. 빌드 → **Hosting** → 시작하기 (안내는 건너뛰고 활성화만)
+5. 프로젝트 설정 → 내 앱 → **웹 앱 추가** (`</>`). 나오는 config 값을 메모
+6. 프로젝트 설정 → 내 앱 → **Android 앱 추가**: 패키지 이름 `com.wildflow.ourday`. `google-services.json`은 받지 않아도 됨. 앱 ID(`1:...:android:...`)와 API 키를 메모
+7. 프로젝트 설정 → **서비스 계정** → "새 비공개 키 생성" → 받은 JSON 파일 내용을 복사
 
-```bash
-firebase deploy --only firestore:rules
+### 2. GitHub Secrets (저장소 Settings → Secrets and variables → Actions)
+| 이름 | 값 |
+|---|---|
+| `FIREBASE_CONFIG_JSON` | 아래 JSON |
+| `KEYSTORE_PASSPHRASE` | 16자 이상 랜덤 문자열 (서명 키 암호. 따로 보관할 것) |
+| `FIREBASE_SERVICE_ACCOUNT` | 7번의 서비스 계정 JSON 전체 |
+
+```json
+{
+  "PROJECT_ID": "ourday-xxxx",
+  "MESSAGING_SENDER_ID": "1234567890",
+  "AUTH_DOMAIN": "ourday-xxxx.firebaseapp.com",
+  "STORAGE_BUCKET": "ourday-xxxx.firebasestorage.app",
+  "WEB_API_KEY": "AIza...",
+  "WEB_APP_ID": "1:1234567890:web:abcdef",
+  "ANDROID_API_KEY": "AIza...",
+  "ANDROID_APP_ID": "1:1234567890:android:abcdef"
+}
 ```
 
-## 실행
-```bash
-flutter run -d chrome          # PC 확인
-flutter run                    # 안드로이드 기기
-flutter build apk --release    # 민아 폰에 설치할 APK
-flutter build web && firebase deploy --only hosting
-```
+### 3. 빌드
+`main`이나 `claude/**` 브랜치에 푸시되면 자동으로 돈다. Actions 탭에서 확인.
+- 웹과 Firestore 보안 규칙이 Firebase에 자동 배포됨 (`https://<project>.web.app`)
+- APK는 실행 결과의 **Artifacts → ourday-apk**에서 받음
+- 첫 실행 때 서명 키가 만들어져 암호화된 채 저장소에 커밋되고, 실행 요약(Summary)에 SHA 지문이 나옴 → Firebase Android 앱의 **SHA 인증서 지문**에 등록
+
+### 로컬에서 돌릴 때 (선택)
+`firebase_config.json`을 위 JSON으로 만들고 `flutter run -d chrome --dart-define-from-file=firebase_config.json`
 
 ## 사용 순서
 1. 대희 아빠가 Google 로그인 → "새 공간 만들기"
