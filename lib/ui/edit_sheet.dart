@@ -121,7 +121,7 @@ class _EditSheetState extends State<_EditSheet> {
     if (d == null) return;
     setState(() {
       if (isEnd) {
-        _end = d.isBefore(_start) ? null : d;
+        _end = d.isAtSameMomentAs(_start) || d.isBefore(_start) ? null : d; // null = 시작일과 같은 날
       } else {
         _start = d;
         if (_end != null && _end!.isBefore(d)) _end = null;
@@ -340,7 +340,7 @@ class _EditSheetState extends State<_EditSheet> {
                 Expanded(
                     child: OutlinedButton(
                         onPressed: () => _pick(true),
-                        child: Text(_end == null ? '종료일(선택)' : df.format(_end!)))),
+                        child: Text(df.format(_end ?? _start)))), // 기본은 시작일과 같은 날
               ],
             ]),
             // 음력: 고른 날짜의 음력 표시 + 음력으로 날짜 고르기 (생일/기일 등)

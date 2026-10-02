@@ -255,14 +255,6 @@ class _HomeScreenState extends State<HomeScreen> {
               showEditSheet(context, day: d, type: ItemType.todo);
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.flag_outlined),
-            title: const Text('휴일 / 기념일 추가'),
-            onTap: () {
-              Navigator.pop(ctx);
-              addCustomDayDialog(context, d);
-            },
-          ),
           if (!wide)
             ListTile(
               leading: const Icon(Icons.list),
@@ -909,16 +901,10 @@ class _DayList extends StatelessWidget {
         subtitle: lunar == null
             ? null
             : Text('음력 ${ganjiYear(lunar.year)}년 ${lunar.monthLabel} ${lunar.day}일'),
-        trailing: PopupMenuButton<String>(
+        trailing: IconButton(
+          tooltip: '일정 / 할 일 추가',
           icon: const Icon(Icons.add),
-          onSelected: (v) {
-            if (v == 'item') showEditSheet(context, day: day);
-            if (v == 'day') addCustomDayDialog(context, day);
-          },
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'item', child: Text('일정 / 할 일 추가')),
-            PopupMenuItem(value: 'day', child: Text('휴일 / 기념일 추가 (임시공휴일 등)')),
-          ],
+          onPressed: () => showEditSheet(context, day: day),
         ),
       ),
       if (marks.isNotEmpty)
