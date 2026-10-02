@@ -33,34 +33,38 @@ class _ColorChooserState extends State<ColorChooser> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final c in colorPalette)
-          GestureDetector(
-            onTap: () => widget.onChanged(c),
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: Color(c),
-                shape: BoxShape.circle,
-                border: Border.all(
-                    color: widget.value == c ? Colors.white : Colors.transparent, width: 2.5),
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      GridView.count(
+        crossAxisCount: 6,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          for (final c in colorPalette)
+            GestureDetector(
+              onTap: () => widget.onChanged(c),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Color(c),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: widget.value == c ? Colors.white : Colors.transparent, width: 2.5),
+                ),
+                child: widget.value == c ? const Icon(Icons.check, size: 18, color: Colors.white) : null,
               ),
-              child: widget.value == c ? const Icon(Icons.check, size: 18, color: Colors.white) : null,
             ),
-          ),
-      ]),
-      const SizedBox(height: 10),
+        ],
+      ),
+      const SizedBox(height: 14),
       Row(children: [
         Container(
-          width: 28,
-          height: 28,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(color: Color(widget.value), shape: BoxShape.circle),
         ),
-        const SizedBox(width: 10),
-        SizedBox(
-          width: 130,
+        const SizedBox(width: 12),
+        Expanded(
           child: TextField(
             controller: _hex,
             maxLength: 7,

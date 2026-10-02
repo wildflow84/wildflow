@@ -7,6 +7,7 @@ import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, Repeat, RepeatDelete, dateOnly, hasEndTime;
 import 'category_manager.dart';
 import 'color_picker.dart';
+import 'date_picker.dart';
 import 'time_picker.dart';
 
 Future<void> showEditSheet(BuildContext context,
@@ -82,11 +83,8 @@ class _EditSheetState extends State<_EditSheet> {
 
   Future<void> _pick(bool isEnd) async {
     final init = isEnd ? (_end ?? _start) : _start;
-    final d = await showDatePicker(
-        context: context,
-        initialDate: init,
-        firstDate: DateTime(1901),
-        lastDate: DateTime(2200, 12, 31));
+    final d = await pickDate(context,
+        initial: init, title: isEnd ? '종료일' : (_type == ItemType.todo ? '마감일' : '시작일'));
     if (d == null) return;
     setState(() {
       if (isEnd) {
@@ -123,10 +121,10 @@ class _EditSheetState extends State<_EditSheet> {
       builder: (ctx) => SimpleDialog(
         title: Text('"${item.title}" 반복 삭제'),
         children: [
-          option(RepeatDelete.thisOnly, '이 날짜만', '$day 하루만 빼고 나머지는 그대로'),
+          option(RepeatDelete.thisOnly, '이 날짜만', '$day 하루만 삭제'),
           option(RepeatDelete.following, '이 날짜 이후 모두',
-              isLaterOccurrence ? '$day 부터 앞으로 전부 삭제 (이전 기록은 남김)' : '첫 회차라서 전체 삭제와 같아'),
-          option(RepeatDelete.all, '전체 삭제', '과거·현재·미래 모든 반복을 삭제', color: Colors.redAccent),
+              isLaterOccurrence ? '$day부터 이후 전부 삭제' : '첫 회차라서 전체 삭제와 같아'),
+          option(RepeatDelete.all, '전체 삭제', '과거·현재·미래 모든 반복', color: Colors.redAccent),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),

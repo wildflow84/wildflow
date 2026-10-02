@@ -15,7 +15,6 @@ class CategoryManagerScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('카테고리 관리'),
-        backgroundColor: Colors.transparent,
         actions: [
           TextButton.icon(
             onPressed: () => showCategoryDialog(context),
@@ -24,7 +23,11 @@ class CategoryManagerScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Column(children: [
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Padding(
           padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: Text(
@@ -70,6 +73,8 @@ class CategoryManagerScreen extends StatelessWidget {
           ),
         ),
       ]),
+        ),
+      ),
     );
   }
 }

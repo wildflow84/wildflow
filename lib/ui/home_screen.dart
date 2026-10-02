@@ -11,6 +11,7 @@ import '../models/map_links.dart';
 import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, isDoneOn, isOverdue, moveItemByDays, nextRollDate, rollLabel, timeLabel, chipTimeLabel;
 import 'category_manager.dart';
+import 'date_picker.dart';
 import 'settings_screen.dart';
 import 'edit_sheet.dart';
 
@@ -28,13 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// 원하는 날짜로 바로 이동 (1901~2200)
   Future<void> _jump(BuildContext context) async {
-    final d = await showDatePicker(
-      context: context,
-      initialDate: _selected,
-      firstDate: DateTime(1901, 1, 1),
-      lastDate: DateTime(2200, 12, 31),
-      helpText: '이동할 날짜',
-    );
+    final d = await pickDate(context, initial: _selected, title: '이동할 날짜');
     if (d == null) return;
     setState(() {
       _selected = dateOnly(d);
@@ -154,13 +149,16 @@ class _HomeScreenState extends State<HomeScreen> {
             day: _selected, type: _tab == 1 ? ItemType.todo : ItemType.event),
         child: const Icon(Icons.add),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.calendar_month), label: '캘린더'),
-          NavigationDestination(icon: Icon(Icons.checklist), label: '할 일'),
-        ],
+      bottomNavigationBar: _BottomBar(
+        child: NavigationBar(
+          backgroundColor: Colors.transparent,
+          selectedIndex: _tab,
+          onDestinationSelected: (i) => setState(() => _tab = i),
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.calendar_month), label: '캘린더'),
+            NavigationDestination(icon: Icon(Icons.checklist), label: '할 일'),
+          ],
+        ),
       ),
     );
   }
@@ -246,6 +244,23 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 /// 내 항목은 항상 보이고, 상대가 올린 같이 보기 항목만 이 알약 버튼으로 켜고 끈다.
+/// 넓은 화면(PC)에서 하단 탭이 끝까지 늘어나지 않게 가운데로 모은다.
+class _BottomBar extends StatelessWidget {
+  final Widget child;
+  const _BottomBar({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Theme.of(context).colorScheme.surfaceContainer,
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 480), child: child),
+      ),
+    );
+  }
+}
+
 class _SharedToggle extends StatelessWidget {
   const _SharedToggle();
 
@@ -513,7 +528,7 @@ class _MarkText extends StatelessWidget {
         padding: const EdgeInsets.only(left: 2, top: 1),
         child: Text(text,
             maxLines: 1,
-            overflow: TextOverflow.clip,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: 9, color: color)),
       );
 }
@@ -550,7 +565,7 @@ class _Chip extends StatelessWidget {
         Expanded(
           child: Text(text,
               maxLines: 1,
-              overflow: TextOverflow.clip,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                   fontSize: 9,
                   decoration: done ? TextDecoration.lineThrough : null)),
@@ -635,6 +650,40 @@ class _DayList extends StatelessWidget {
   }
 }
 
+const _repeatName = {
+  Repeat.daily: '매일',
+  Repeat.weekly: '매주',
+  Repeat.monthly: '매월',
+  Repeat.yearly: '매년',
+};
+
+/// 항목 부가정보 한 조각 (아이콘 또는 색 점 + 글자). 긴 글자는 말줄임.
+class _Meta extends StatelessWidget {
+  final IconData? icon;
+  final Color? dot;
+  final String text;
+  const _Meta({this.icon, this.dot, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 220),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (icon != null) Icon(icon, size: 14, color: Colors.white54),
+        if (dot != null)
+          Container(width: 8, height: 8, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: Colors.white70)),
+        ),
+      ]),
+    );
+  }
+}
+
 class _ItemTile extends StatelessWidget {
   final Item item;
   final DateTime day;
@@ -669,16 +718,19 @@ class _ItemTile extends StatelessWidget {
       title: Text(item.title,
           style: TextStyle(
               decoration: done ? TextDecoration.lineThrough : null)),
-      subtitle: Text([
-        if (timeLabel(item) != null) '🕒 ${timeLabel(item)}',
-        if (!mine) s.ownerName(item),
-        s.categoriesOf(item).map((c) => c.name).join('·'),
-        if (item.visibility == m.Visibility.private) '프라이빗',
-        if (item.location.isNotEmpty) '📍 ${item.location}',
-        if (item.isRolling) '↻ ${rollLabel(item)} (완료하면 다음 일정으로)',
-        if (item.repeat != Repeat.none) '반복',
-        if (item.note.isNotEmpty) item.note,
-      ].join(' · ')),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Wrap(spacing: 12, runSpacing: 3, children: [
+          if (timeLabel(item) != null) _Meta(icon: Icons.schedule, text: timeLabel(item)!),
+          if (item.location.isNotEmpty) _Meta(icon: Icons.place_outlined, text: item.location),
+          for (final c in s.categoriesOf(item)) _Meta(dot: c.color, text: c.name),
+          if (item.isRolling) _Meta(icon: Icons.autorenew, text: rollLabel(item)),
+          if (item.repeat != Repeat.none) _Meta(icon: Icons.repeat, text: _repeatName[item.repeat]!),
+          if (item.visibility == m.Visibility.private) const _Meta(icon: Icons.lock_outline, text: '나만'),
+          if (!mine) _Meta(icon: Icons.person_outline, text: s.ownerName(item)),
+          if (item.note.isNotEmpty) _Meta(icon: Icons.notes, text: item.note),
+        ]),
+      ),
       trailing: item.location.isEmpty
           ? null
           : PopupMenuButton<MapApp>(
@@ -726,11 +778,17 @@ class _TodoTab extends StatelessWidget {
                   day: i.repeat == Repeat.none ? dateOnly(i.start) : today),
           ]);
 
-    return ListView(children: [
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: ListView(children: [
       section('지난 할 일', overdue),
       section('앞으로', upcoming),
       if (open.isEmpty) const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('할 일 끝! 순대 산책 ㄱㄱ'))),
-    ]);
+    ]),
+      ),
+    );
   }
 }
 

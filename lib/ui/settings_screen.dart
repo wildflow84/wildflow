@@ -13,8 +13,12 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<Store>();
     return Scaffold(
-      appBar: AppBar(title: const Text('설정'), backgroundColor: Colors.transparent),
-      body: ListView(
+      appBar: AppBar(title: const Text('설정')),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: ListView(
         padding: const EdgeInsets.only(bottom: 80),
         children: [
           const _Header('새 일정 / 할 일의 기본 공개 범위'),
@@ -69,6 +73,8 @@ class SettingsScreen extends StatelessWidget {
             },
           ),
         ],
+      ),
+        ),
       ),
     );
   }

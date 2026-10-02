@@ -42,6 +42,19 @@ class OurDayApp extends StatelessWidget {
         brightness: Brightness.dark,
         colorSchemeSeed: const Color(0xFF4C6EF5),
         scaffoldBackgroundColor: const Color(0xFF1E2233),
+        // 모든 화면의 상단 바를 같은 배경으로
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+        ),
+        // 모든 입력창을 같은 외곽선 스타일로
+        inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       ),
       home: home,
     );

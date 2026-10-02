@@ -9,9 +9,15 @@ import 'data/store.dart';
 import 'main.dart';
 import 'models/item.dart' as m;
 import 'models/item.dart' show Item, ItemType, Repeat;
+import 'ui/category_dialog.dart';
 import 'ui/category_manager.dart';
+import 'ui/color_picker.dart';
+import 'ui/date_picker.dart';
+import 'ui/login_screen.dart';
+import 'ui/space_screen.dart';
 import 'ui/edit_sheet.dart';
 import 'ui/home_screen.dart';
+import 'models/category.dart';
 import 'ui/settings_screen.dart';
 import 'ui/time_picker.dart';
 
@@ -57,6 +63,25 @@ Widget _start() {
       return const _OpenEdit(timed: true);
     case 'time':
       return const _OpenTime();
+    case 'jump':
+      return _Opener((c) => pickDate(c, initial: DateTime(2026, 10, 8), title: '이동할 날짜'));
+    case 'color':
+      return _Opener((c) => pickColor(c, initial: 0xFF6C74D8));
+    case 'catdialog':
+      return _Opener((c) => showCategoryDialog(c, edit: defaultCategories[2]));
+    case 'holiday':
+      return _Opener((c) => addCustomDayDialog(c, DateTime(2026, 10, 5)));
+    case 'login':
+      return const LoginScreen();
+    case 'space':
+      return const SpaceScreen();
+    case 'edit-weekly':
+      return _Opener((c) => showEditSheet(c,
+          day: DateTime(2026, 10, 14),
+          item: m.Item(
+              id: 'w', type: ItemType.event, title: '정기점검', start: DateTime(2026, 10, 7, 15, 0),
+              end: DateTime(2026, 10, 7, 16, 30), allDay: false, ownerUid: 'me',
+              categories: const ['work', 'kid'], repeat: Repeat.weekly, location: '판교 사옥')));
     case 'edit-roll':
       return const _OpenEdit(roll: true);
     case 'categories':
@@ -107,6 +132,25 @@ class _OpenTimeState extends State<_OpenTime> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback(
         (_) => pickTimeDigital(context, initial: const TimeOfDay(hour: 9, minute: 0)));
+  }
+
+  @override
+  Widget build(BuildContext context) => const HomeScreen();
+}
+
+/// 점검용: 홈 위에 원하는 대화상자/시트를 첫 프레임 뒤에 연다.
+class _Opener extends StatefulWidget {
+  final void Function(BuildContext) open;
+  const _Opener(this.open);
+  @override
+  State<_Opener> createState() => _OpenerState();
+}
+
+class _OpenerState extends State<_Opener> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => widget.open(context));
   }
 
   @override
