@@ -76,23 +76,27 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: _tab == 0
-            ? InkWell(
-                onTap: () => _jump(context),
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('${_month.year}년 ${_month.month}월',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      Text(_lunarRange(_month),
-                          style: const TextStyle(fontSize: 12, color: Colors.white60)),
-                    ],
+            ? Row(children: [
+                InkWell(
+                  onTap: () => _jump(context),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('${_month.year}년 ${_month.month}월',
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        Text(_lunarRange(_month),
+                            style: const TextStyle(fontSize: 12, color: Colors.white60)),
+                      ],
+                    ),
                   ),
                 ),
-              )
+                const SizedBox(width: 10),
+                const _SharedToggle(),
+              ])
             : const Text('할 일'),
         actions: [
           if (_tab == 0) ...[
@@ -133,7 +137,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
-          _FilterBar(),
           Expanded(
             child: _tab == 1
                 ? const _TodoTab()
@@ -242,29 +245,43 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// 내 항목은 항상 보이고, 상대가 올린 같이 보기 항목만 토글로 켜고 끈다.
-class _FilterBar extends StatelessWidget {
+/// 내 항목은 항상 보이고, 상대가 올린 같이 보기 항목만 이 알약 버튼으로 켜고 끈다.
+class _SharedToggle extends StatelessWidget {
+  const _SharedToggle();
+
   @override
   Widget build(BuildContext context) {
     final s = context.watch<Store>();
+    final on = s.showShared;
     final partner = s.names.entries.where((e) => e.key != s.uid).map((e) => e.value).firstOrNull;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Tooltip(
-          message: partner == null ? '상대가 올린 같이 보기 일정/할 일' : '$partner가 올린 같이 보기 일정/할 일',
-          child: Container(
-            padding: const EdgeInsets.only(left: 12, right: 4),
+    final accent = Theme.of(context).colorScheme.primary;
+    final narrow = MediaQuery.sizeOf(context).width < 400;
+    return Tooltip(
+      message: '공유 캘린더 보기 ${on ? '켜짐' : '꺼짐'}${partner == null ? '' : ' · $partner의 같이 보기 항목'}',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => s.toggleFilter('partner'),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: EdgeInsets.symmetric(horizontal: narrow ? 8 : 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white10,
+              color: on ? accent.withValues(alpha: 0.22) : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: on ? accent : Colors.white24),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.people_outline, size: 18),
-              const SizedBox(width: 6),
-              const Text('공유 캘린더 보기'),
-              Switch(value: s.showShared, onChanged: (_) => s.toggleFilter('partner')),
+              Icon(on ? Icons.people : Icons.people_outline,
+                  size: 17, color: on ? accent : Colors.white54),
+              if (!narrow) ...[
+                const SizedBox(width: 6),
+                Text('공유',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: on ? accent : Colors.white54)),
+              ],
             ]),
           ),
         ),
