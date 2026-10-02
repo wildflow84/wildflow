@@ -50,11 +50,14 @@ class _EditSheetState extends State<_EditSheet> {
   late bool _visTouched = widget.item != null; // 직접 바꾸면 카테고리 기본값으로 덮어쓰지 않는다
   late int? _color = widget.item?.color; // null이면 카테고리 색
   // 반복: 빠른 선택(구글 캘린더처럼 시작 날짜에서 값이 정해짐) 또는 맞춤 규칙
-  late RepeatPreset _preset = presetOf(widget.item?.effectiveRule, widget.item?.start ?? _start);
-  late Recurrence? _custom = widget.item?.effectiveRule;
-  late int _rollEvery = widget.item?.rollEvery ?? 0; // 0이면 이동형 반복 아님
+  late RepeatPreset _preset = presetOf(widget.item?.rollRule ?? widget.item?.effectiveRule, widget.item?.start ?? _start);
+  late Recurrence? _custom = widget.item?.rollRule ?? widget.item?.effectiveRule;
+  // 이동형: 완료하면 날짜가 다음 일정으로 넘어간다. 반복 규칙(위 "반복")을 고르면 그 규칙대로,
+  // 고르지 않으면 아래 "매 N일/주/개월/년마다"로 옮긴다. 기준은 예정일이 기본.
+  late bool _rolling = widget.item?.isRolling ?? false;
+  late int _rollEvery = (widget.item?.rollEvery ?? 0) > 0 ? widget.item!.rollEvery : 1;
   late m.RollUnit _rollUnit = widget.item?.rollUnit ?? m.RollUnit.day;
-  late bool _rollFromCompletion = widget.item?.rollFromCompletion ?? true;
+  late bool _rollFromCompletion = widget.item?.rollFromCompletion ?? false;
 
   /// 현재 선택한 반복 규칙 (없으면 반복 안 함)
   Recurrence? get _rule => _preset == RepeatPreset.none
@@ -152,10 +155,12 @@ class _EditSheetState extends State<_EditSheet> {
   Future<void> _save() async {
     if (_title.text.trim().isEmpty) return;
     final s = context.read<Store>();
-    // 이동형 반복이 켜진 할 일은 일반 반복을 쓰지 않는다
-    final rule = _type == ItemType.todo && _rollEvery > 0 ? null : _rule;
-    // 구글처럼, 시작일이 반복 규칙과 안 맞으면 첫 발생일로 옮긴다 (예: 매월 15일인데 시작이 2일이면 15일부터)
-    var startDate = rule == null ? dateOnly(_start) : rule.firstOnOrAfter(_start);
+    // 이동형(할 일만): 반복 규칙은 "일반 반복"이 아니라 이동 규칙으로 저장한다
+    final isRoll = _type == ItemType.todo && _rolling;
+    final rollRule = isRoll ? _rule : null; // 규칙형 이동
+    final rule = isRoll ? null : _rule;
+    final startRule = rollRule ?? rule;
+    var startDate = startRule == null ? dateOnly(_start) : startRule.firstOnOrAfter(_start);
     final startDt = _allDay
         ? startDate
         : DateTime(startDate.year, startDate.month, startDate.day, _startTime.hour, _startTime.minute);
@@ -187,9 +192,12 @@ class _EditSheetState extends State<_EditSheet> {
       repeat: repeatFor(rule),
       rule: rule,
       clearRule: rule == null,
-      rollEvery: _type == ItemType.todo ? _rollEvery : 0,
+      // 간격형 이동은 규칙을 고르지 않았을 때만
+      rollEvery: isRoll && rollRule == null ? _rollEvery : 0,
       rollUnit: _rollUnit,
       rollFromCompletion: _rollFromCompletion,
+      rollRule: rollRule,
+      clearRollRule: rollRule == null,
     ));
     if (mounted) Navigator.pop(context);
   }
@@ -362,21 +370,19 @@ class _EditSheetState extends State<_EditSheet> {
                       ),
                     ),
                 ],
-                onChanged: _rollEvery > 0
-                    ? null
-                    : (v) async {
-                        if (v == RepeatPreset.custom) {
-                          await _editCustom();
-                        } else if (v != null) {
-                          setState(() {
-                            _preset = v;
-                            if (v != RepeatPreset.none) _end = null;
-                          });
-                        }
-                      },
+                onChanged: (v) async {
+                  if (v == RepeatPreset.custom) {
+                    await _editCustom();
+                  } else if (v != null) {
+                    setState(() {
+                      _preset = v;
+                      if (v != RepeatPreset.none) _end = null;
+                    });
+                  }
+                },
               );
             }),
-            if (_rule != null && _rollEvery == 0)
+            if (_rule != null)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Row(children: [
@@ -398,15 +404,31 @@ class _EditSheetState extends State<_EditSheet> {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('완료하면 다음 일정으로 이동'),
-                subtitle: const Text('캘린더에는 하나만 보이고, 완료하면 날짜가 자동으로 넘어가. 약 먹기 같은 매일 확인용.',
+                subtitle: const Text('캘린더에는 다음 1개만 보이고, 완료하면 날짜가 자동으로 넘어가. 약 먹기, 정기 점검 같은 확인용.',
                     style: TextStyle(fontSize: 12)),
-                value: _rollEvery > 0,
-                onChanged: (v) => setState(() {
-                  _rollEvery = v ? 1 : 0;
-                  if (v) _preset = RepeatPreset.none;
-                }),
+                value: _rolling,
+                onChanged: (v) => setState(() => _rolling = v),
               ),
-              if (_rollEvery > 0) ...[
+              if (_rolling && _rule != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Icon(Icons.autorenew, size: 16, color: Colors.white54),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '"${_rule!.describe(_start)}" 규칙대로, 완료하면 다음 날짜로 이동해.',
+                        style: const TextStyle(color: Colors.white60, fontSize: 12),
+                      ),
+                    ),
+                  ]),
+                ),
+              if (_rolling && _rule == null) ...[
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Text('위에서 반복(예: 매주 목요일)을 고르면 그 규칙대로 이동하고, 고르지 않으면 아래 간격으로 이동해.',
+                      style: TextStyle(color: Colors.white60, fontSize: 12)),
+                ),
                 Row(children: [
                   const Text('매'),
                   const SizedBox(width: 8),
@@ -432,8 +454,8 @@ class _EditSheetState extends State<_EditSheet> {
                 const SizedBox(height: 8),
                 SegmentedButton<bool>(
                   segments: const [
-                    ButtonSegment(value: true, label: Text('완료한 날 기준')),
                     ButtonSegment(value: false, label: Text('예정일 기준')),
+                    ButtonSegment(value: true, label: Text('완료한 날 기준')),
                   ],
                   selected: {_rollFromCompletion},
                   onSelectionChanged: (v) => setState(() => _rollFromCompletion = v.first),
@@ -442,7 +464,7 @@ class _EditSheetState extends State<_EditSheet> {
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                     _rollFromCompletion
-                        ? '늦게 완료해도 완료한 날부터 다시 세어. (약 먹기에 알맞아)'
+                        ? '늦게 완료하면 완료한 날부터 다시 세어. (약 먹기에 알맞아)'
                         : '늦게 완료해도 원래 주기를 유지해. (월세, 정기 점검에 알맞아)',
                     style: const TextStyle(color: Colors.white60, fontSize: 12),
                   ),

@@ -43,6 +43,7 @@ Future<void> main() async {
     todo('퇴직연금 매수', DateTime(2026, 9, 29), c: 'money', r: Repeat.monthly),
     todo('연금복권 구매', DateTime(2026, 10, 1), c: 'money', r: Repeat.weekly),
     todo('면도기 청소', DateTime(2026, 10, 2), done: true),
+    m.Item(id: 'rr', type: ItemType.todo, title: '목요일 점검', start: DateTime(2026, 10, 8), ownerUid: 'me', categories: const ['work'], rollRule: const Recurrence(freq: Freq.weekly, weekdays: [4])),
     todo('아침 약', DateTime(2026, 10, 2), c: 'family', v: m.Visibility.private, roll: true),
     todo('저녁 약', DateTime(2026, 10, 2), c: 'family', v: m.Visibility.private, roll: true),
     todo('대희 증여세', DateTime(2026, 10, 30), c: 'kid'),
@@ -94,6 +95,13 @@ Widget _start() {
               id: 'w', type: ItemType.event, title: '정기점검', start: DateTime(2026, 10, 7, 15, 0),
               end: DateTime(2026, 10, 7, 16, 30), allDay: false, ownerUid: 'me',
               categories: const ['work', 'kid'], repeat: Repeat.weekly, location: '판교 사옥')));
+    case 'edit-roll-rule':
+      return _Opener((c) => showEditSheet(c,
+          day: DateTime(2026, 10, 8),
+          item: m.Item(
+              id: 'rr', type: ItemType.todo, title: '목요일 점검', start: DateTime(2026, 10, 8),
+              ownerUid: 'me', categories: const ['work'],
+              rollRule: const Recurrence(freq: Freq.weekly, weekdays: [4]))));
     case 'edit-roll':
       return const _OpenEdit(roll: true);
     case 'categories':

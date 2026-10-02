@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ourday/models/item.dart';
+import 'package:ourday/models/recurrence.dart';
 
 Item _roll(DateTime start, int every, RollUnit unit, {bool fromCompletion = true}) => Item(
     id: 'x', type: ItemType.todo, title: '약', start: start, ownerUid: 'me',
@@ -12,6 +13,7 @@ void main() {
   todoTimeTests();
   repeatDeleteTests();
   futureCompleteTests();
+  rollRuleTests();
   test('매일, 완료한 날 기준: 오늘 완료하면 내일', () {
     final i = _roll(DateTime(2026, 10, 2), 1, RollUnit.day);
     expect(_d(nextRollDate(i, DateTime(2026, 10, 2))), '2026-10-03');
@@ -204,5 +206,101 @@ void futureCompleteTests() {
     expect(back.start, e.start);
     // 월 경계
     expect(moveItemByDays(e, 20).start, DateTime(2026, 11, 3, 9, 30));
+  });
+}
+
+void rollRuleTests() {
+  // 2026-10-08은 목요일
+  Item weeklyThu({DateTime? start, Recurrence? rule}) => Item(
+      id: 'r', type: ItemType.todo, title: '목요일 점검', start: start ?? DateTime(2026, 10, 8), ownerUid: 'me',
+      rollRule: rule ?? const Recurrence(freq: Freq.weekly, weekdays: [4]));
+
+  test('이동형 기본 기준은 예정일', () {
+    final i = Item(id: 'x', type: ItemType.todo, title: 't', start: DateTime(2026, 10, 2), ownerUid: 'me', rollEvery: 1);
+    expect(i.rollFromCompletion, false);
+  });
+
+  test('매주 목요일 이동형: 완료하면 다음 목요일로', () {
+    final i = weeklyThu();
+    expect(i.isRolling, true);
+    expect(i.isRecurring, false); // 달력에 계속 반복해서 나오지 않는다
+    expect(_d(nextRollDate(i, DateTime(2026, 10, 8))), '2026-10-15');
+    final done = rollNextItem(i, DateTime(2026, 10, 8, 20), 'me');
+    expect(_d(done.start), '2026-10-15');
+    expect(done.done, false);
+    expect(done.lastDoneBy, 'me');
+  });
+
+  test('미리 완료해도 다음 회차로 한 칸만 전진', () {
+    // 10/8 목요일 항목을 10/2에 미리 완료 -> 10/15
+    expect(_d(nextRollDate(weeklyThu(), DateTime(2026, 10, 2))), '2026-10-15');
+  });
+
+  test('밀린 것을 늦게 완료하면 오늘 이후 첫 목요일', () {
+    // 10/1 목요일 항목을 토요일 10/3에 완료 -> 10/8
+    expect(_d(nextRollDate(weeklyThu(start: DateTime(2026, 10, 1)), DateTime(2026, 10, 3))), '2026-10-08');
+    // 여러 주 밀렸어도 오늘 이후 첫 목요일 (9/10 항목, 10/3 완료 -> 10/8)
+    expect(_d(nextRollDate(weeklyThu(start: DateTime(2026, 9, 10)), DateTime(2026, 10, 3))), '2026-10-08');
+  });
+
+  test('매월 마지막 날 이동형', () {
+    final i = weeklyThu(start: DateTime(2026, 1, 31), rule: const Recurrence(freq: Freq.monthly, monthDays: [-1]));
+    expect(_d(nextRollDate(i, DateTime(2026, 1, 31))), '2026-02-28');
+    final n = rollNextItem(i, DateTime(2026, 1, 31), 'me');
+    expect(_d(rollNextItem(n, DateTime(2026, 2, 28), 'me').start), '2026-03-31');
+  });
+
+  test('격주 이동형은 위상을 유지', () {
+    final i = weeklyThu(rule: const Recurrence(freq: Freq.weekly, interval: 2, weekdays: [4]));
+    var cur = i;
+    final seen = <String>[];
+    for (var k = 0; k < 3; k++) {
+      cur = rollNextItem(cur, cur.start, 'me');
+      seen.add(_d(cur.start));
+    }
+    expect(seen, ['2026-10-22', '2026-11-05', '2026-11-19']);
+  });
+
+  test('평일 이동형: 금요일 완료 -> 월요일', () {
+    final i = weeklyThu(start: DateTime(2026, 10, 2), rule: const Recurrence(freq: Freq.weekly, weekdays: [1, 2, 3, 4, 5]));
+    expect(_d(nextRollDate(i, DateTime(2026, 10, 2))), '2026-10-05');
+  });
+
+  test('시각을 유지한다', () {
+    final i = Item(
+        id: 'r', type: ItemType.todo, title: 't', start: DateTime(2026, 10, 8, 8, 30), allDay: false, ownerUid: 'me',
+        rollRule: const Recurrence(freq: Freq.weekly, weekdays: [4]));
+    expect(rollNextItem(i, DateTime(2026, 10, 8), 'me').start, DateTime(2026, 10, 15, 8, 30));
+  });
+
+  test('횟수 종료: 3회 뒤 완료 처리, 남은 횟수가 줄어든다', () {
+    var cur = weeklyThu(rule: const Recurrence(freq: Freq.weekly, weekdays: [4], count: 3));
+    cur = rollNextItem(cur, cur.start, 'me');
+    expect(cur.rollRule!.count, 2);
+    expect(_d(cur.start), '2026-10-15');
+    cur = rollNextItem(cur, cur.start, 'me');
+    expect(cur.rollRule!.count, 1);
+    cur = rollNextItem(cur, cur.start, 'me');
+    expect(cur.done, true); // 마지막 회차를 끝냄
+    expect(_d(cur.start), '2026-10-22'); // 날짜는 마지막 회차에 머문다
+  });
+
+  test('종료일을 지나면 완료 처리', () {
+    final i = weeklyThu(rule: Recurrence(freq: Freq.weekly, weekdays: [4], until: DateTime(2026, 10, 10)));
+    expect(rollNextItem(i, DateTime(2026, 10, 8), 'me').done, true);
+  });
+
+  test('라벨, 저장 필드', () {
+    final i = weeklyThu();
+    expect(rollLabel(i), '매주 목요일');
+    expect(i.toMap()['rollRule']['weekdays'], [4]);
+    expect(i.copyWith(clearRollRule: true).rollRule, isNull);
+  });
+
+  test('이전 방식(간격형, 완료한 날 기준)도 그대로 동작', () {
+    final i = Item(
+        id: 'p', type: ItemType.todo, title: '약', start: DateTime(2026, 10, 3), ownerUid: 'me',
+        rollEvery: 1, rollUnit: RollUnit.day, rollFromCompletion: true);
+    expect(_d(rollNextItem(i, DateTime(2026, 10, 2), 'me').start), '2026-10-04');
   });
 }

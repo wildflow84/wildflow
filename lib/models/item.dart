@@ -47,13 +47,17 @@ class Item {
   /// [rollEvery] > 0 이면 완료 처리할 때 완료되는 대신 날짜가 다음 일정으로 옮겨진다.
   final int rollEvery;
   final RollUnit rollUnit;
-  final bool rollFromCompletion; // true: 완료한 날 기준, false: 예정일 기준
+  final bool rollFromCompletion; // true: 완료한 날 기준, false: 예정일 기준 (기본)
+
+  /// 이동형 반복에 구글 캘린더식 규칙을 쓰는 경우 (예: 매주 목요일, 평일, 매월 마지막 날).
+  /// 달력에는 다음 1회만 보이고, 완료하면 규칙에 맞는 다음 날짜로 옮겨진다. [rule]과는 별개다.
+  final Recurrence? rollRule;
 
   /// 마지막으로 완료한 사람/시각 (알림, 이력용)
   final String? lastDoneBy;
   final DateTime? lastDoneAt;
 
-  bool get isRolling => rollEvery > 0;
+  bool get isRolling => rollRule != null || rollEvery > 0;
 
   /// 실제로 적용되는 반복 규칙. 옛 데이터(repeat만 있는 항목)는 같은 의미의 규칙으로 바꿔서 쓴다.
   Recurrence? get effectiveRule => rule ?? legacyRule(repeat, start);
@@ -83,7 +87,8 @@ class Item {
     this.exceptions = const [],
     this.rollEvery = 0,
     this.rollUnit = RollUnit.day,
-    this.rollFromCompletion = true,
+    this.rollFromCompletion = false,
+    this.rollRule,
     this.lastDoneBy,
     this.lastDoneAt,
   });
@@ -112,6 +117,8 @@ class Item {
     int? rollEvery,
     RollUnit? rollUnit,
     bool? rollFromCompletion,
+    Recurrence? rollRule,
+    bool clearRollRule = false,
     String? lastDoneBy,
     DateTime? lastDoneAt,
   }) =>
@@ -137,6 +144,7 @@ class Item {
         rollEvery: rollEvery ?? this.rollEvery,
         rollUnit: rollUnit ?? this.rollUnit,
         rollFromCompletion: rollFromCompletion ?? this.rollFromCompletion,
+        rollRule: clearRollRule ? null : (rollRule ?? this.rollRule),
         lastDoneBy: lastDoneBy ?? this.lastDoneBy,
         lastDoneAt: lastDoneAt ?? this.lastDoneAt,
       );
@@ -163,6 +171,7 @@ class Item {
         'rollEvery': rollEvery,
         'rollUnit': rollUnit.name,
         'rollFrom': rollFromCompletion ? 'completion' : 'schedule',
+        'rollRule': rollRule?.toMap(),
         'lastDoneBy': lastDoneBy,
         'lastDoneAt': lastDoneAt == null ? null : Timestamp.fromDate(lastDoneAt!),
       };
@@ -192,7 +201,8 @@ class Item {
       exceptions: List<String>.from(m['exceptions'] ?? const []),
       rollEvery: (m['rollEvery'] as num?)?.toInt() ?? 0,
       rollUnit: byName(RollUnit.values, m['rollUnit'], RollUnit.day),
-      rollFromCompletion: (m['rollFrom'] ?? 'completion') == 'completion',
+      rollFromCompletion: m['rollFrom'] == 'completion',
+      rollRule: m['rollRule'] is Map ? Recurrence.fromMap(Map<String, dynamic>.from(m['rollRule'] as Map)) : null,
       lastDoneBy: m['lastDoneBy'] as String?,
       lastDoneAt: (m['lastDoneAt'] as Timestamp?)?.toDate(),
     );
@@ -276,12 +286,19 @@ DateTime _addRoll(DateTime d, int every, RollUnit unit) {
 }
 
 /// 이동형 반복 항목을 [today]에 완료했을 때의 다음 날짜.
-///  - 완료한 날 기준: (오늘과 예정일 중 더 늦은 날) + 간격.
+///  - 규칙형(rollRule): 예정일·오늘 중 더 늦은 날 다음으로 규칙에 처음 맞는 날. (매주 목요일, 매월 마지막 날 등)
+///  - 간격형 / 예정일 기준(기본): 예정일 + 간격. 밀려서 이미 지난 날짜가 되면 오늘 이후가 될 때까지 건너뛴다.
+///  - 간격형 / 완료한 날 기준: (오늘과 예정일 중 더 늦은 날) + 간격.
 ///    약 먹기: 오늘 먹으면 내일, 며칠 밀려서 먹어도 내일, **내일 것을 미리 오늘 먹으면 모레**.
-///  - 예정일 기준: 예정일 + 간격. 밀려서 이미 지난 날짜가 되면 오늘 이후가 될 때까지 건너뛴다.
 DateTime nextRollDate(Item item, DateTime today) {
   final t = dateOnly(today);
   final due = dateOnly(item.start);
+  final rule = item.rollRule;
+  if (rule != null) {
+    // 규칙대로: 예정일과 오늘 중 더 늦은 날 다음으로 처음 맞는 날. (미리 완료하면 그 다음 회차로 한 칸 전진)
+    final after = due.isAfter(t) ? due : t;
+    return rule.nextAfter(due, after) ?? due;
+  }
   if (item.rollFromCompletion) {
     final base = due.isAfter(t) ? due : t; // 미리 완료하면 예정일 기준으로 한 칸 전진
     return _addRoll(base, item.rollEvery, item.rollUnit);
@@ -295,6 +312,7 @@ DateTime nextRollDate(Item item, DateTime today) {
 
 /// 예: 매일, 3일마다, 매주, 2주마다, 매월, 매년
 String rollLabel(Item item) {
+  if (item.rollRule != null) return item.rollRule!.describe(item.start);
   final e = item.rollEvery;
   const unit = {RollUnit.day: '일', RollUnit.week: '주', RollUnit.month: '개월', RollUnit.year: '년'};
   if (e == 1) {
@@ -325,6 +343,40 @@ String? timeLabel(Item i) {
 DateTime rollStart(Item item, DateTime today) {
   final d = nextRollDate(item, today);
   return item.allDay ? d : DateTime(d.year, d.month, d.day, item.start.hour, item.start.minute);
+}
+
+/// 이동형 반복 항목을 [now]에 완료했을 때의 새 항목.
+///  - 다음 날짜가 있으면 시작일을 옮긴다(시각 유지). 횟수 종료가 있으면 1 줄인다.
+///  - 규칙이 끝났으면(종료일 지남/횟수 소진) 완료 처리한다.
+Item rollNextItem(Item item, DateTime now, String? byUid) {
+  final log = [...item.doneDates, dateKey(now)];
+  final trimmed = log.length > 60 ? log.sublist(log.length - 60) : log; // 최근 60회만
+  final rule = item.rollRule;
+  if (rule != null) {
+    final due = dateOnly(item.start);
+    final t = dateOnly(now);
+    final after = due.isAfter(t) ? due : t;
+    final next = rule.nextAfter(due, after);
+    final remaining = rule.count == null ? null : rule.count! - 1;
+    if (next == null || (remaining != null && remaining <= 0)) {
+      return item.copyWith(done: true, doneDates: trimmed, lastDoneBy: byUid, lastDoneAt: now);
+    }
+    return item.copyWith(
+      start: item.allDay ? next : DateTime(next.year, next.month, next.day, item.start.hour, item.start.minute),
+      rollRule: remaining == null ? rule : rule.copyWith(count: remaining),
+      done: false,
+      doneDates: trimmed,
+      lastDoneBy: byUid,
+      lastDoneAt: now,
+    );
+  }
+  return item.copyWith(
+    start: rollStart(item, now),
+    done: false,
+    doneDates: trimmed,
+    lastDoneBy: byUid,
+    lastDoneAt: now,
+  );
 }
 
 /// 캘린더 칸 칩 앞에 붙이는 짧은 시각. 일정은 "15:00", 할 일은 마감이라 "~15:00".

@@ -242,15 +242,7 @@ class Store extends ChangeNotifier {
   Future<Item?> toggleDone(Item i, DateTime day) async {
     final now = DateTime.now();
     if (i.isRolling) {
-      final next = rollStart(i, now);
-      final log = [...i.doneDates, dateKey(now)];
-      await save(i.copyWith(
-        start: next,
-        done: false,
-        doneDates: log.length > 60 ? log.sublist(log.length - 60) : log, // 최근 60회만
-        lastDoneBy: uid,
-        lastDoneAt: now,
-      ));
+      await save(rollNextItem(i, now, uid));
       return i;
     }
     if (!i.isRecurring) {
