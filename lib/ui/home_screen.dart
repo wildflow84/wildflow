@@ -70,7 +70,12 @@ class _HomeScreenState extends State<HomeScreen> {
       onDragStarted: () => setState(() => _dragging = true),
       onBlankTap: (d) {
         setState(() => _selected = d);
-        _quickAdd(context, d, wide);
+        // 그날 일정/할 일이 있으면 목록을 보여주고(PC는 오른쪽 패널에 이미 보임), 아무것도 없을 때만 추가 메뉴
+        if (context.read<Store>().itemsOn(d).isEmpty) {
+          _quickAdd(context, d, wide);
+        } else if (!wide) {
+          _openDaySheet(context, d);
+        }
       },
       // PC: 바로 수정. 폰: 먼저 그날 목록(제목이 안 잘림)을 보여주고, 거기서 눌러야 수정으로 간다.
       onItemTap: (item, d) {
