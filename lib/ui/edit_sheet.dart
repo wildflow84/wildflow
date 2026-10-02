@@ -13,6 +13,8 @@ import '../models/recurrence.dart';
 import 'category_manager.dart';
 import 'color_picker.dart';
 import 'date_picker.dart';
+import 'lunar_picker.dart';
+import '../models/lunar.dart' show solarToLunar;
 import 'recurrence_editor.dart';
 import 'time_picker.dart';
 
@@ -124,6 +126,15 @@ class _EditSheetState extends State<_EditSheet> {
         _start = d;
         if (_end != null && _end!.isBefore(d)) _end = null;
       }
+    });
+  }
+
+  Future<void> _pickLunar() async {
+    final d = await pickLunarDate(context, initial: _start);
+    if (d == null) return;
+    setState(() {
+      _start = d;
+      if (_end != null && _end!.isBefore(d)) _end = null;
     });
   }
 
@@ -332,7 +343,20 @@ class _EditSheetState extends State<_EditSheet> {
                         child: Text(_end == null ? '종료일(선택)' : df.format(_end!)))),
               ],
             ]),
-            const SizedBox(height: 12),
+            // 음력: 고른 날짜의 음력 표시 + 음력으로 날짜 고르기 (생일/기일 등)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                icon: const Icon(Icons.nights_stay_outlined, size: 16),
+                label: Text(() {
+                  final l = solarToLunar(_start);
+                  return l == null ? '음력으로 고르기' : '음력 ${l.monthLabel} ${l.day}일 · 음력으로 고르기';
+                }()),
+                onPressed: _pickLunar,
+              ),
+            ),
+            const SizedBox(height: 4),
             if (_type == ItemType.todo)
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,

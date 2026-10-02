@@ -1,4 +1,4 @@
-import 'lunar.dart' show dayNumber;
+import 'lunar.dart' show dayNumber, solarToLunar, lunarToSolar;
 
 /// 구글 캘린더(RFC 5545 RRULE)와 같은 구조의 반복 규칙.
 ///
@@ -19,6 +19,9 @@ class Recurrence {
   final bool clampMonthEnd;
   final DateTime? until;
   final int? count;
+  /// 음력 반복. 매년(음력 생일/기일) 또는 매월(음력 15일 등). 시작일의 음력 날짜를 따른다.
+  /// 시작일이 윤달이어도 평달에 챙기고, 30일인데 29일까지인 달은 29일에 챙긴다.
+  final bool lunar;
 
   const Recurrence({
     required this.freq,
@@ -30,6 +33,7 @@ class Recurrence {
     this.clampMonthEnd = false,
     this.until,
     this.count,
+    this.lunar = false,
   });
 
   bool get isNthWeekday => freq == Freq.monthly && nth != null;
@@ -57,6 +61,7 @@ class Recurrence {
         clampMonthEnd: clampMonthEnd ?? this.clampMonthEnd,
         until: clearUntil ? null : (until ?? this.until),
         count: clearCount ? null : (count ?? this.count),
+        lunar: lunar,
       );
 
   // ---------- 저장 ----------
@@ -70,6 +75,7 @@ class Recurrence {
         'clamp': clampMonthEnd,
         'until': until == null ? null : _key(until!),
         'count': count,
+        'lunar': lunar,
       };
 
   factory Recurrence.fromMap(Map<String, dynamic> m) => Recurrence(
@@ -82,6 +88,7 @@ class Recurrence {
         clampMonthEnd: m['clamp'] == true,
         until: m['until'] == null ? null : _parse(m['until'] as String),
         count: (m['count'] as num?)?.toInt(),
+        lunar: m['lunar'] == true,
       );
 
   static String _key(DateTime d) =>
@@ -99,7 +106,7 @@ class Recurrence {
   String get _id => [
         freq.name, interval, (List<int>.of(weekdays)..sort()).join(','),
         (List<int>.of(monthDays)..sort()).join(','), nth, nthWeekday, clampMonthEnd,
-        until == null ? '' : _key(until!), count,
+        until == null ? '' : _key(until!), count, lunar,
       ].join('|');
 
   // ---------- 발생 계산 ----------
@@ -112,6 +119,7 @@ class Recurrence {
   bool matches(DateTime start, DateTime day) {
     final s = _d(start), d = _d(day);
     if (d.isBefore(s)) return false;
+    if (lunar && (freq == Freq.yearly || freq == Freq.monthly)) return _lunarMatch(s, d);
     switch (freq) {
       case Freq.daily:
         return (dayNumber(d) - dayNumber(s)) % interval == 0;
@@ -128,6 +136,18 @@ class Recurrence {
         if (d.month == s.month && d.day == s.day) return true;
         return clampMonthEnd && s.month == 2 && s.day == 29 && d.month == 2 && d.day == 28 && !_leap(d.year);
     }
+  }
+
+  bool _lunarMatch(DateTime s, DateTime d) {
+    final ls = solarToLunar(s), ld = solarToLunar(d);
+    if (ls == null || ld == null) return false;
+    if (freq == Freq.yearly) {
+      if ((ld.year - ls.year) % interval != 0) return false;
+      if (ld.leap || ld.month != ls.month) return false; // 윤달은 평달에 챙긴다
+    }
+    if (ld.day == ls.day) return true;
+    // 30일이 없는 달(29일까지)은 29일에
+    return ls.day == 30 && ld.day == 29 && lunarToSolar(ld.year, ld.month, 30, leap: ld.leap) == null;
   }
 
   bool _dateMatch(DateTime s, DateTime d) {
@@ -215,6 +235,16 @@ class Recurrence {
   String describe(DateTime start) {
     final s = _d(start);
     String base;
+    final ls = lunar ? solarToLunar(s) : null;
+    if (ls != null && (freq == Freq.yearly || freq == Freq.monthly)) {
+      final head = freq == Freq.yearly
+          ? '${interval == 1 ? '매년' : '$interval년마다'} 음력 ${ls.month}월 ${ls.day}일'
+          : '매월 음력 ${ls.day}일';
+      var out = head;
+      if (until != null) out += ' · ${until!.year}.${until!.month}.${until!.day}까지';
+      if (count != null) out += ' · $count회';
+      return out;
+    }
     switch (freq) {
       case Freq.daily:
         base = interval == 1 ? '매일' : '$interval일마다';
@@ -248,7 +278,9 @@ class Recurrence {
 }
 
 /// 등록 화면의 빠른 선택 항목. 시작 날짜에서 값이 정해진다.
-enum RepeatPreset { none, daily, weekly, monthlyDate, monthlyNth, monthlyLastWeekday, monthlyLast, yearly, weekdays, custom }
+enum RepeatPreset {
+  none, daily, weekly, monthlyDate, monthlyNth, monthlyLastWeekday, monthlyLast, yearly, weekdays, lunarYearly, lunarMonthly, custom
+}
 
 /// 시작일이 그 달의 마지막 7일 안이면 "마지막 ○요일"도 고를 수 있다.
 bool isLastWeekdayOfMonth(DateTime s) => s.day + 7 > DateTime(s.year, s.month + 1, 0).day;
@@ -277,6 +309,10 @@ Recurrence? presetRule(RepeatPreset p, DateTime start) {
       return const Recurrence(freq: Freq.monthly, monthDays: [-1]);
     case RepeatPreset.yearly:
       return const Recurrence(freq: Freq.yearly);
+    case RepeatPreset.lunarYearly:
+      return const Recurrence(freq: Freq.yearly, lunar: true);
+    case RepeatPreset.lunarMonthly:
+      return const Recurrence(freq: Freq.monthly, lunar: true);
   }
 }
 
@@ -284,6 +320,7 @@ Recurrence? presetRule(RepeatPreset p, DateTime start) {
 List<(RepeatPreset, String)> presetChoices(DateTime start) {
   final s = DateTime(start.year, start.month, start.day);
   final n = nthOfMonth(s);
+  final ls = solarToLunar(s);
   return [
     (RepeatPreset.none, '반복 안 함'),
     (RepeatPreset.daily, '매일'),
@@ -294,6 +331,8 @@ List<(RepeatPreset, String)> presetChoices(DateTime start) {
       (RepeatPreset.monthlyLastWeekday, '매월 마지막 ${Recurrence.wdFull(s.weekday)}'),
     (RepeatPreset.monthlyLast, '매월 마지막 날'),
     (RepeatPreset.yearly, '매년 ${s.month}월 ${s.day}일'),
+    if (ls != null) (RepeatPreset.lunarYearly, '매년 음력 ${ls.month}월 ${ls.day}일'),
+    if (ls != null) (RepeatPreset.lunarMonthly, '매월 음력 ${ls.day}일'),
     (RepeatPreset.weekdays, '평일 (월~금)'),
     (RepeatPreset.custom, '맞춤 설정…'),
   ];

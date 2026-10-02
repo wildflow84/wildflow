@@ -60,6 +60,7 @@ class _RecurrenceDialogState extends State<_RecurrenceDialog> {
       nth: _freq == Freq.monthly && _monthMode == _MonthMode.weekday ? _nth : null,
       nthWeekday: _freq == Freq.monthly && _monthMode == _MonthMode.weekday ? _nthWeekday : null,
       clampMonthEnd: _freq == Freq.monthly && _monthMode == _MonthMode.date && _clamp,
+      lunar: widget.initial?.lunar == true && _freq == widget.initial!.freq,
       until: _end == _EndKind.until ? _until : null,
       count: _end == _EndKind.count ? _count : null,
     );
