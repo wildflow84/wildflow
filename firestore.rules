@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    // 내 프로필 (소속 space 기록)
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /spaces/{spaceId} {
+      function isMember() {
+        return signedIn() && request.auth.uid in get(/databases/$(database)/documents/spaces/$(spaceId)).data.members;
+      }
+
+      // spaceId 자체가 비밀 초대 코드. 목록 조회(list)는 막고, 단건 get만 허용.
+      allow get: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.members == [request.auth.uid];
+
+      // 참여: 본인을 추가하고 총 2명 이하일 때만
+      allow update: if signedIn()
+        && (
+          isMember()
+          || (
+            !(request.auth.uid in resource.data.members)
+            && resource.data.members.size() < 2
+            && request.resource.data.members.hasAll(resource.data.members)
+            && request.resource.data.members.size() == resource.data.members.size() + 1
+            && request.auth.uid in request.resource.data.members
+          )
+        );
+
+      match /items/{itemId} {
+        // 공유 항목은 멤버 모두, 프라이빗은 소유자만 읽을 수 있다.
+        allow read: if isMember()
+          && (resource.data.visibility == 'shared' || resource.data.ownerUid == request.auth.uid);
+
+        allow create: if isMember() && request.resource.data.ownerUid == request.auth.uid;
+
+        // 수정/삭제는 소유자만 (소유자 변경 불가)
+        allow update: if isMember() && resource.data.ownerUid == request.auth.uid
+          && request.resource.data.ownerUid == request.auth.uid;
+        allow delete: if isMember() && resource.data.ownerUid == request.auth.uid;
+      }
+    }
+  }
+}

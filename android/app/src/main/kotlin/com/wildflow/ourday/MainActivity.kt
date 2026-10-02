@@ -1,0 +1,5 @@
+package com.wildflow.ourday
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()
