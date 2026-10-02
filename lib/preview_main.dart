@@ -13,6 +13,7 @@ import 'ui/category_manager.dart';
 import 'ui/edit_sheet.dart';
 import 'ui/home_screen.dart';
 import 'ui/settings_screen.dart';
+import 'ui/time_picker.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +55,8 @@ Widget _start() {
       return const _OpenEdit();
     case 'edit-timed':
       return const _OpenEdit(timed: true);
+    case 'time':
+      return const _OpenTime();
     case 'edit-roll':
       return const _OpenEdit(roll: true);
     case 'categories':
@@ -86,6 +89,24 @@ class _OpenEditState extends State<_OpenEdit> {
               : null;
       showEditSheet(context, day: DateTime(2026, 10, 14), item: item);
     });
+  }
+
+  @override
+  Widget build(BuildContext context) => const HomeScreen();
+}
+
+class _OpenTime extends StatefulWidget {
+  const _OpenTime();
+  @override
+  State<_OpenTime> createState() => _OpenTimeState();
+}
+
+class _OpenTimeState extends State<_OpenTime> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_) => pickTimeDigital(context, initial: const TimeOfDay(hour: 9, minute: 0)));
   }
 
   @override

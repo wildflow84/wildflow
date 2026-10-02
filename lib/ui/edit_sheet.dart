@@ -7,6 +7,7 @@ import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, Repeat, RepeatDelete, dateOnly, hasEndTime;
 import 'category_manager.dart';
 import 'color_picker.dart';
+import 'time_picker.dart';
 
 Future<void> showEditSheet(BuildContext context,
     {Item? item, DateTime? day, ItemType type = ItemType.event}) {
@@ -100,14 +101,7 @@ class _EditSheetState extends State<_EditSheet> {
   static String _hhmm(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
-  Future<TimeOfDay?> _pickTime(TimeOfDay initial) => showTimePicker(
-        context: context,
-        initialTime: initial,
-        builder: (ctx, child) => MediaQuery(
-          data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
-          child: child!,
-        ),
-      );
+  Future<TimeOfDay?> _pickTime(TimeOfDay initial) => pickTimeDigital(context, initial: initial);
 
   /// 반복 항목 삭제 범위 선택
   Future<RepeatDelete?> _askDeleteScope(Item item) {

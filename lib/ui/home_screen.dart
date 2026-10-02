@@ -9,7 +9,7 @@ import '../models/kr_calendar.dart';
 import '../models/lunar.dart';
 import '../models/map_links.dart';
 import '../models/item.dart' as m;
-import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, isDoneOn, isOverdue, nextRollDate, rollLabel, timeLabel, chipTimeLabel;
+import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, isDoneOn, isOverdue, moveItemByDays, nextRollDate, rollLabel, timeLabel, chipTimeLabel;
 import 'category_manager.dart';
 import 'settings_screen.dart';
 import 'edit_sheet.dart';
@@ -64,10 +64,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final calendar = _MonthGrid(
       month: _month,
       selected: _selected,
-      onSelect: (d) => setState(() {
-        _selected = d;
-        if (!wide) _openDaySheet(context, d);
-      }),
+      onBlankTap: (d) {
+        setState(() => _selected = d);
+        _quickAdd(context, d, wide);
+      },
+      onItemTap: (item, d) => showEditSheet(context, item: item, day: d),
+      onMove: _moveItem,
     );
 
     return Scaffold(
@@ -160,6 +162,72 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 달력 빈 공간을 눌렀을 때: 바로 일정/할 일/휴일 추가
+  void _quickAdd(BuildContext context, DateTime d, bool wide) {
+    final s = context.read<Store>();
+    final lunar = solarToLunar(d);
+    final count = s.itemsOn(d).length;
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            title: Text(DateFormat('M월 d일 (E)', 'ko').format(d),
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: lunar == null ? null : Text('음력 ${lunar.monthLabel} ${lunar.day}일'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.event),
+            title: const Text('일정 추가'),
+            onTap: () {
+              Navigator.pop(ctx);
+              showEditSheet(context, day: d, type: ItemType.event);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.check_circle_outline),
+            title: const Text('할 일 추가'),
+            onTap: () {
+              Navigator.pop(ctx);
+              showEditSheet(context, day: d, type: ItemType.todo);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.flag_outlined),
+            title: const Text('휴일 / 기념일 추가'),
+            onTap: () {
+              Navigator.pop(ctx);
+              addCustomDayDialog(context, d);
+            },
+          ),
+          if (!wide)
+            ListTile(
+              leading: const Icon(Icons.list),
+              title: Text(count == 0 ? '이 날 보기' : '이 날 목록 보기 ($count)'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _openDaySheet(context, d);
+              },
+            ),
+        ]),
+      ),
+    );
+  }
+
+  /// 드래그로 다른 날로 이동 (시각/기간 유지). 되돌리기 제공.
+  Future<void> _moveItem(Item item, DateTime from, DateTime to) async {
+    final s = context.read<Store>();
+    final messenger = ScaffoldMessenger.of(context);
+    final delta = dayNumber(to) - dayNumber(from);
+    if (delta == 0) return;
+    await s.save(moveItemByDays(item, delta));
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(
+      content: Text('"${item.title}" → ${DateFormat('M월 d일 (E)', 'ko').format(to)}로 이동'),
+      action: SnackBarAction(label: '되돌리기', onPressed: () => s.save(item)),
+    ));
+  }
+
   void _openDaySheet(BuildContext context, DateTime d) {
     showModalBottomSheet(
       context: context,
@@ -174,36 +242,49 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+/// 내 항목은 항상 보이고, 상대가 올린 같이 보기 항목만 토글로 켜고 끈다.
 class _FilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<Store>();
-    final me = s.uid;
-    final partner = s.names.entries.where((e) => e.key != me).map((e) => e.value).firstOrNull;
+    final partner = s.names.entries.where((e) => e.key != s.uid).map((e) => e.value).firstOrNull;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(children: [
-        FilterChip(
-          label: const Text('나'),
-          selected: s.filters.contains('mine'),
-          onSelected: (_) => s.toggleFilter('mine'),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Tooltip(
+          message: partner == null ? '상대가 올린 같이 보기 일정/할 일' : '$partner가 올린 같이 보기 일정/할 일',
+          child: Container(
+            padding: const EdgeInsets.only(left: 12, right: 4),
+            decoration: BoxDecoration(
+              color: Colors.white10,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.people_outline, size: 18),
+              const SizedBox(width: 6),
+              const Text('공유 캘린더 보기'),
+              Switch(value: s.showShared, onChanged: (_) => s.toggleFilter('partner')),
+            ]),
+          ),
         ),
-        const SizedBox(width: 8),
-        FilterChip(
-          label: Text(partner ?? '상대'),
-          selected: s.filters.contains('partner'),
-          onSelected: (_) => s.toggleFilter('partner'),
-        ),
-      ]),
+      ),
     );
   }
 }
 
 class _MonthGrid extends StatelessWidget {
   final DateTime month, selected;
-  final ValueChanged<DateTime> onSelect;
-  const _MonthGrid(
-      {required this.month, required this.selected, required this.onSelect});
+  final ValueChanged<DateTime> onBlankTap;
+  final void Function(Item item, DateTime day) onItemTap;
+  final void Function(Item item, DateTime from, DateTime to) onMove;
+  const _MonthGrid({
+    required this.month,
+    required this.selected,
+    required this.onBlankTap,
+    required this.onItemTap,
+    required this.onMove,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +328,9 @@ class _MonthGrid extends StatelessWidget {
                       isToday: gridStart.add(Duration(days: w * 7 + d)) == today,
                       isSelected: gridStart.add(Duration(days: w * 7 + d)) == selected,
                       items: s.itemsOn(gridStart.add(Duration(days: w * 7 + d))),
-                      onTap: onSelect,
+                      onTap: onBlankTap,
+                      onTapItem: onItemTap,
+                      onDropItem: onMove,
                     ),
                   ),
               ]),
@@ -262,7 +345,9 @@ class _DayCell extends StatelessWidget {
   final DateTime day;
   final bool inMonth, isToday, isSelected;
   final List<Item> items;
-  final ValueChanged<DateTime> onTap;
+  final ValueChanged<DateTime> onTap; // 빈 공간 탭
+  final void Function(Item item, DateTime day) onTapItem;
+  final void Function(Item item, DateTime from, DateTime to) onDropItem;
   const _DayCell({
     required this.day,
     required this.inMonth,
@@ -270,6 +355,8 @@ class _DayCell extends StatelessWidget {
     required this.isSelected,
     required this.items,
     required this.onTap,
+    required this.onTapItem,
+    required this.onDropItem,
   });
 
   /// 날짜 옆 음력 표기: 평일은 일, 초하루는 "월.1" (윤달은 앞에 윤)
@@ -296,15 +383,7 @@ class _DayCell extends StatelessWidget {
       lines.add(_Chip(text: m.name, color: const Color(0xFF3FA796)));
     }
     for (final i in items) {
-      lines.add(_Chip(
-        text: i.allDay ? i.title : '${chipTimeLabel(i)} ${i.title}',
-        color: s0.colorOf(i),
-        extraDots: [for (final c in s0.categoriesOf(i).skip(1)) c.color],
-        isTodo: i.type == ItemType.todo,
-        done: isDoneOn(i, day),
-        isPrivate: i.visibility == m.Visibility.private,
-        isRolling: i.isRolling,
-      ));
+      lines.add(_itemChip(context, s0, i));
     }
     for (final mk in marks.where((m) => !m.isHoliday)) {
       lines.add(_MarkText(
@@ -312,13 +391,21 @@ class _DayCell extends StatelessWidget {
           color: mk.kind == MarkKind.term ? const Color(0xFFE8A95B) : Colors.white54));
     }
 
-    return InkWell(
+    return DragTarget<_DragData>(
+      onWillAcceptWithDetails: (d) => dayNumber(d.data.from) != dayNumber(day),
+      onAcceptWithDetails: (d) => onDropItem(d.data.item, d.data.from, day),
+      builder: (context, candidates, _) => InkWell(
       onTap: () => onTap(day),
       child: Container(
         decoration: BoxDecoration(
+          color: candidates.isNotEmpty ? Colors.lightGreenAccent.withValues(alpha: 0.12) : null,
           border: Border.all(
-              color: isSelected ? Colors.lightBlueAccent : Colors.white12,
-              width: isSelected ? 1.5 : 0.5),
+              color: candidates.isNotEmpty
+                  ? Colors.lightGreenAccent
+                  : isSelected
+                      ? Colors.lightBlueAccent
+                      : Colors.white12,
+              width: (isSelected || candidates.isNotEmpty) ? 1.5 : 0.5),
         ),
         padding: const EdgeInsets.all(2),
         child: Opacity(
@@ -358,8 +445,45 @@ class _DayCell extends StatelessWidget {
           }),
         ),
       ),
+    ));
+  }
+
+  /// 내 일정/할 일 칩: 탭하면 바로 편집, 길게 눌러 끌면 다른 날로 이동 (반복 항목은 이동 불가)
+  Widget _itemChip(BuildContext context, Store s0, Item i) {
+    final canEdit = i.ownerUid == s0.uid || i.visibility == m.Visibility.shared;
+    final chip = _Chip(
+      text: i.allDay ? i.title : '${chipTimeLabel(i)} ${i.title}',
+      color: s0.colorOf(i),
+      extraDots: [for (final c in s0.categoriesOf(i).skip(1)) c.color],
+      isTodo: i.type == ItemType.todo,
+      done: isDoneOn(i, day),
+      isPrivate: i.visibility == m.Visibility.private,
+      isRolling: i.isRolling,
+    );
+    final tappable = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: canEdit ? () => onTapItem(i, day) : () => onTap(day),
+      child: chip,
+    );
+    if (!canEdit || i.repeat != Repeat.none) return tappable;
+    return LongPressDraggable<_DragData>(
+      data: _DragData(i, day),
+      delay: const Duration(milliseconds: 180),
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      feedback: Material(
+        color: Colors.transparent,
+        child: SizedBox(width: 130, child: Opacity(opacity: 0.9, child: chip)),
+      ),
+      childWhenDragging: Opacity(opacity: 0.3, child: chip),
+      child: tappable,
     );
   }
+}
+
+class _DragData {
+  final Item item;
+  final DateTime from;
+  _DragData(this.item, this.from);
 }
 
 class _MarkText extends StatelessWidget {
@@ -450,7 +574,7 @@ class _DayList extends StatelessWidget {
           icon: const Icon(Icons.add),
           onSelected: (v) {
             if (v == 'item') showEditSheet(context, day: day);
-            if (v == 'day') _addCustomDay(context, day);
+            if (v == 'day') addCustomDayDialog(context, day);
           },
           itemBuilder: (_) => const [
             PopupMenuItem(value: 'item', child: Text('일정 / 할 일 추가')),
@@ -491,38 +615,6 @@ class _DayList extends StatelessWidget {
               ]),
       ),
     ]);
-  }
-
-  Future<void> _addCustomDay(BuildContext context, DateTime day) async {
-    final name = TextEditingController();
-    var holiday = true;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: Text('${day.month}월 ${day.day}일에 추가'),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(
-                controller: name,
-                autofocus: true,
-                decoration: const InputDecoration(labelText: '이름 (예: 임시공휴일)')),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('공휴일 (빨간 날)'),
-              value: holiday,
-              onChanged: (v) => setS(() => holiday = v),
-            ),
-          ]),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('취소')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('추가')),
-          ],
-        ),
-      ),
-    );
-    if (ok == true && name.text.trim().isNotEmpty && context.mounted) {
-      await context.read<Store>().addCustomDay(day, name.text.trim(), holiday);
-    }
   }
 }
 
@@ -622,5 +714,38 @@ class _TodoTab extends StatelessWidget {
       section('앞으로', upcoming),
       if (open.isEmpty) const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('할 일 끝! 순대 산책 ㄱㄱ'))),
     ]);
+  }
+}
+
+/// 휴일/기념일(임시공휴일 등) 추가 대화상자
+Future<void> addCustomDayDialog(BuildContext context, DateTime day) async {
+  final name = TextEditingController();
+  var holiday = true;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setS) => AlertDialog(
+        title: Text('${day.month}월 ${day.day}일에 추가'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+              controller: name,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: '이름 (예: 임시공휴일)')),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('공휴일 (빨간 날)'),
+            value: holiday,
+            onChanged: (v) => setS(() => holiday = v),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('취소')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('추가')),
+        ],
+      ),
+    ),
+  );
+  if (ok == true && name.text.trim().isNotEmpty && context.mounted) {
+    await context.read<Store>().addCustomDay(day, name.text.trim(), holiday);
   }
 }

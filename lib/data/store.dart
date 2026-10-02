@@ -47,7 +47,7 @@ class Store extends ChangeNotifier {
   KrCalendar cal = KrCalendar();
 
   /// 보기 필터: mine=내 항목, partner=상대 공유 항목
-  final Set<String> filters = {'mine', 'partner'};
+  final Set<String> filters = {'partner'};
 
   Future<void> _onAuth(User? u) async {
     user = u;
@@ -141,11 +141,13 @@ class Store extends ChangeNotifier {
   List<Item> get visibleItems {
     final me = _previewUid ?? user?.uid;
     return items.where((i) {
-      final isMine = i.ownerUid == me;
-      if (isMine) return filters.contains('mine');
-      return filters.contains('partner');
+      if (i.ownerUid == me) return true; // 내 항목은 항상 보인다
+      return showShared; // 상대가 올린 같이 보기 항목은 토글
     }).toList();
   }
+
+  /// "공유 캘린더 보기" 토글 (상대가 올린 같이 보기 항목)
+  bool get showShared => filters.contains('partner');
 
   void toggleFilter(String f) {
     filters.contains(f) ? filters.remove(f) : filters.add(f);
@@ -214,7 +216,15 @@ class Store extends ChangeNotifier {
 
   String ownerName(Item i) => names[i.ownerUid] ?? '';
 
-  Future<void> save(Item i) => repo.save(spaceId!, i);
+  Future<void> save(Item i) async {
+    if (_previewUid != null) {
+      // 미리보기(Firebase 없음): 로컬 목록만 갱신
+      items = [...items.where((x) => x.id != i.id), i];
+      notifyListeners();
+      return;
+    }
+    await repo.save(spaceId!, i);
+  }
   Future<void> delete(Item i) => repo.delete(spaceId!, i.id);
 
   /// 반복 항목 삭제: 이 날짜만 / 이 날짜 이후 / 전부

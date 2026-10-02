@@ -11,6 +11,7 @@ void main() {
   timeTests();
   todoTimeTests();
   repeatDeleteTests();
+  futureCompleteTests();
   test('매일, 완료한 날 기준: 오늘 완료하면 내일', () {
     final i = _roll(DateTime(2026, 10, 2), 1, RollUnit.day);
     expect(_d(nextRollDate(i, DateTime(2026, 10, 2))), '2026-10-03');
@@ -163,5 +164,45 @@ void repeatDeleteTests() {
     expect(occursOn(r, DateTime(2026, 3, 31)), true);
     expect(occursOn(r, DateTime(2026, 4, 30)), false);
     expect(occursOn(r, DateTime(2026, 5, 31)), false);
+  });
+}
+
+void futureCompleteTests() {
+  Item pill(DateTime start, {bool completion = true}) => Item(
+      id: 'p', type: ItemType.todo, title: '약', start: start, ownerUid: 'me',
+      rollEvery: 1, rollUnit: RollUnit.day, rollFromCompletion: completion);
+
+  test('내일 것을 오늘 미리 완료하면 모레로 넘어감', () {
+    final tomorrowPill = pill(DateTime(2026, 10, 3));
+    expect(_d(nextRollDate(tomorrowPill, DateTime(2026, 10, 2))), '2026-10-04');
+  });
+
+  test('미리 계속 완료할 수 있음 (오늘 안에 연속으로)', () {
+    var item = pill(DateTime(2026, 10, 2));
+    final today = DateTime(2026, 10, 2);
+    final seen = <String>[];
+    for (var i = 0; i < 3; i++) {
+      final next = nextRollDate(item, today);
+      seen.add(_d(next));
+      item = item.copyWith(start: next);
+    }
+    expect(seen, ['2026-10-03', '2026-10-04', '2026-10-05']);
+  });
+
+  test('밀린 것을 완료하면 여전히 내일 (기존 동작 유지)', () {
+    expect(_d(nextRollDate(pill(DateTime(2026, 9, 28)), DateTime(2026, 10, 2))), '2026-10-03');
+  });
+
+  test('날짜 드래그 이동: 시각과 기간 유지', () {
+    final e = Item(
+        id: 'e', type: ItemType.event, title: '여행', start: DateTime(2026, 10, 14, 9, 30),
+        end: DateTime(2026, 10, 17, 18, 0), allDay: false, ownerUid: 'me');
+    final m = moveItemByDays(e, 3);
+    expect(m.start, DateTime(2026, 10, 17, 9, 30));
+    expect(m.end, DateTime(2026, 10, 20, 18, 0));
+    final back = moveItemByDays(m, -3);
+    expect(back.start, e.start);
+    // 월 경계
+    expect(moveItemByDays(e, 20).start, DateTime(2026, 11, 3, 9, 30));
   });
 }

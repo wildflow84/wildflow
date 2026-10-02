@@ -240,12 +240,17 @@ DateTime _addRoll(DateTime d, int every, RollUnit unit) {
 }
 
 /// 이동형 반복 항목을 [today]에 완료했을 때의 다음 날짜.
-///  - 완료한 날 기준: 오늘 + 간격 (약 먹기: 오늘 먹으면 내일)
+///  - 완료한 날 기준: (오늘과 예정일 중 더 늦은 날) + 간격.
+///    약 먹기: 오늘 먹으면 내일, 며칠 밀려서 먹어도 내일, **내일 것을 미리 오늘 먹으면 모레**.
 ///  - 예정일 기준: 예정일 + 간격. 밀려서 이미 지난 날짜가 되면 오늘 이후가 될 때까지 건너뛴다.
 DateTime nextRollDate(Item item, DateTime today) {
   final t = dateOnly(today);
-  if (item.rollFromCompletion) return _addRoll(t, item.rollEvery, item.rollUnit);
-  var next = _addRoll(dateOnly(item.start), item.rollEvery, item.rollUnit);
+  final due = dateOnly(item.start);
+  if (item.rollFromCompletion) {
+    final base = due.isAfter(t) ? due : t; // 미리 완료하면 예정일 기준으로 한 칸 전진
+    return _addRoll(base, item.rollEvery, item.rollUnit);
+  }
+  var next = _addRoll(due, item.rollEvery, item.rollUnit);
   while (!next.isAfter(t)) {
     next = _addRoll(next, item.rollEvery, item.rollUnit);
   }
@@ -315,4 +320,14 @@ Item? applyRepeatDelete(Item item, DateTime day, RepeatDelete scope) {
       if (!d.isAfter(dateOnly(item.start))) return null;
       return item.copyWith(repeatUntil: DateTime(d.year, d.month, d.day - 1));
   }
+}
+
+
+/// 항목을 [deltaDays]일만큼 옮긴다 (드래그로 날짜 변경). 시각과 기간(여러 날 일정)은 그대로 유지.
+Item moveItemByDays(Item item, int deltaDays) {
+  DateTime shift(DateTime d) => DateTime(d.year, d.month, d.day + deltaDays, d.hour, d.minute);
+  return item.copyWith(
+    start: shift(item.start),
+    end: item.end == null ? null : shift(item.end!),
+  );
 }
