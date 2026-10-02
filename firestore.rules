@@ -33,6 +33,11 @@ service cloud.firestore {
           )
         );
 
+      // 임시공휴일 등 공용 달력 정보: 멤버 모두 읽고 쓴다.
+      match /holidays/{holidayId} {
+        allow read, write: if isMember();
+      }
+
       match /items/{itemId} {
         // 공유 항목은 멤버 모두, 프라이빗은 소유자만 읽을 수 있다.
         allow read: if isMember()

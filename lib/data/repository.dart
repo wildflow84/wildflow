@@ -5,16 +5,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../models/item.dart';
+import '../models/kr_calendar.dart';
 
 /// Firestore 구조
 ///   users/{uid}                 { spaceId, name }
 ///   spaces/{spaceId}            { members: [uid], names: {uid: name} }
 ///   spaces/{spaceId}/items/{id} Item.toMap()
+///   spaces/{spaceId}/holidays/{id} { date, name, holiday }  (임시공휴일 등 사용자가 추가한 날)
 ///
 /// 프라이빗 보호는 firestore.rules가 서버에서 강제한다.
 class Repository {
-  final _db = FirebaseFirestore.instance;
-  final _auth = FirebaseAuth.instance;
+  // 지연 초기화: Firebase 없이 화면만 띄우는 미리보기(lib/preview_main.dart)에서도 만들 수 있게
+  late final _db = FirebaseFirestore.instance;
+  late final _auth = FirebaseAuth.instance;
 
   Stream<User?> get authChanges => _auth.authStateChanges();
   User? get user => _auth.currentUser;
@@ -113,4 +116,33 @@ class Repository {
 
   Future<void> delete(String spaceId, String id) =>
       _db.collection('spaces').doc(spaceId).collection('items').doc(id).delete();
+
+  Stream<List<CustomDay>> watchCustomDays(String spaceId) => _db
+      .collection('spaces')
+      .doc(spaceId)
+      .collection('holidays')
+      .snapshots()
+      .map((s) => s.docs.map((d) {
+            final m = d.data();
+            return CustomDay(
+              id: d.id,
+              date: (m['date'] as Timestamp).toDate(),
+              name: m['name'] ?? '',
+              holiday: m['holiday'] ?? true,
+            );
+          }).toList());
+
+  Future<void> saveCustomDay(String spaceId, CustomDay c) => _db
+      .collection('spaces')
+      .doc(spaceId)
+      .collection('holidays')
+      .doc(c.id.isEmpty ? null : c.id)
+      .set({
+        'date': Timestamp.fromDate(DateTime(c.date.year, c.date.month, c.date.day)),
+        'name': c.name,
+        'holiday': c.holiday,
+      });
+
+  Future<void> deleteCustomDay(String spaceId, String id) =>
+      _db.collection('spaces').doc(spaceId).collection('holidays').doc(id).delete();
 }

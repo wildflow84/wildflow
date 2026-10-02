@@ -66,7 +66,7 @@ class _EditSheetState extends State<_EditSheet> {
     if (_title.text.trim().isEmpty) return;
     final s = context.read<Store>();
     final base = widget.item ??
-        Item(id: '', type: _type, title: '', start: _start, ownerUid: s.user!.uid);
+        Item(id: '', type: _type, title: '', start: _start, ownerUid: s.uid);
     await s.save(base.copyWith(
       type: _type,
       title: _title.text.trim(),

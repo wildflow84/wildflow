@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/item.dart';
+import '../models/kr_calendar.dart';
 import 'repository.dart';
 import 'widget_sync.dart';
 
@@ -14,8 +15,17 @@ class Store extends ChangeNotifier {
     _authSub = repo.authChanges.listen(_onAuth);
   }
 
-  late final StreamSubscription _authSub;
-  StreamSubscription? _itemsSub, _namesSub;
+  /// Firebase 없이 화면만 확인하는 미리보기용 (lib/preview_main.dart, 위젯 테스트)
+  Store.preview(this.repo, {required String uid, required this.names, required this.items})
+      : _previewUid = uid,
+        spaceId = 'preview',
+        loading = false;
+
+  String? _previewUid;
+  StreamSubscription? _authSub;
+
+  String get uid => _previewUid ?? user!.uid;
+  StreamSubscription? _itemsSub, _namesSub, _customSub;
 
   User? user;
   String? spaceId;
@@ -23,6 +33,10 @@ class Store extends ChangeNotifier {
   String? error;
   List<Item> items = [];
   Map<String, String> names = {};
+  List<CustomDay> customDays = [];
+
+  /// 공휴일/절기/기념일 달력. 사용자가 추가한 임시공휴일이 바뀌면 새로 만든다.
+  KrCalendar cal = KrCalendar();
 
   /// 보기 필터: mine=내 항목, partner=상대 공유 항목
   final Set<String> filters = {'mine', 'partner'};
@@ -54,9 +68,14 @@ class Store extends ChangeNotifier {
     _itemsSub = repo.watchItems(id).listen((list) {
       items = list;
       notifyListeners();
-      WidgetSync.push(visibleItems, user!.uid);
+      WidgetSync.push(visibleItems, uid);
     }, onError: (e) {
       error = '$e';
+      notifyListeners();
+    });
+    _customSub = repo.watchCustomDays(id).listen((list) {
+      customDays = list;
+      cal = KrCalendar(custom: list);
       notifyListeners();
     });
     _namesSub = repo.memberNames(id).listen((n) {
@@ -68,6 +87,9 @@ class Store extends ChangeNotifier {
   Future<void> _stop() async {
     await _itemsSub?.cancel();
     await _namesSub?.cancel();
+    await _customSub?.cancel();
+    customDays = [];
+    cal = KrCalendar();
   }
 
   Future<void> createSpace() async {
@@ -85,7 +107,7 @@ class Store extends ChangeNotifier {
 
   /// 현재 필터에 맞는 항목. 'mine'=내가 소유한 것(공유+프라이빗), 'partner'=상대가 올린 공유 항목.
   List<Item> get visibleItems {
-    final me = user?.uid;
+    final me = _previewUid ?? user?.uid;
     return items.where((i) {
       final isMine = i.ownerUid == me;
       if (isMine) return filters.contains('mine');
@@ -96,7 +118,7 @@ class Store extends ChangeNotifier {
   void toggleFilter(String f) {
     filters.contains(f) ? filters.remove(f) : filters.add(f);
     notifyListeners();
-    WidgetSync.push(visibleItems, user!.uid);
+    WidgetSync.push(visibleItems, uid);
   }
 
   List<Item> itemsOn(DateTime day) {
@@ -107,6 +129,14 @@ class Store extends ChangeNotifier {
     });
     return list;
   }
+
+  List<CustomDay> customDaysOn(DateTime d) =>
+      customDays.where((c) => dateOnly(c.date) == dateOnly(d)).toList();
+
+  Future<void> addCustomDay(DateTime d, String name, bool holiday) => repo.saveCustomDay(
+      spaceId!, CustomDay(id: '', date: d, name: name, holiday: holiday));
+
+  Future<void> deleteCustomDay(CustomDay c) => repo.deleteCustomDay(spaceId!, c.id);
 
   String ownerName(Item i) => names[i.ownerUid] ?? '';
 
@@ -123,7 +153,7 @@ class Store extends ChangeNotifier {
 
   @override
   void dispose() {
-    _authSub.cancel();
+    _authSub?.cancel();
     _stop();
     super.dispose();
   }

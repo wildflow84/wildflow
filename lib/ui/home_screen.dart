@@ -4,7 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../data/store.dart';
-import '../models/holidays.dart';
+import '../models/kr_calendar.dart';
+import '../models/lunar.dart';
 import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, isDoneOn;
 import 'categories.dart';
@@ -21,6 +22,33 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _selected = dateOnly(DateTime.now());
   int _tab = 0;
+
+  /// 원하는 날짜로 바로 이동 (1901~2200)
+  Future<void> _jump(BuildContext context) async {
+    final d = await showDatePicker(
+      context: context,
+      initialDate: _selected,
+      firstDate: DateTime(1901, 1, 1),
+      lastDate: DateTime(2200, 12, 31),
+      helpText: '이동할 날짜',
+    );
+    if (d == null) return;
+    setState(() {
+      _selected = dateOnly(d);
+      _month = DateTime(d.year, d.month);
+    });
+  }
+
+  /// 예: "병오년 8월 – 9월"
+  String _lunarRange(DateTime month) {
+    final a = solarToLunar(DateTime(month.year, month.month, 1));
+    final b = solarToLunar(DateTime(month.year, month.month + 1, 0));
+    if (a == null || b == null) return '';
+    final first = '${ganjiYear(a.year)}년 ${a.monthLabel}';
+    if (a.year == b.year && a.month == b.month && a.leap == b.leap) return first;
+    if (a.year == b.year) return '$first – ${b.monthLabel}';
+    return '$first – ${ganjiYear(b.year)}년 ${b.monthLabel}';
+  }
 
   void _shift(int d) =>
       setState(() => _month = DateTime(_month.year, _month.month + d));
@@ -42,7 +70,25 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: Text(_tab == 0 ? DateFormat('M월', 'ko').format(_month) : '할 일'),
+        title: _tab == 0
+            ? InkWell(
+                onTap: () => _jump(context),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('${_month.year}년 ${_month.month}월',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text(_lunarRange(_month),
+                          style: const TextStyle(fontSize: 12, color: Colors.white60)),
+                    ],
+                  ),
+                ),
+              )
+            : const Text('할 일'),
         actions: [
           if (_tab == 0) ...[
             IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => _shift(-1)),
@@ -119,7 +165,7 @@ class _FilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<Store>();
-    final me = s.user!.uid;
+    final me = s.uid;
     final partner = s.names.entries.where((e) => e.key != me).map((e) => e.value).firstOrNull;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -213,13 +259,44 @@ class _DayCell extends StatelessWidget {
     required this.onTap,
   });
 
+  /// 날짜 옆 음력 표기: 평일은 일, 초하루는 "월.1" (윤달은 앞에 윤)
+  static String lunarText(DateTime d) {
+    final l = solarToLunar(d);
+    if (l == null) return '';
+    return l.day == 1 ? '${l.leap ? '윤' : ''}${l.month}.1' : '${l.day}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final holiday = holidayName(day);
-    final holidayColor = (day.weekday == DateTime.sunday || holiday != null)
+    final cal = context.watch<Store>().cal;
+    final marks = cal.marksOn(day);
+    final isHoliday = marks.any((m) => m.isHoliday);
+    final numColor = (day.weekday == DateTime.sunday || isHoliday)
         ? Colors.redAccent
-        : null;
-    const maxChips = 3;
+        : day.weekday == DateTime.saturday
+            ? Colors.lightBlueAccent
+            : null;
+
+    // 공휴일 → 내 일정/할 일 → 절기·기념일 순으로 채우고, 넘치면 +N
+    final lines = <Widget>[];
+    for (final m in marks.where((m) => m.isHoliday)) {
+      lines.add(_Chip(text: m.name, color: const Color(0xFF3FA796)));
+    }
+    for (final i in items) {
+      lines.add(_Chip(
+        text: i.title,
+        color: categoryOf(i.category).color,
+        isTodo: i.type == ItemType.todo,
+        done: isDoneOn(i, day),
+        isPrivate: i.visibility == m.Visibility.private,
+      ));
+    }
+    for (final mk in marks.where((m) => !m.isHoliday)) {
+      lines.add(_MarkText(
+          text: mk.name,
+          color: mk.kind == MarkKind.term ? const Color(0xFFE8A95B) : Colors.white54));
+    }
+
     return InkWell(
       onTap: () => onTap(day),
       child: Container(
@@ -231,38 +308,58 @@ class _DayCell extends StatelessWidget {
         padding: const EdgeInsets.all(2),
         child: Opacity(
           opacity: inMonth ? 1 : 0.4,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: isToday
-                      ? const BoxDecoration(
-                          color: Color(0xFF3B6FF5),
-                          borderRadius: BorderRadius.all(Radius.circular(8)))
-                      : null,
-                  child: Text('${day.day}',
-                      style: TextStyle(fontSize: 11, color: holidayColor)),
-                ),
-              ]),
-              if (holiday != null) _Chip(text: holiday, color: const Color(0xFF3FA796)),
-              for (final i in items.take(maxChips - (holiday != null ? 1 : 0)))
-                _Chip(
-                  text: i.title,
-                  color: categoryOf(i.category).color,
-                  isTodo: i.type == ItemType.todo,
-                  done: isDoneOn(i, day),
-                  isPrivate: i.visibility == m.Visibility.private,
-                ),
-              if (items.length > maxChips - (holiday != null ? 1 : 0))
-                const Text('•••', style: TextStyle(fontSize: 9, color: Colors.white54)),
-            ],
-          ),
+          child: LayoutBuilder(builder: (context, c) {
+            final room = ((c.maxHeight - 16) / 13).floor().clamp(0, 12);
+            final overflow = lines.length > room;
+            final shown = overflow ? room - 1 : lines.length;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: isToday
+                        ? const BoxDecoration(
+                            color: Color(0xFF3B6FF5),
+                            borderRadius: BorderRadius.all(Radius.circular(8)))
+                        : null,
+                    child: Text('${day.day}',
+                        style: TextStyle(fontSize: 11, color: numColor)),
+                  ),
+                  const SizedBox(width: 2),
+                  Flexible(
+                    child: Text('(${lunarText(day)})',
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                        style: const TextStyle(fontSize: 9, color: Colors.white38)),
+                  ),
+                ]),
+                ...lines.take(shown.clamp(0, lines.length)),
+                if (overflow && room > 0)
+                  Text('+${lines.length - shown}',
+                      style: const TextStyle(fontSize: 9, color: Colors.white54)),
+              ],
+            );
+          }),
         ),
       ),
     );
   }
+}
+
+class _MarkText extends StatelessWidget {
+  final String text;
+  final Color color;
+  const _MarkText({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(left: 2, top: 1),
+        child: Text(text,
+            maxLines: 1,
+            overflow: TextOverflow.clip,
+            style: TextStyle(fontSize: 9, color: color)),
+      );
 }
 
 class _Chip extends StatelessWidget {
@@ -312,15 +409,52 @@ class _DayList extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<Store>();
     final items = s.itemsOn(day);
-    final holiday = holidayName(day);
+    final marks = s.cal.marksOn(day);
+    final custom = s.customDaysOn(day);
+    final lunar = solarToLunar(day);
     return Column(children: [
       ListTile(
-        title: Text(DateFormat('M월 d일 (E)', 'ko').format(day)),
-        subtitle: holiday == null ? null : Text(holiday),
-        trailing: IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => showEditSheet(context, day: day)),
+        title: Text(DateFormat('y년 M월 d일 (E)', 'ko').format(day)),
+        subtitle: lunar == null
+            ? null
+            : Text('음력 ${ganjiYear(lunar.year)}년 ${lunar.monthLabel} ${lunar.day}일'),
+        trailing: PopupMenuButton<String>(
+          icon: const Icon(Icons.add),
+          onSelected: (v) {
+            if (v == 'item') showEditSheet(context, day: day);
+            if (v == 'day') _addCustomDay(context, day);
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'item', child: Text('일정 / 할 일 추가')),
+            PopupMenuItem(value: 'day', child: Text('휴일 / 기념일 추가 (임시공휴일 등)')),
+          ],
+        ),
       ),
+      if (marks.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(spacing: 6, runSpacing: 4, children: [
+              for (final m in marks)
+                Chip(
+                  visualDensity: VisualDensity.compact,
+                  label: Text(m.name, style: const TextStyle(fontSize: 12)),
+                  backgroundColor: m.isHoliday
+                      ? const Color(0xFF3FA796)
+                      : m.kind == MarkKind.term
+                          ? const Color(0xFF6B5A3A)
+                          : Colors.white12,
+                  deleteIcon: custom.any((c) => c.name == m.name)
+                      ? const Icon(Icons.close, size: 14)
+                      : null,
+                  onDeleted: custom.any((c) => c.name == m.name)
+                      ? () => s.deleteCustomDay(custom.firstWhere((c) => c.name == m.name))
+                      : null,
+                ),
+            ]),
+          ),
+        ),
       Expanded(
         child: items.isEmpty
             ? const Center(child: Text('비어 있어'))
@@ -329,6 +463,38 @@ class _DayList extends StatelessWidget {
               ]),
       ),
     ]);
+  }
+
+  Future<void> _addCustomDay(BuildContext context, DateTime day) async {
+    final name = TextEditingController();
+    var holiday = true;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Text('${day.month}월 ${day.day}일에 추가'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+                controller: name,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: '이름 (예: 임시공휴일)')),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('공휴일 (빨간 날)'),
+              value: holiday,
+              onChanged: (v) => setS(() => holiday = v),
+            ),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('취소')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('추가')),
+          ],
+        ),
+      ),
+    );
+    if (ok == true && name.text.trim().isNotEmpty && context.mounted) {
+      await context.read<Store>().addCustomDay(day, name.text.trim(), holiday);
+    }
   }
 }
 
@@ -341,7 +507,7 @@ class _ItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.read<Store>();
     final done = isDoneOn(item, day);
-    final mine = item.ownerUid == s.user!.uid;
+    final mine = item.ownerUid == s.uid;
     final cat = categoryOf(item.category);
     return ListTile(
       leading: item.type == ItemType.todo
