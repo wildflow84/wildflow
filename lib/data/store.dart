@@ -217,6 +217,16 @@ class Store extends ChangeNotifier {
   Future<void> save(Item i) => repo.save(spaceId!, i);
   Future<void> delete(Item i) => repo.delete(spaceId!, i.id);
 
+  /// 반복 항목 삭제: 이 날짜만 / 이 날짜 이후 / 전부
+  Future<void> deleteRepeating(Item i, DateTime day, RepeatDelete scope) async {
+    final result = applyRepeatDelete(i, day, scope);
+    if (result == null) {
+      await delete(i);
+    } else {
+      await save(result);
+    }
+  }
+
   /// 완료 토글. 이동형 반복은 완료 대신 날짜가 다음 일정으로 넘어간다.
   /// 되돌리기용으로 변경 전 항목을 돌려준다 (이동형일 때만).
   Future<Item?> toggleDone(Item i, DateTime day) async {

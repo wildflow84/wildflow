@@ -10,6 +10,7 @@ String _d(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.da
 void main() {
   timeTests();
   todoTimeTests();
+  repeatDeleteTests();
   test('매일, 완료한 날 기준: 오늘 완료하면 내일', () {
     final i = _roll(DateTime(2026, 10, 2), 1, RollUnit.day);
     expect(_d(nextRollDate(i, DateTime(2026, 10, 2))), '2026-10-03');
@@ -111,5 +112,56 @@ void todoTimeTests() {
     expect(isOverdue(todo(start: DateTime(2026, 10, 2, 18, 0)), now), false);
     expect(isOverdue(todo(allDay: true, start: DateTime(2026, 10, 2)), now), false); // 오늘 종일은 아직
     expect(isOverdue(todo(allDay: true, start: DateTime(2026, 10, 1)), now), true);
+  });
+}
+
+void repeatDeleteTests() {
+  Item weekly() => Item(
+      id: 'x', type: ItemType.event, title: '정기점검', start: DateTime(2026, 10, 7), ownerUid: 'me',
+      repeat: Repeat.weekly);
+
+  test('이 날짜만 삭제: 그 회차만 빠지고 나머지는 유지', () {
+    final r = applyRepeatDelete(weekly(), DateTime(2026, 10, 21), RepeatDelete.thisOnly)!;
+    expect(occursOn(r, DateTime(2026, 10, 14)), true);
+    expect(occursOn(r, DateTime(2026, 10, 21)), false);
+    expect(occursOn(r, DateTime(2026, 10, 28)), true);
+    // 같은 날짜를 두 번 지워도 중복되지 않는다
+    final again = applyRepeatDelete(r, DateTime(2026, 10, 21), RepeatDelete.thisOnly)!;
+    expect(again.exceptions.length, 1);
+  });
+
+  test('이 날짜 이후 삭제: 앞의 기록은 남고 이후로는 사라짐', () {
+    final r = applyRepeatDelete(weekly(), DateTime(2026, 10, 21), RepeatDelete.following)!;
+    expect(occursOn(r, DateTime(2026, 10, 7)), true);
+    expect(occursOn(r, DateTime(2026, 10, 14)), true);
+    expect(occursOn(r, DateTime(2026, 10, 21)), false);
+    expect(occursOn(r, DateTime(2026, 10, 28)), false);
+    expect(occursOn(r, DateTime(2030, 1, 2)), false); // 먼 미래도
+  });
+
+  test('첫 회차에서 "이 날짜 이후"를 고르면 전체 삭제와 같음', () {
+    expect(applyRepeatDelete(weekly(), DateTime(2026, 10, 7), RepeatDelete.following), isNull);
+    expect(applyRepeatDelete(weekly(), DateTime(2026, 10, 1), RepeatDelete.following), isNull);
+  });
+
+  test('전체 삭제', () {
+    expect(applyRepeatDelete(weekly(), DateTime(2026, 10, 21), RepeatDelete.all), isNull);
+  });
+
+  test('저장/복원 필드: repeatUntil, exceptions 가 toMap에 들어간다', () {
+    final r = applyRepeatDelete(weekly(), DateTime(2026, 10, 21), RepeatDelete.following)!;
+    expect(r.toMap()['repeatUntil'], isNotNull);
+    final t = applyRepeatDelete(weekly(), DateTime(2026, 10, 21), RepeatDelete.thisOnly)!;
+    expect(t.toMap()['exceptions'], ['2026-10-21']);
+  });
+
+  test('매월 31일 같은 반복도 until/exceptions 가 동작', () {
+    final m = Item(
+        id: 'm', type: ItemType.todo, title: '퇴직연금', start: DateTime(2026, 1, 31), ownerUid: 'me',
+        repeat: Repeat.monthly);
+    final r = applyRepeatDelete(m, DateTime(2026, 4, 30), RepeatDelete.following)!;
+    expect(occursOn(r, DateTime(2026, 3, 31)), true);
+    expect(occursOn(r, DateTime(2026, 4, 30)), false);
+    expect(occursOn(r, DateTime(2026, 5, 31)), false);
   });
 }

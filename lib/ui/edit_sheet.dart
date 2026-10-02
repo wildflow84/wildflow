@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../data/store.dart';
 import '../models/item.dart' as m;
-import '../models/item.dart' show Item, ItemType, Repeat, dateOnly, hasEndTime;
+import '../models/item.dart' show Item, ItemType, Repeat, RepeatDelete, dateOnly, hasEndTime;
 import 'category_manager.dart';
 import 'color_picker.dart';
 
@@ -108,6 +108,39 @@ class _EditSheetState extends State<_EditSheet> {
           child: child!,
         ),
       );
+
+  /// 반복 항목 삭제 범위 선택
+  Future<RepeatDelete?> _askDeleteScope(Item item) {
+    final f = DateFormat('M월 d일 (E)', 'ko');
+    final day = f.format(widget.day);
+    final isLaterOccurrence = dateOnly(widget.day).isAfter(dateOnly(item.start));
+    Widget option(RepeatDelete v, String title, String sub, {Color? color}) => SimpleDialogOption(
+          onPressed: () => Navigator.pop(context, v),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: TextStyle(fontSize: 16, color: color)),
+              Text(sub, style: const TextStyle(fontSize: 12, color: Colors.white60)),
+            ]),
+          ),
+        );
+    return showDialog<RepeatDelete>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text('"${item.title}" 반복 삭제'),
+        children: [
+          option(RepeatDelete.thisOnly, '이 날짜만', '$day 하루만 빼고 나머지는 그대로'),
+          option(RepeatDelete.following, '이 날짜 이후 모두',
+              isLaterOccurrence ? '$day 부터 앞으로 전부 삭제 (이전 기록은 남김)' : '첫 회차라서 전체 삭제와 같아'),
+          option(RepeatDelete.all, '전체 삭제', '과거·현재·미래 모든 반복을 삭제', color: Colors.redAccent),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _save() async {
     if (_title.text.trim().isEmpty) return;
@@ -398,7 +431,15 @@ class _EditSheetState extends State<_EditSheet> {
               if (widget.item != null && isOwner)
                 TextButton(
                   onPressed: () async {
-                    await context.read<Store>().delete(widget.item!);
+                    final s = context.read<Store>();
+                    final item = widget.item!;
+                    if (item.repeat == Repeat.none) {
+                      await s.delete(item);
+                    } else {
+                      final scope = await _askDeleteScope(item);
+                      if (scope == null) return;
+                      await s.deleteRepeating(item, widget.day, scope);
+                    }
                     if (context.mounted) Navigator.pop(context);
                   },
                   child: const Text('삭제', style: TextStyle(color: Colors.redAccent)),

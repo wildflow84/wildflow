@@ -6,6 +6,9 @@ enum Visibility { shared, private }
 
 enum Repeat { none, daily, weekly, monthly, yearly }
 
+/// 반복 일정 삭제 범위
+enum RepeatDelete { thisOnly, following, all }
+
 /// 이동형 반복의 단위
 enum RollUnit { day, week, month, year }
 
@@ -27,6 +30,12 @@ class Item {
   final Visibility visibility;
   final String ownerUid;
   final Repeat repeat;
+
+  /// 반복의 마지막 날(포함). null이면 끝없이 반복. "이 날짜 이후 삭제"로 설정된다.
+  final DateTime? repeatUntil;
+
+  /// 반복에서 빠진 날짜(yyyy-MM-dd). "이 날짜만 삭제"로 추가된다.
+  final List<String> exceptions;
 
   /// 이동형 반복 (약 먹기처럼 "항상 하나만" 존재하는 할 일).
   /// [rollEvery] > 0 이면 완료 처리할 때 완료되는 대신 날짜가 다음 일정으로 옮겨진다.
@@ -58,6 +67,8 @@ class Item {
     this.color,
     this.visibility = Visibility.shared,
     this.repeat = Repeat.none,
+    this.repeatUntil,
+    this.exceptions = const [],
     this.rollEvery = 0,
     this.rollUnit = RollUnit.day,
     this.rollFromCompletion = true,
@@ -81,6 +92,9 @@ class Item {
     bool clearColor = false,
     Visibility? visibility,
     Repeat? repeat,
+    DateTime? repeatUntil,
+    bool clearRepeatUntil = false,
+    List<String>? exceptions,
     int? rollEvery,
     RollUnit? rollUnit,
     bool? rollFromCompletion,
@@ -103,6 +117,8 @@ class Item {
         color: clearColor ? null : (color ?? this.color),
         visibility: visibility ?? this.visibility,
         repeat: repeat ?? this.repeat,
+        repeatUntil: clearRepeatUntil ? null : (repeatUntil ?? this.repeatUntil),
+        exceptions: exceptions ?? this.exceptions,
         rollEvery: rollEvery ?? this.rollEvery,
         rollUnit: rollUnit ?? this.rollUnit,
         rollFromCompletion: rollFromCompletion ?? this.rollFromCompletion,
@@ -126,6 +142,8 @@ class Item {
         'visibility': visibility.name,
         'ownerUid': ownerUid,
         'repeat': repeat.name,
+        'repeatUntil': repeatUntil == null ? null : Timestamp.fromDate(repeatUntil!),
+        'exceptions': exceptions,
         'rollEvery': rollEvery,
         'rollUnit': rollUnit.name,
         'rollFrom': rollFromCompletion ? 'completion' : 'schedule',
@@ -153,6 +171,8 @@ class Item {
       visibility: byName(Visibility.values, m['visibility'], Visibility.shared),
       ownerUid: m['ownerUid'] ?? '',
       repeat: byName(Repeat.values, m['repeat'], Repeat.none),
+      repeatUntil: (m['repeatUntil'] as Timestamp?)?.toDate(),
+      exceptions: List<String>.from(m['exceptions'] ?? const []),
       rollEvery: (m['rollEvery'] as num?)?.toInt() ?? 0,
       rollUnit: byName(RollUnit.values, m['rollUnit'], RollUnit.day),
       rollFromCompletion: (m['rollFrom'] ?? 'completion') == 'completion',
@@ -178,6 +198,10 @@ bool occursOn(Item item, DateTime day) {
   final d = dateOnly(day);
   final s = dateOnly(item.start);
   if (d.isBefore(s)) return false;
+  if (item.repeat != Repeat.none) {
+    if (item.repeatUntil != null && d.isAfter(dateOnly(item.repeatUntil!))) return false;
+    if (item.exceptions.contains(dateKey(d))) return false;
+  }
   switch (item.repeat) {
     case Repeat.none:
       final e = item.end == null ? s : dateOnly(item.end!);
@@ -272,4 +296,23 @@ String? chipTimeLabel(Item i) {
 bool isOverdue(Item i, DateTime now) {
   if (i.type != ItemType.todo || i.repeat != Repeat.none) return false;
   return i.allDay ? dateOnly(i.start).isBefore(dateOnly(now)) : i.start.isBefore(now);
+}
+
+
+/// 반복 항목에서 [day] 회차를 [scope] 범위로 삭제한 결과.
+/// 항목 전체를 지워야 하면 null, 아니면 수정된 항목을 돌려준다.
+Item? applyRepeatDelete(Item item, DateTime day, RepeatDelete scope) {
+  final d = dateOnly(day);
+  switch (scope) {
+    case RepeatDelete.all:
+      return null;
+    case RepeatDelete.thisOnly:
+      final key = dateKey(d);
+      if (item.exceptions.contains(key)) return item;
+      return item.copyWith(exceptions: [...item.exceptions, key]);
+    case RepeatDelete.following:
+      // 첫 회차부터 지우면 남는 게 없으니 전체 삭제와 같다.
+      if (!d.isAfter(dateOnly(item.start))) return null;
+      return item.copyWith(repeatUntil: DateTime(d.year, d.month, d.day - 1));
+  }
 }
