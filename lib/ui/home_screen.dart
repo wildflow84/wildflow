@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart' show PointerScrollEvent;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -31,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
   bool _dragging = false; // 일정을 끌고 있는 동안: 달력 양 끝에 월 이동 영역을 보여준다
   double _swipeDx = 0;
+  DateTime _lastWheel = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// 원하는 날짜로 바로 이동 (1901~2200)
   Future<void> _jump(BuildContext context) async {
@@ -77,6 +79,14 @@ class _HomeScreenState extends State<HomeScreen> {
     // 달력을 좌우로 밀면(마우스 드래그, 터치 스와이프) 월이 넘어간다.
     // 일정을 끌고 있을 때는 양 끝 영역에 대고 있으면 월이 계속 넘어가 다른 달로 옮길 수 있다.
     final calendar = Listener(
+      // 마우스 휠/트랙패드: 아래로 굴리면 다음 달, 위로 굴리면 이전 달 (연속 입력은 0.35초에 한 번만)
+      onPointerSignal: (e) {
+        if (e is! PointerScrollEvent || e.scrollDelta.dy == 0) return;
+        final now = DateTime.now();
+        if (now.difference(_lastWheel) < const Duration(milliseconds: 350)) return;
+        _lastWheel = now;
+        _shift(e.scrollDelta.dy > 0 ? 1 : -1);
+      },
       onPointerUp: (_) {
         if (_dragging) setState(() => _dragging = false);
       },
