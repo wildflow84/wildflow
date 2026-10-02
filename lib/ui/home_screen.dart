@@ -72,7 +72,15 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _selected = d);
         _quickAdd(context, d, wide);
       },
-      onItemTap: (item, d) => showEditSheet(context, item: item, day: d),
+      // PC: 바로 수정. 폰: 먼저 그날 목록(제목이 안 잘림)을 보여주고, 거기서 눌러야 수정으로 간다.
+      onItemTap: (item, d) {
+        if (wide) {
+          showEditSheet(context, item: item, day: d);
+        } else {
+          setState(() => _selected = d);
+          _openDaySheet(context, d);
+        }
+      },
       onMove: _moveItem,
     );
 
@@ -863,7 +871,7 @@ class _Chip extends StatelessWidget {
           ),
         if (isTodo) Icon(done ? Icons.check_circle : Icons.radio_button_unchecked, size: 9),
         if (isPrivate) const Icon(Icons.lock, size: 8),
-        if (isRolling) const Icon(Icons.autorenew, size: 9),
+        if (isRolling && MediaQuery.sizeOf(context).width >= 600) const Icon(Icons.autorenew, size: 9),
         Expanded(
           child: Text(text,
               maxLines: 1,
