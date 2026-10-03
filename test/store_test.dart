@@ -82,4 +82,16 @@ void main() {
   test('기본 카테고리 id는 기존 항목과 호환 (default/work/family/money/travel/kid)', () {
     expect(defaultCategories.map((c) => c.id), ['default', 'work', 'family', 'money', 'travel', 'kid']);
   });
+
+  test('닉네임: 저장하면 내 이름표와 만든 사람 표시가 바뀐다 (빈 값/너무 긴 값은 무시)', () async {
+    final st = Store.preview(Repository(), uid: 'me', names: {'me': '구글이름', 'you': '상대'}, items: []);
+    expect(st.ownerLabel(_item()), '구글이름');
+    await st.setNickname('  대희아빠 ');
+    expect(st.myNickname, '대희아빠');
+    expect(st.ownerLabel(_item()), '대희아빠');
+    await st.setNickname('   ');
+    await st.setNickname('가' * (Store.maxNicknameLength + 1));
+    expect(st.myNickname, '대희아빠');
+    expect(st.names['you'], '상대');
+  });
 }

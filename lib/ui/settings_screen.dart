@@ -21,6 +21,15 @@ class SettingsScreen extends StatelessWidget {
           child: ListView(
         padding: const EdgeInsets.only(bottom: 80),
         children: [
+          const _Header('내 정보'),
+          ListTile(
+            leading: const Icon(Icons.badge_outlined),
+            title: const Text('닉네임'),
+            subtitle: Text(s.myNickname.isEmpty ? '정하지 않음 (구글 이름으로 보여)' : '${s.myNickname} · 상대와 내가 만든 항목에 이 이름으로 보여'),
+            trailing: const Icon(Icons.edit_outlined, size: 18),
+            onTap: () => _editNickname(context, s),
+          ),
+          const Divider(height: 32),
           const _Header('새 일정 / 할 일의 기본 공개 범위'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -95,4 +104,26 @@ class _Header extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         child: Text(text, style: Theme.of(context).textTheme.titleSmall),
       );
+}
+
+Future<void> _editNickname(BuildContext context, Store s) async {
+  final ctl = TextEditingController(text: s.myNickname);
+  final v = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('닉네임'),
+      content: TextField(
+        controller: ctl,
+        autofocus: true,
+        maxLength: Store.maxNicknameLength,
+        decoration: const InputDecoration(hintText: '상대에게 보일 이름'),
+        onSubmitted: (t) => Navigator.pop(ctx, t),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, ctl.text), child: const Text('저장')),
+      ],
+    ),
+  );
+  if (v != null && v.trim().isNotEmpty) await s.setNickname(v);
 }

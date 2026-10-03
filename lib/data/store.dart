@@ -214,6 +214,20 @@ class Store extends ChangeNotifier {
 
   Future<void> deleteCategory(Category c) => repo.deleteCategory(spaceId!, c.id);
 
+  /// 내 닉네임 (상대와 항목의 '만든 사람'에 이 이름으로 보인다). 아직 안 정했으면 구글 이름.
+  String get myNickname => names[uid] ?? '';
+
+  static const maxNicknameLength = 12;
+
+  Future<void> setNickname(String value) async {
+    final n = value.trim();
+    if (n.isEmpty || n.length > maxNicknameLength) return;
+    names = {...names, uid: n};
+    notifyListeners();
+    if (_previewUid != null) return;
+    await repo.setNickname(spaceId!, n);
+  }
+
   String ownerName(Item i) => names[i.ownerUid] ?? '';
 
   /// 만든 사람 표시용 이름 (이름을 아직 모르면 나/상대)

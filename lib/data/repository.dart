@@ -68,6 +68,15 @@ class Repository {
         {'spaceId': ref.id, 'name': u.displayName}, SetOptions(merge: true));
   }
 
+  /// 닉네임 변경: 공간의 이름표(상대 화면에 보이는 이름)와 내 프로필에 같이 저장한다.
+  Future<void> setNickname(String spaceId, String nickname) async {
+    final u = user!;
+    final batch = _db.batch();
+    batch.update(_db.collection('spaces').doc(spaceId), {'names.${u.uid}': nickname});
+    batch.set(_db.collection('users').doc(u.uid), {'name': nickname, 'nickname': nickname}, SetOptions(merge: true));
+    await batch.commit();
+  }
+
   Stream<Map<String, String>> memberNames(String spaceId) => _db
       .collection('spaces')
       .doc(spaceId)
