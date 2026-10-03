@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'lunar.dart' show solarToLunar;
 import 'recurrence.dart';
 
 enum ItemType { event, todo }
@@ -61,6 +62,8 @@ class Item {
   final List<CheckEntry> checklist;
   /// 할 일 담당자 uid. 비어 있으면 담당을 정하지 않음(만든 사람 몫).
   final String assignee;
+  /// 목록에 D-day(남은 날/지난 날)를 표시할지
+  final bool dday;
   /// 반복 항목의 회차별 체크 기록: 날짜(yyyy-MM-dd) → 체크한 항목의 글자. 반복이 아니면 안 쓴다.
   final Map<String, List<String>> checksByDate;
 
@@ -141,6 +144,7 @@ class Item {
         checklist: i.checklist,
         checksByDate: i.checksByDate,
         assignee: i.assignee,
+        dday: i.dday,
       );
 
   /// 이 할 일이 [uid]의 몫인지: 담당자가 정해져 있으면 그 사람, 아니면 만든 사람.
@@ -190,6 +194,7 @@ class Item {
     this.checklist = const [],
     this.checksByDate = const {},
     this.assignee = '',
+    this.dday = false,
   });
 
   Item copyWith({
@@ -229,6 +234,7 @@ class Item {
     List<CheckEntry>? checklist,
     Map<String, List<String>>? checksByDate,
     String? assignee,
+    bool? dday,
   }) =>
       Item(
         id: id,
@@ -262,6 +268,7 @@ class Item {
         checklist: checklist ?? this.checklist,
         checksByDate: checksByDate ?? this.checksByDate,
         assignee: assignee ?? this.assignee,
+        dday: dday ?? this.dday,
       );
 
   Map<String, dynamic> toMap() => {
@@ -296,6 +303,7 @@ class Item {
         'checklist': [for (final c in checklist) c.toMap()],
         'checksByDate': checksByDate,
         'assignee': assignee,
+        'dday': dday,
       };
 
   factory Item.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -336,6 +344,7 @@ class Item {
           if (c is Map) CheckEntry.fromMap(Map<String, dynamic>.from(c)),
       ],
       assignee: (m['assignee'] as String?) ?? '',
+      dday: m['dday'] == true,
       checksByDate: {
         for (final e in ((m['checksByDate'] as Map?) ?? const {}).entries)
           '${e.key}': List<String>.from(e.value as List),
@@ -602,6 +611,37 @@ Item moveItemByDays(Item item, int deltaDays) {
     start: shift(item.start),
     end: item.end == null ? null : shift(item.end!),
   );
+}
+
+/// 같은 내용의 새 항목(복제). 완료/반복 기록은 비우고 제목 뒤에 "(복사)"를 붙인다.
+Item copyOfItem(Item i) => Item.fresh(i.copyWith(
+      title: '${i.title} (복사)',
+      done: false,
+      doneDates: const [],
+      exceptions: const [],
+      checksByDate: const {},
+      checklist: allChecked(i.checklist, false),
+    ));
+
+/// D-day 문구: 오늘이면 "D-day", 앞이면 "D-3", 지났으면 "D+2". [day]는 표시 중인 날짜(반복이면 그 회차).
+String ddayLabel(DateTime day, DateTime today) {
+  final n = dateOnly(day).difference(dateOnly(today)).inDays;
+  return n == 0 ? 'D-day' : n > 0 ? 'D-$n' : 'D+${-n}';
+}
+
+/// 매년 반복(양력/음력) 일정의 "N주년" 문구. 첫 해이거나 매년 반복이 아니면 null.
+String? anniversaryLabel(Item i, DateTime day) {
+  final r = i.effectiveRule;
+  if (r == null || r.freq != Freq.yearly || r.interval != 1) return null;
+  int? n;
+  if (r.lunar) {
+    final a = solarToLunar(i.start), b = solarToLunar(day);
+    if (a == null || b == null) return null;
+    n = b.year - a.year;
+  } else {
+    n = day.year - i.start.year;
+  }
+  return n >= 1 ? '$n주년' : null;
 }
 
 /// 체크리스트 한 줄

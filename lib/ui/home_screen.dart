@@ -1105,6 +1105,8 @@ class ItemTile extends StatelessWidget {
           if (item.type == ItemType.event && item.location.isNotEmpty)
             _Meta(icon: Icons.place_outlined, text: item.location),
           _Meta(dot: s.categoriesOf(item).first.color, text: s.categoriesOf(item).first.name),
+          if (item.dday) _Meta(icon: Icons.hourglass_bottom, text: m.ddayLabel(day, DateTime.now())),
+          if (m.anniversaryLabel(item, day) != null) _Meta(icon: Icons.cake_outlined, text: m.anniversaryLabel(item, day)!),
           if (item.isRolling) _Meta(icon: Icons.autorenew, text: rollLabel(item)),
           if (item.isRecurring) _Meta(icon: Icons.repeat, text: item.effectiveRule!.describe(item.start)),
           if (item.visibility == m.Visibility.private) const _Meta(icon: Icons.lock_outline, text: '나만'),

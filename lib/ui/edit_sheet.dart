@@ -17,6 +17,7 @@ import 'date_picker.dart';
 import 'lunar_picker.dart';
 import '../models/lunar.dart' show solarToLunar;
 import 'recurrence_editor.dart';
+import 'snack.dart';
 import 'time_picker.dart';
 
 Future<void> showEditSheet(BuildContext context,
@@ -69,6 +70,7 @@ class _EditSheetState extends State<_EditSheet> {
       : null;
   late List<String> _cats; // 항상 하나 (이전 버전에서 여러 개였던 항목은 첫 번째만 쓴다)
   late String _assignee = widget.item?.assignee ?? '';
+  late bool _dday = widget.item?.dday ?? false;
   late m.Visibility _vis;
   late bool _visTouched = widget.item != null; // 직접 바꾸면 카테고리 기본값으로 덮어쓰지 않는다
   late int? _color = widget.item?.color; // null이면 카테고리 색
@@ -265,6 +267,7 @@ class _EditSheetState extends State<_EditSheet> {
       color: _color,
       clearColor: _color == null,
       visibility: _vis,
+      dday: _dday,
       // 담당자는 같이 보기 할 일에서만 (나만 보기면 본인 몫)
       assignee: _type == ItemType.todo && _vis == m.Visibility.shared ? _assignee : '',
       repeat: repeatFor(rule),
@@ -763,6 +766,15 @@ class _EditSheetState extends State<_EditSheet> {
             ),
             const SizedBox(height: 12),
             ChecklistEditor(initial: _checklist, showChecks: _rule == null, onChanged: (l) => _checklist = l),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              secondary: const Icon(Icons.hourglass_bottom, size: 20),
+              title: const Text('D-day 표시'),
+              subtitle: const Text('목록에 D-3, D-day, D+2 처럼 남은/지난 날을 보여줘'),
+              value: _dday,
+              onChanged: (v) => setState(() => _dday = v),
+            ),
             const SizedBox(height: 16),
             Row(children: [
               if (widget.item != null && isOwner)
@@ -780,6 +792,17 @@ class _EditSheetState extends State<_EditSheet> {
                     if (context.mounted) Navigator.pop(context);
                   },
                   child: const Text('삭제', style: TextStyle(color: Colors.redAccent)),
+                ),
+              if (widget.item != null)
+                TextButton(
+                  onPressed: () async {
+                    final nav = Navigator.of(context);
+                    final messenger = ScaffoldMessenger.of(context);
+                    await context.read<Store>().save(m.copyOfItem(widget.item!));
+                    nav.pop();
+                    showTimedSnack(messenger, '복제했어 (제목 뒤에 "(복사)")');
+                  },
+                  child: const Text('복제'),
                 ),
               const Spacer(),
               FilledButton(onPressed: _save, child: const Text('저장')),
