@@ -8,7 +8,7 @@
 - 구글 캘린더식 반복(요일·매월 N일/n번째 요일/마지막 날·종료 조건), **음력 반복**(생일·기일), 이동형 반복(약 먹기), 반복 삭제·수정 범위 선택
 - 체크리스트(반복 회차별), 담당자 지정, D-day·N주년, 위치(카카오 장소 검색, 위키백과 사진), 복제
 - 푸시 알림: 일정 알림(정각~하루 전), 재촉(항목당 3번), 같이 하는 할 일 완료·새로 공유 알림 — 설정에서 각각 끌 수 있음
-- 구글 캘린더 가져오기(.zip/.ics)·내보내기(.ics), 일정 구독(.ics 주소를 12시간마다 갱신: 아스날 경기 등)
+- 일정 구독(.ics 주소를 12시간마다 갱신: 아스날 경기 등)
 - 닉네임, 구성원 관리(방장이 초대한 사람 내보내기/다시 받기)
 - 안드로이드 홈화면 위젯 (오늘 일정/할 일), PC/폰 브라우저는 Flutter Web을 Firebase Hosting에 배포
 
@@ -25,7 +25,7 @@
 
 ## 구조
 ```
-lib/models   Item, 반복 규칙(Recurrence), 음력·공휴일, ICS 가져오기/내보내기
+lib/models   Item, 반복 규칙(Recurrence), 음력·공휴일
 lib/data     Repository(Firestore/Auth/서버 함수 호출), Store(상태), Push(알림), 장소 검색, WidgetSync(홈 위젯)
 lib/ui       로그인 / 공간 설정 / 홈 / 편집 시트 / 설정 / 구독 / 구성원 등
 functions/   서버 함수(Node 22, 서울 리전): nudge, notifyShared, notifyComplete, sendReminders(5분마다),
