@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: build-deploy-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false # 배포가 진행 중이면 끝까지 돌리고 다음 것은 대기 (함수 배포 결과를 놓치지 않게)
 
 jobs:
   build:
