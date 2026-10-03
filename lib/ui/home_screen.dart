@@ -159,6 +159,15 @@ class _HomeScreenState extends State<HomeScreen> {
             : Text(_tab == 1 ? '다가오는 일정' : '할 일'),
         actions: [
           IconButton(
+            tooltip: '카테고리별 보기',
+            icon: Badge(
+              isLabelVisible: s.hiddenCategories.isNotEmpty,
+              smallSize: 8,
+              child: const Icon(Icons.filter_list),
+            ),
+            onPressed: () => _categoryFilter(context),
+          ),
+          IconButton(
             tooltip: '검색',
             icon: const Icon(Icons.search),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
@@ -230,6 +239,33 @@ class _HomeScreenState extends State<HomeScreen> {
             NavigationDestination(icon: Icon(Icons.view_agenda_outlined), label: '목록'),
             NavigationDestination(icon: Icon(Icons.checklist), label: '할 일'),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// 카테고리별로 켜고 끄기 (끈 카테고리의 일정/할 일은 달력, 목록, 할 일 탭에서 숨김)
+  void _categoryFilter(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Consumer<Store>(
+        builder: (ctx, s, _) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ListTile(
+              title: const Text('카테고리별 보기', style: TextStyle(fontWeight: FontWeight.bold)),
+              trailing: TextButton(
+                onPressed: s.hiddenCategories.isEmpty ? null : s.showAllCategories,
+                child: const Text('모두 보기'),
+              ),
+            ),
+            for (final c in s.categories)
+              SwitchListTile(
+                secondary: CircleAvatar(backgroundColor: c.color, radius: 8),
+                title: Text(c.name),
+                value: !s.hiddenCategories.contains(c.id),
+                onChanged: (v) => s.setCategoryHidden(c.id, !v),
+              ),
+          ]),
         ),
       ),
     );

@@ -94,4 +94,20 @@ void main() {
     expect(st.myNickname, '대희아빠');
     expect(st.names['you'], '상대');
   });
+
+  test('카테고리 숨기기: 숨긴 카테고리 항목은 보이지 않고, 모두 보기로 되돌린다', () async {
+    final a = Item(id: 'a', type: ItemType.todo, title: 'a', start: DateTime(2026, 10, 3), ownerUid: 'me', categories: const ['work']);
+    final b = Item(id: 'b', type: ItemType.todo, title: 'b', start: DateTime(2026, 10, 3), ownerUid: 'me', categories: const ['family']);
+    final st = Store.preview(Repository(), uid: 'me', names: {'me': '나'}, items: [a, b]);
+    expect(st.visibleItems.length, 2);
+    await st.setCategoryHidden('work', true);
+    expect(st.hiddenCategories, {'work'});
+    expect(st.visibleItems.map((i) => i.id), ['b']);
+    await st.setCategoryHidden('family', true);
+    expect(st.visibleItems, isEmpty);
+    await st.setCategoryHidden('work', false);
+    expect(st.visibleItems.map((i) => i.id), ['a']);
+    await st.showAllCategories();
+    expect(st.visibleItems.length, 2);
+  });
 }

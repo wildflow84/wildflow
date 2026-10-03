@@ -47,7 +47,7 @@ class Store extends ChangeNotifier {
   bool get notifyComplete => profile['notifyComplete'] != false;
   bool get notifyCompleteRepeating => profile['notifyCompleteRepeating'] == true;
 
-  Future<void> setPref(String key, bool value) async {
+  Future<void> setPref(String key, Object value) async {
     profile = {...profile, key: value};
     notifyListeners();
     if (_previewUid == null) await repo.setPref(key, value);
@@ -160,10 +160,31 @@ class Store extends ChangeNotifier {
   /// 현재 필터에 맞는 항목. 'mine'=내가 소유한 것(공유+프라이빗), 'partner'=상대가 올린 공유 항목.
   List<Item> get visibleItems {
     final me = _previewUid ?? user?.uid;
+    final hidden = hiddenCategories;
     return items.where((i) {
+      if (hidden.isNotEmpty && hidden.contains(i.categories.isEmpty ? 'default' : i.categories.first)) {
+        return false; // 숨긴 카테고리
+      }
       if (i.ownerUid == me) return true; // 내 항목은 항상 보인다
       return showShared; // 상대가 올린 같이 보기 항목은 토글
     }).toList();
+  }
+
+  /// 달력에서 숨긴 카테고리 (기기 간 같이 쓰도록 내 프로필에 저장)
+  Set<String> get hiddenCategories => {...?(profile['hiddenCategories'] as List?)?.map((e) => '$e')};
+
+  Future<void> setCategoryHidden(String id, bool hidden) async {
+    final next = hiddenCategories..remove(id);
+    if (hidden) next.add(id);
+    profile = {...profile, 'hiddenCategories': next.toList()};
+    notifyListeners();
+    if (_previewUid == null) await repo.setPref('hiddenCategories', next.toList());
+  }
+
+  Future<void> showAllCategories() async {
+    profile = {...profile, 'hiddenCategories': <String>[]};
+    notifyListeners();
+    if (_previewUid == null) await repo.setPref('hiddenCategories', <String>[]);
   }
 
   /// "공유 캘린더 보기" 토글 (상대가 올린 같이 보기 항목)
