@@ -217,6 +217,14 @@ class Store extends ChangeNotifier {
     if (_previewUid == null) await repo.setPref('hiddenCategories', next.toList());
   }
 
+  /// 모든 카테고리를 한꺼번에 숨기거나(전체 해제) 보이게(전체 선택) 한다
+  Future<void> setAllCategoriesHidden(Iterable<String> ids, bool hidden) async {
+    final next = hidden ? ids.toList() : <String>[];
+    profile = {...profile, 'hiddenCategories': next};
+    notifyListeners();
+    if (_previewUid == null) await repo.setPref('hiddenCategories', next);
+  }
+
   Future<void> showAllCategories() async {
     profile = {...profile, 'hiddenCategories': <String>[]};
     notifyListeners();

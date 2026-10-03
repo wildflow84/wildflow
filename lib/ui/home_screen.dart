@@ -246,25 +246,45 @@ class _HomeScreenState extends State<HomeScreen> {
   void _categoryFilter(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
       builder: (ctx) => Consumer<Store>(
-        builder: (ctx, s, _) => SafeArea(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            ListTile(
-              title: const Text('카테고리별 보기', style: TextStyle(fontWeight: FontWeight.bold)),
-              trailing: TextButton(
-                onPressed: s.hiddenCategories.isEmpty ? null : s.showAllCategories,
-                child: const Text('모두 보기'),
+        builder: (ctx, s, _) {
+          final all = [...s.categories, subscriptionCategory];
+          final allIds = [for (final c in all) c.id];
+          final hidden = s.hiddenCategories;
+          final noneHidden = !allIds.any(hidden.contains);
+          final allHidden = allIds.every(hidden.contains);
+          return SafeArea(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+                child: Row(children: [
+                  const Expanded(child: Text('카테고리별 보기', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                  TextButton(
+                    onPressed: noneHidden ? null : () => s.setAllCategoriesHidden(allIds, false),
+                    child: const Text('모두 선택'),
+                  ),
+                  TextButton(
+                    onPressed: allHidden ? null : () => s.setAllCategoriesHidden(allIds, true),
+                    child: const Text('모두 해제'),
+                  ),
+                ]),
               ),
-            ),
-            for (final c in [...s.categories, if (s.items.any((i) => i.subscriptionId != null)) subscriptionCategory])
-              SwitchListTile(
-                secondary: CircleAvatar(backgroundColor: c.color, radius: 8),
-                title: Text(c.name),
-                value: !s.hiddenCategories.contains(c.id),
-                onChanged: (v) => s.setCategoryHidden(c.id, !v),
+              Flexible(
+                child: ListView(shrinkWrap: true, children: [
+                  for (final c in all)
+                    SwitchListTile(
+                      secondary: CircleAvatar(backgroundColor: c.color, radius: 8),
+                      title: Text(c.name),
+                      value: !hidden.contains(c.id),
+                      onChanged: (v) => s.setCategoryHidden(c.id, !v),
+                    ),
+                ]),
               ),
-          ]),
-        ),
+            ]),
+          );
+        },
       ),
     );
   }
