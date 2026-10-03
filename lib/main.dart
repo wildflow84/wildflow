@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
+import 'data/location_report.dart';
 import 'data/push.dart';
 import 'data/repository.dart';
 import 'data/store.dart';
@@ -31,8 +32,10 @@ Future<void> main() async {
   await initializeDateFormatting('ko');
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   Push.listenForeground(messengerKey);
-  runApp(ChangeNotifierProvider(
-    create: (_) => Store(Repository()),
+  final store = Store(Repository());
+  LocationReporter(store).start(); // 출발 시간 알림용 위치 전달
+  runApp(ChangeNotifierProvider.value(
+    value: store,
     child: const OurDayApp(),
   ));
 }

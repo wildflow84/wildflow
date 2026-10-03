@@ -65,6 +65,8 @@ class Item {
   final String assignee;
   /// 목록에 D-day(남은 날/지난 날)를 표시할지
   final bool dday;
+  /// 출발 시간 알림: 현재 위치에서 이 일정 장소까지 걸리는 시간을 계산해서 출발할 때 알려 준다 (장소 좌표가 있는 시각 일정)
+  final bool departAlert;
   /// 기념일 기준 연도. 정해져 있으면 매년 반복 항목에 `N주년`(또는 생일이면 N번째)을 표시. null이면 표시 안 함.
   final int? annivYear;
   /// 일정 구독(.ics)에서 가져온 항목이면 그 구독의 id. 서버가 12시간마다 원본대로 갱신한다.
@@ -152,6 +154,7 @@ class Item {
         checksByDate: i.checksByDate,
         assignee: i.assignee,
         dday: i.dday,
+        departAlert: i.departAlert,
         annivYear: i.annivYear,
         subscriptionId: null, // 복제본은 구독과 무관
         remindMinutes: i.remindMinutes,
@@ -168,6 +171,10 @@ class Item {
     final base = allDay ? DateTime(start.year, start.month, start.day, 9) : start;
     return base.subtract(Duration(minutes: r));
   }
+
+  /// 출발 시간 알림을 계산할 일정의 시작 시각 (서버가 이 값으로 곧 시작할 일정을 찾는다). 알림 조건이 안 맞으면 null.
+  DateTime? get departFrom =>
+      departAlert && type == ItemType.event && lat != null && lng != null && !allDay && !isRecurring ? start : null;
 
   int get checksLeft => checklist.where((c) => !c.done).length;
   bool get hasChecklist => checklist.isNotEmpty;
@@ -214,6 +221,7 @@ class Item {
     this.checksByDate = const {},
     this.assignee = '',
     this.dday = false,
+    this.departAlert = false,
     this.annivYear,
     this.subscriptionId,
     this.remindMinutes,
@@ -257,6 +265,7 @@ class Item {
     Map<String, List<String>>? checksByDate,
     String? assignee,
     bool? dday,
+    bool? departAlert,
     int? annivYear,
     bool clearAnniv = false,
     int? remindMinutes,
@@ -295,6 +304,7 @@ class Item {
         checksByDate: checksByDate ?? this.checksByDate,
         assignee: assignee ?? this.assignee,
         dday: dday ?? this.dday,
+        departAlert: departAlert ?? this.departAlert,
         annivYear: clearAnniv ? null : (annivYear ?? this.annivYear),
         subscriptionId: subscriptionId,
         remindMinutes: clearRemind ? null : (remindMinutes ?? this.remindMinutes),
@@ -333,6 +343,8 @@ class Item {
         'checksByDate': checksByDate,
         'assignee': assignee,
         'dday': dday,
+        'departAlert': departAlert,
+        'departFrom': departFrom == null ? null : Timestamp.fromDate(departFrom!),
         'annivYear': annivYear,
         'subscriptionId': subscriptionId,
         'remindMinutes': remindMinutes,
@@ -378,6 +390,7 @@ class Item {
       ],
       assignee: (m['assignee'] as String?) ?? '',
       dday: m['dday'] == true,
+      departAlert: m['departAlert'] == true,
       annivYear: (m['annivYear'] as num?)?.toInt(),
       subscriptionId: m['subscriptionId'] as String?,
       remindMinutes: (m['remindMinutes'] as num?)?.toInt(),

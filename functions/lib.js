@@ -119,7 +119,68 @@ function reminderRecipients(item, members, prefsByUid) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// 출발 시간 알림: 현재 위치에서 장소까지 걸리는 시간으로 "지금 출발할 때"를 계산한다.
+// ---------------------------------------------------------------------------
+const DEPART_WINDOW_MS = 15 * 60 * 1000; // 놓친 알림은 15분까지만 늦게 보낸다
+const DEPART_BUFFER_MIN = 10; // 도착 여유 시간
+const LOC_FRESH_MS = 3 * 60 * 60 * 1000; // 이 시간보다 오래된 위치는 쓰지 않는다
+
+/** 두 좌표 사이 직선거리(m) */
+function haversineM(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const rad = (d) => (d * Math.PI) / 180;
+  const dLat = rad(lat2 - lat1);
+  const dLng = rad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/** 길찾기 서비스를 못 쓸 때의 어림값(초): 직선거리 x 1.4(굽은 길), 평균 35km/h */
+function fallbackDurationSec(distM) {
+  return Math.round(((distM * 1.4) / (35000 / 3600)));
+}
+
+/** 위치가 쓸 만큼 최근인지 */
+function locFresh(lastLoc, nowMs) {
+  if (!lastLoc || typeof lastLoc.lat !== 'number' || typeof lastLoc.lng !== 'number') return false;
+  const at = millis(lastLoc.at);
+  return !!at && nowMs - at <= LOC_FRESH_MS && at <= nowMs + 60000;
+}
+
+/** 지금 출발 알림을 보낼 차례인지 */
+function dueForDepart(item, durationSec, nowMs) {
+  const startMs = millis(item.departFrom);
+  if (!startMs || startMs <= nowMs) return false;
+  if (item.done) return false;
+  if (millis(item.departSentFor) === startMs) return false;
+  const leaveAt = startMs - durationSec * 1000 - DEPART_BUFFER_MIN * 60000;
+  return nowMs >= leaveAt && nowMs - leaveAt <= DEPART_WINDOW_MS;
+}
+
+function kstHHmm(ms) {
+  return new Date(ms + 9 * 3600 * 1000).toISOString().slice(11, 16);
+}
+
+function departMessage(item, durationSec, approximate) {
+  const startMs = millis(item.departFrom);
+  const min = Math.max(1, Math.round(durationSec / 60));
+  const where = item.location ? ` ${item.location}` : '';
+  return {
+    title: '지금 출발해야 해',
+    body: `"${item.title}"${where} · 약 ${min}분${approximate ? '(대략)' : ''} 걸려, ${kstHHmm(startMs)} 시작`,
+  };
+}
+
 module.exports = {
+  DEPART_WINDOW_MS,
+  DEPART_BUFFER_MIN,
+  LOC_FRESH_MS,
+  haversineM,
+  fallbackDurationSec,
+  locFresh,
+  dueForDepart,
+  departMessage,
   REMIND_WINDOW_MS,
   dueForReminder,
   reminderMessage,

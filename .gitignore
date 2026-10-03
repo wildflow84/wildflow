@@ -56,3 +56,4 @@ android/app/*.jks
 # Firebase 함수
 functions/node_modules/
 tool/rules-test/node_modules/
+functions/.env

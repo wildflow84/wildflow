@@ -93,3 +93,32 @@ test('알림: 시각 창, 중복 방지, 문구, 받는 사람', () => {
   assert.deepEqual(lib.reminderRecipients({ ownerUid: 'me', visibility: 'shared' }, members, {}), ['me', 'you']);
   assert.deepEqual(lib.reminderRecipients({ ownerUid: 'me', visibility: 'shared' }, members, { you: { notifyReminder: false } }), ['me']);
 });
+
+test('출발 알림: 걸리는 시간만큼 앞서 + 여유 10분, 15분 안에만', () => {
+  const start = Date.UTC(2026, 9, 3, 6, 0, 0); // 15:00 KST
+  const item = { departFrom: { toMillis: () => start }, title: '미용실', location: '헤어유메이' };
+  const dur = 30 * 60; // 30분 걸림 -> 출발은 14:20
+  const leave = start - dur * 1000 - 10 * 60000;
+  assert.equal(lib.dueForDepart(item, dur, leave - 60000), false, '아직 이름');
+  assert.equal(lib.dueForDepart(item, dur, leave), true);
+  assert.equal(lib.dueForDepart(item, dur, leave + 14 * 60000), true);
+  assert.equal(lib.dueForDepart(item, dur, leave + 16 * 60000), false, '너무 늦음');
+  assert.equal(lib.dueForDepart({ ...item, departSentFor: { toMillis: () => start } }, dur, leave), false, '이미 보냄');
+  assert.equal(lib.dueForDepart(item, dur, start + 1000), false, '시작 후엔 안 보냄');
+});
+
+test('출발 알림: 거리 어림값과 위치 신선도, 문구', () => {
+  // 서울시청 -> 강남역 약 9km
+  const d = lib.haversineM(37.5662, 126.9779, 37.4979, 127.0276);
+  assert.ok(d > 8000 && d < 10000, `거리 ${d}`);
+  const sec = lib.fallbackDurationSec(d);
+  assert.ok(sec > 15 * 60 && sec < 40 * 60, `어림 시간 ${sec}`);
+  const now = Date.now();
+  assert.equal(lib.locFresh({ lat: 1, lng: 2, at: { toMillis: () => now - 60000 } }, now), true);
+  assert.equal(lib.locFresh({ lat: 1, lng: 2, at: { toMillis: () => now - 4 * 3600 * 1000 } }, now), false);
+  assert.equal(lib.locFresh(null, now), false);
+  const m = lib.departMessage({ title: '미용실', location: '헤어유메이', departFrom: { toMillis: () => Date.UTC(2026, 9, 3, 6, 0, 0) } }, 1800, true);
+  assert.equal(m.title, '지금 출발해야 해');
+  assert.match(m.body, /약 30분\(대략\)/);
+  assert.match(m.body, /15:00 시작/);
+});

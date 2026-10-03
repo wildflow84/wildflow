@@ -105,6 +105,18 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
 
+      # 출발 시간 알림의 길찾기 키 (선택). 없으면 직선거리로 어림잡아 알린다.
+      - name: 서버 함수 환경 설정
+        env:
+          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
+        run: |
+          if [ -n "$KAKAO_REST_KEY" ]; then
+            printf 'KAKAO_REST_KEY=%s\n' "$KAKAO_REST_KEY" > functions/.env
+            echo "길찾기 키를 서버 함수에 넣었어."
+          else
+            echo "::notice::KAKAO_REST_KEY 시크릿이 없어서 출발 시간 알림은 직선거리 어림값으로 계산해."
+          fi
+
       - name: 서버 함수 설치와 테스트
         run: |
           npm ci --prefix functions

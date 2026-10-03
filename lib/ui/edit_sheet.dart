@@ -74,6 +74,7 @@ class _EditSheetState extends State<_EditSheet> {
   late List<String> _cats; // 항상 하나 (이전 버전에서 여러 개였던 항목은 첫 번째만 쓴다)
   late String _assignee = widget.item?.assignee ?? '';
   late bool _dday = widget.item?.dday ?? false;
+  late bool _departAlert = widget.item?.departAlert ?? false;
   late int? _annivYear = widget.item?.annivYear;
   late int? _remind = widget.item?.remindMinutes;
   late m.Visibility _vis;
@@ -275,6 +276,7 @@ class _EditSheetState extends State<_EditSheet> {
       clearColor: _color == null,
       visibility: _vis,
       dday: _dday,
+      departAlert: _type == ItemType.event && _lat != null && !_allDay && _rule == null && _departAlert,
       annivYear: _rule?.freq == Freq.yearly && _rule?.interval == 1 ? _annivYear : null,
       clearAnniv: !(_rule?.freq == Freq.yearly && _rule?.interval == 1) || _annivYear == null,
       remindMinutes: remind,
@@ -785,6 +787,16 @@ class _EditSheetState extends State<_EditSheet> {
                 onChanged: _rule != null ? null : (v) => setState(() => _remind = v),
               );
             }(),
+            if (_type == ItemType.event && _lat != null && !_allDay && _rule == null)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                secondary: const Icon(Icons.directions_car_outlined, size: 20),
+                title: const Text('출발 시간 알림'),
+                subtitle: const Text('내 위치에서 장소까지 걸리는 시간을 계산해서, 출발할 때 알려줘 (앱을 열 때 위치를 확인해)'),
+                value: _departAlert,
+                onChanged: (v) => setState(() => _departAlert = v),
+              ),
             const SizedBox(height: 12),
             SegmentedButton<m.Visibility>(
               segments: const [

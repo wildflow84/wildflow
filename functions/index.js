@@ -257,6 +257,60 @@ exports.sendReminders = onSchedule({ schedule: 'every 5 minutes', timeZone: 'Asi
 });
 
 // ---------------------------------------------------------------------------
+// 출발 시간 알림: 앞으로 6시간 안에 시작하는 "출발 알림" 일정에 대해, 만든 사람의 마지막 위치에서
+// 장소까지 걸리는 시간을 구해(카카오모빌리티 길찾기, 키가 없으면 직선거리 어림값) 출발할 때 푸시한다.
+// ---------------------------------------------------------------------------
+async function kakaoDurationSec(oLat, oLng, dLat, dLng) {
+  const key = process.env.KAKAO_REST_KEY;
+  if (!key) return null;
+  try {
+    const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${oLng},${oLat}&destination=${dLng},${dLat}&priority=TIME`;
+    const res = await fetch(url, { headers: { Authorization: `KakaoAK ${key}` } });
+    if (!res.ok) {
+      console.warn('길찾기 실패', res.status);
+      return null;
+    }
+    const json = await res.json();
+    const route = json.routes && json.routes[0];
+    if (!route || route.result_code !== 0 || !route.summary) return null;
+    return route.summary.duration; // 초
+  } catch (err) {
+    console.warn('길찾기 오류', err.message);
+    return null;
+  }
+}
+
+exports.sendDepartAlerts = onSchedule({ schedule: 'every 5 minutes', timeZone: 'Asia/Seoul', timeoutSeconds: 120 }, async () => {
+  const now = Date.now();
+  const soon = await db
+    .collectionGroup('items')
+    .where('departFrom', '>', Timestamp.fromMillis(now))
+    .where('departFrom', '<=', Timestamp.fromMillis(now + 6 * 3600 * 1000))
+    .get();
+  for (const d of soon.docs) {
+    const item = d.data();
+    if (item.departAlert !== true || typeof item.lat !== 'number' || typeof item.lng !== 'number') continue;
+    const owner = (await db.doc(`users/${item.ownerUid}`).get()).data() || {};
+    if (owner.notifyReminder === false) continue;
+    if (!lib.locFresh(owner.lastLoc, now)) continue;
+    const distM = lib.haversineM(owner.lastLoc.lat, owner.lastLoc.lng, item.lat, item.lng);
+    // 길찾기 호출을 아끼려고, 직선거리로 봐도 아직 한참 남았으면 건너뛴다
+    const rough = lib.fallbackDurationSec(distM);
+    const startMs = item.departFrom.toMillis();
+    if (now < startMs - rough * 1000 * 3 - 60 * 60 * 1000) continue;
+    let sec = await kakaoDurationSec(owner.lastLoc.lat, owner.lastLoc.lng, item.lat, item.lng);
+    const approximate = sec == null;
+    if (approximate) sec = rough;
+    if (!lib.dueForDepart(item, sec, now)) continue;
+    const spaceId = d.ref.parent.parent.id;
+    const message = lib.departMessage(item, sec, approximate);
+    const sent = await pushTo(item.ownerUid, owner, message, { spaceId, itemId: d.id, kind: 'depart' });
+    await d.ref.update({ departSentFor: item.departFrom });
+    console.log('출발 알림', spaceId, d.id, '보낸 기기', sent, approximate ? '(어림값)' : '');
+  }
+});
+
+// ---------------------------------------------------------------------------
 // 구성원 관리: 방장(공간을 만든 사람 = members 맨 앞)만 상대를 내보내거나 다시 받을 수 있다.
 // ---------------------------------------------------------------------------
 async function hostContext(req) {
