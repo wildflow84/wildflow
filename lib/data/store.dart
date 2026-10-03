@@ -37,6 +37,12 @@ class Store extends ChangeNotifier {
   String? error;
   List<Item> items = [];
   Map<String, String> names = {};
+  List<String> members = []; // 맨 앞이 방장(공간을 만든 사람)
+  Map<String, String> bannedNames = {}; // 내보낸 사람들 (uid → 이름)
+  /// 방장이 나를 내보냈을 때 한 번 안내하기 위한 표시
+  bool removedNotice = false;
+
+  bool get isHost => members.isNotEmpty && members.first == uid;
 
   /// 내 프로필 문서 (알림 설정 등)
   Map<String, dynamic> profile = {};
@@ -126,11 +132,31 @@ class Store extends ChangeNotifier {
       cal = KrCalendar(custom: list);
       notifyListeners();
     });
-    _namesSub = repo.memberNames(id).listen((n) {
-      names = n;
+    _namesSub = repo.watchSpace(id).listen((sp) {
+      names = sp.names;
+      members = sp.members;
+      bannedNames = sp.bannedNames;
       notifyListeners();
+      // 방장이 나를 내보냈다: 연결을 끊고 공간 선택 화면으로
+      if (sp.members.isNotEmpty && !sp.members.contains(uid)) _wasRemoved();
     });
   }
+
+  Future<void> _wasRemoved() async {
+    await _stop();
+    spaceId = null;
+    items = [];
+    names = {};
+    members = [];
+    removedNotice = true;
+    notifyListeners();
+    repo.clearMySpace().catchError((_) {});
+  }
+
+  /// 방장만: 상대를 내보낸다 (그 사람이 만든 같이 보기 항목은 남고, 나만 보기 항목은 그 사람 것으로 남는다)
+  Future<void> removeMember(String targetUid) => repo.removeMember(spaceId!, targetUid);
+
+  Future<void> allowMember(String targetUid) => repo.allowMember(spaceId!, targetUid);
 
   Future<void> _stop() async {
     await _itemsSub?.cancel();
@@ -152,6 +178,7 @@ class Store extends ChangeNotifier {
   }
 
   Future<void> joinSpace(String code) async {
+    removedNotice = false;
     await repo.joinSpace(code);
     spaceId = code.trim();
     _start();

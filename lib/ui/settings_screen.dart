@@ -11,6 +11,7 @@ import '../models/ics_export.dart';
 import '../models/item.dart' as m;
 import 'category_manager.dart';
 import 'ics_import.dart';
+import 'members_screen.dart';
 import 'subscriptions.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -143,6 +144,13 @@ class SettingsScreen extends StatelessWidget {
           ),
           const Divider(height: 32),
           const _Header('공유 공간'),
+          ListTile(
+            leading: const Icon(Icons.group_outlined),
+            title: const Text('구성원'),
+            subtitle: Text(s.isHost ? '초대한 사람을 내보내거나 다시 받을 수 있어' : '공간 구성원 보기'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MembersScreen())),
+          ),
           ListTile(
             leading: const Icon(Icons.key),
             title: const Text('초대 코드 복사'),

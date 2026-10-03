@@ -255,3 +255,57 @@ exports.sendReminders = onSchedule({ schedule: 'every 5 minutes', timeZone: 'Asi
     console.log('알림', spaceId, d.id, '보낸 기기', sent);
   }
 });
+
+// ---------------------------------------------------------------------------
+// 구성원 관리: 방장(공간을 만든 사람 = members 맨 앞)만 상대를 내보내거나 다시 받을 수 있다.
+// ---------------------------------------------------------------------------
+async function hostContext(req) {
+  const { spaceId, targetUid } = req.data || {};
+  const uid = req.auth && req.auth.uid;
+  if (!uid) throw new HttpsError('unauthenticated', '로그인이 필요해');
+  if (typeof spaceId !== 'string' || typeof targetUid !== 'string' || !spaceId || !targetUid) {
+    throw new HttpsError('invalid-argument', '잘못된 요청이야');
+  }
+  const ref = db.doc(`spaces/${spaceId}`);
+  const space = (await ref.get()).data() || {};
+  const members = space.members || [];
+  if (members[0] !== uid) throw new HttpsError('permission-denied', '방장만 할 수 있어');
+  if (targetUid === uid) throw new HttpsError('invalid-argument', '나 자신은 내보낼 수 없어');
+  return { ref, space, members, spaceId, targetUid, hostUid: uid };
+}
+
+exports.removeMember = onCall({ timeoutSeconds: 120 }, async (req) => {
+  const c = await hostContext(req);
+  if (!c.members.includes(c.targetUid)) throw new HttpsError('not-found', '이 공간의 구성원이 아니야');
+  const name = (c.space.names || {})[c.targetUid] || '상대';
+  await c.ref.update({
+    members: FieldValue.arrayRemove(c.targetUid),
+    [`names.${c.targetUid}`]: FieldValue.delete(),
+    banned: FieldValue.arrayUnion(c.targetUid),
+    [`bannedNames.${c.targetUid}`]: name,
+  });
+  // 그 사람의 프로필에서 공간 연결과 기기 토큰을 지운다 (이 공간 알림이 더 가지 않게)
+  await db.doc(`users/${c.targetUid}`).set({ spaceId: FieldValue.delete(), fcmTokens: [] }, { merge: true });
+  // 맡겨둔 할 일의 담당 비우기
+  const assigned = await db.collection(`spaces/${c.spaceId}/items`).where('assignee', '==', c.targetUid).get();
+  // 그 사람이 만든 구독은 방장이 이어받는다 (구독으로 들어온 일정도 방장 것으로)
+  const subs = await db.collection(`spaces/${c.spaceId}/subscriptions`).where('ownerUid', '==', c.targetUid).get();
+  const batch = db.batch();
+  assigned.docs.forEach((d) => batch.update(d.ref, { assignee: '' }));
+  for (const sub of subs.docs) {
+    batch.update(sub.ref, { ownerUid: c.hostUid });
+    const subItems = await db.collection(`spaces/${c.spaceId}/items`).where('subscriptionId', '==', sub.id).get();
+    subItems.docs.forEach((d) => batch.update(d.ref, { ownerUid: c.hostUid }));
+  }
+  await batch.commit();
+  return { removed: c.targetUid };
+});
+
+exports.allowMember = onCall(async (req) => {
+  const c = await hostContext(req);
+  await c.ref.update({
+    banned: FieldValue.arrayRemove(c.targetUid),
+    [`bannedNames.${c.targetUid}`]: FieldValue.delete(),
+  });
+  return { allowed: c.targetUid };
+});

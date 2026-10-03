@@ -13,4 +13,13 @@ void main() {
     expect(st.allowNudge, false);
     expect(st.notifyCompleteRepeating, true);
   });
+
+  test('방장은 members 맨 앞 사람, 내보낸 사람은 목록에서 빠진다', () {
+    final st = Store.preview(Repository(), uid: 'me', names: {'me': '나', 'you': '상대'}, items: []);
+    expect(st.isHost, false); // 구성원 정보가 아직 없을 때
+    st.members = ['me', 'you'];
+    expect(st.isHost, true);
+    st.members = ['you', 'me'];
+    expect(st.isHost, false);
+  });
 }

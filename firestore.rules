@@ -20,12 +20,20 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.members == [request.auth.uid];
 
-      // 참여: 본인을 추가하고 총 2명 이하일 때만
+      // 구성원 목록(members)과 내보낸 사람(banned)은 서버 함수와 '참여'로만 바뀐다:
+      //  - 멤버는 이름표 같은 다른 필드만 고칠 수 있다 (members/banned는 그대로)
+      //  - 참여: 본인을 추가하고 총 2명 이하, 방장이 내보낸 사람(banned)은 불가
       allow update: if signedIn()
         && (
-          isMember()
+          (
+            isMember()
+            && request.resource.data.members == resource.data.members
+            && request.resource.data.get('banned', []) == resource.data.get('banned', [])
+          )
           || (
             !(request.auth.uid in resource.data.members)
+            && !(request.auth.uid in resource.data.get('banned', []))
+            && request.resource.data.get('banned', []) == resource.data.get('banned', [])
             && resource.data.members.size() < 2
             && request.resource.data.members.hasAll(resource.data.members)
             && request.resource.data.members.size() == resource.data.members.size() + 1

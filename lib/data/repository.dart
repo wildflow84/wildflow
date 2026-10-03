@@ -18,6 +18,13 @@ import '../models/subscription.dart';
 ///   spaces/{spaceId}/holidays/{id} { date, name, holiday }  (임시공휴일 등 사용자가 추가한 날)
 ///
 /// 프라이빗 보호는 firestore.rules가 서버에서 강제한다.
+class SpaceInfo {
+  final List<String> members;
+  final Map<String, String> names;
+  final Map<String, String> bannedNames;
+  const SpaceInfo({this.members = const [], this.names = const {}, this.bannedNames = const {}});
+}
+
 class Repository {
   // 지연 초기화: Firebase 없이 화면만 띄우는 미리보기(lib/preview_main.dart)에서도 만들 수 있게
   late final _db = FirebaseFirestore.instance;
@@ -78,6 +85,28 @@ class Repository {
     batch.set(_db.collection('users').doc(u.uid), {'name': nickname, 'nickname': nickname}, SetOptions(merge: true));
     await batch.commit();
   }
+
+  /// 공간 정보: 멤버(맨 앞이 방장), 이름표, 내보낸 사람들
+  Stream<SpaceInfo> watchSpace(String spaceId) => _db.collection('spaces').doc(spaceId).snapshots().map((s) {
+        final d = s.data() ?? const {};
+        return SpaceInfo(
+          members: List<String>.from(d['members'] ?? const []),
+          names: Map<String, String>.from(d['names'] ?? const {}),
+          bannedNames: Map<String, String>.from(d['bannedNames'] ?? const {}),
+        );
+      });
+
+  /// 내 프로필에서 공간 연결을 끊는다 (내보내졌을 때)
+  Future<void> clearMySpace() =>
+      _db.collection('users').doc(user!.uid).update({'spaceId': FieldValue.delete()});
+
+  /// 방장이 상대를 내보낸다 (서버 함수)
+  Future<void> removeMember(String spaceId, String targetUid) =>
+      _fn.httpsCallable('removeMember').call({'spaceId': spaceId, 'targetUid': targetUid});
+
+  /// 방장이 내보낸 사람을 다시 받아준다 (다시 초대 코드로 들어올 수 있게)
+  Future<void> allowMember(String spaceId, String targetUid) =>
+      _fn.httpsCallable('allowMember').call({'spaceId': spaceId, 'targetUid': targetUid});
 
   Stream<Map<String, String>> memberNames(String spaceId) => _db
       .collection('spaces')
