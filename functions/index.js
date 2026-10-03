@@ -3,7 +3,11 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
+const crypto = require('node:crypto');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { Timestamp } = require('firebase-admin/firestore');
 const lib = require('./lib');
+const ics = require('./ics');
 
 initializeApp();
 setGlobalOptions({ region: 'asia-northeast3', maxInstances: 3 });
@@ -103,4 +107,122 @@ exports.notifyShared = onCall(async (req) => {
   }
   await c.itemRef.update({ sharedNotifyAt: FieldValue.serverTimestamp() });
   return { sent };
+});
+
+// ---------------------------------------------------------------------------
+// 일정 구독 (아스날 경기, 드라마 방영 일정 등 .ics 주소)
+// ---------------------------------------------------------------------------
+
+async function fetchFeed(rawUrl) {
+  const url = new URL(rawUrl.trim().replace(/^webcal:/i, 'https:'));
+  if (url.protocol !== 'https:') throw new HttpsError('invalid-argument', 'https 주소만 가능해');
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const res = await fetch(url, { signal: ctl.signal, headers: { 'User-Agent': 'soondaehui-calendar/1.0' } });
+    if (!res.ok) throw new HttpsError('unavailable', `구독 주소가 응답하지 않아 (HTTP ${res.status})`);
+    const text = await res.text();
+    if (text.length > 5 * 1024 * 1024) throw new HttpsError('invalid-argument', '파일이 너무 커');
+    if (!text.includes('BEGIN:VCALENDAR')) throw new HttpsError('invalid-argument', '캘린더(.ics) 파일이 아니야');
+    return text;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const itemIdFor = (subId, e) =>
+  `sub_${subId}_${crypto.createHash('sha1').update(e.uid || `${e.title}|${e.startMs}`).digest('hex').slice(0, 20)}`;
+
+/** 구독 하나를 동기화: 피드의 일정을 항목으로 만들거나 갱신하고, 피드에서 사라진 일정은 지운다. */
+async function syncOne(spaceId, subId) {
+  const subRef = db.doc(`spaces/${spaceId}/subscriptions/${subId}`);
+  const sub = (await subRef.get()).data();
+  if (!sub) throw new HttpsError('not-found', '구독을 찾을 수 없어');
+  try {
+    const { events, skippedRepeating } = ics.parseFeed(await fetchFeed(sub.url));
+    const col = db.collection(`spaces/${spaceId}/items`);
+    const existing = await col.where('subscriptionId', '==', subId).get();
+    const have = new Set(existing.docs.map((d) => d.id));
+    const seen = new Set();
+    let writes = [];
+    const flush = async () => {
+      for (let i = 0; i < writes.length; i += 400) {
+        const batch = db.batch();
+        writes.slice(i, i + 400).forEach((w) => w(batch));
+        await batch.commit();
+      }
+      writes = [];
+    };
+    for (const e of events) {
+      const id = itemIdFor(subId, e);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const ref = col.doc(id);
+      // 일정 내용은 매번 피드대로 갱신, 카테고리/공개범위/색은 처음 만들 때만 정해서 사용자가 바꾼 걸 지키지 않음
+      const source = {
+        type: 'event', title: e.title, note: e.note, location: e.location,
+        start: Timestamp.fromMillis(e.startMs),
+        end: e.endMs === null ? null : Timestamp.fromMillis(e.endMs),
+        allDay: e.allDay, subscriptionId: subId,
+      };
+      if (have.has(id)) writes.push((b) => b.set(ref, source, { merge: true }));
+      else {
+        writes.push((b) => b.set(ref, {
+          ...source, done: false, doneDates: [], categories: [sub.categoryId || 'default'],
+          visibility: sub.visibility || 'shared', ownerUid: sub.ownerUid, repeat: 'none',
+          rollEvery: 0, rollUnit: 'day', rollFrom: 'schedule', color: null, checklist: [], exceptions: [],
+        }));
+      }
+    }
+    for (const id of have) if (!seen.has(id)) writes.push((b) => b.delete(col.doc(id)));
+    await flush();
+    await subRef.set({ lastSyncAt: FieldValue.serverTimestamp(), lastCount: seen.size, skippedRepeating, error: null }, { merge: true });
+    return { count: seen.size, skippedRepeating };
+  } catch (err) {
+    await subRef.set({ lastSyncAt: FieldValue.serverTimestamp(), error: String(err.message || err).slice(0, 200) }, { merge: true });
+    throw err;
+  }
+}
+
+async function requireMember(req, spaceId) {
+  const uid = req.auth && req.auth.uid;
+  if (!uid) throw new HttpsError('unauthenticated', '로그인이 필요해');
+  const members = ((await db.doc(`spaces/${spaceId}`).get()).data() || {}).members || [];
+  if (!members.includes(uid)) throw new HttpsError('permission-denied', '이 공간의 멤버가 아니야');
+  return uid;
+}
+
+exports.syncSubscription = onCall({ timeoutSeconds: 120 }, async (req) => {
+  const { spaceId, subId } = req.data || {};
+  if (!spaceId || !subId) throw new HttpsError('invalid-argument', '잘못된 요청이야');
+  await requireMember(req, spaceId);
+  return syncOne(spaceId, subId);
+});
+
+/** 구독을 지우고 그 구독에서 만든 일정도 같이 지운다. */
+exports.removeSubscription = onCall({ timeoutSeconds: 120 }, async (req) => {
+  const { spaceId, subId } = req.data || {};
+  if (!spaceId || !subId) throw new HttpsError('invalid-argument', '잘못된 요청이야');
+  await requireMember(req, spaceId);
+  const items = await db.collection(`spaces/${spaceId}/items`).where('subscriptionId', '==', subId).get();
+  for (let i = 0; i < items.docs.length; i += 400) {
+    const batch = db.batch();
+    items.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+  await db.doc(`spaces/${spaceId}/subscriptions/${subId}`).delete();
+  return { removed: items.size };
+});
+
+/** 12시간마다 모든 구독을 새로 받아온다 (킥오프 시간 변경, 새 경기 반영). */
+exports.syncAllSubscriptions = onSchedule({ schedule: 'every 12 hours', timeZone: 'Asia/Seoul', timeoutSeconds: 300 }, async () => {
+  const subs = await db.collectionGroup('subscriptions').get();
+  for (const d of subs.docs) {
+    const spaceId = d.ref.parent.parent.id;
+    try {
+      await syncOne(spaceId, d.id);
+    } catch (err) {
+      console.warn('구독 동기화 실패', spaceId, d.id, err.message);
+    }
+  }
 });

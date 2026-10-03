@@ -20,4 +20,13 @@ void main() {
     expect(Item.fresh(it).assignee, 'you');
     expect(it.copyWith(assignee: '').assignee, '');
   });
+
+  test('구독 일정 표시는 수정해도 유지되고, 복제하면 사라진다', () {
+    final it = Item(
+        id: 'sub_x', type: ItemType.event, title: 'Arsenal v Everton', start: DateTime(2026, 10, 24), ownerUid: 'me',
+        subscriptionId: 'abc');
+    expect(it.copyWith(title: '수정').subscriptionId, 'abc');
+    expect(it.toMap()['subscriptionId'], 'abc');
+    expect(copyOfItem(it).subscriptionId, isNull);
+  });
 }

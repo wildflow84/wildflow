@@ -7,6 +7,7 @@ import '../data/store.dart';
 import '../models/item.dart' as m;
 import 'category_manager.dart';
 import 'ics_import.dart';
+import 'subscriptions.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -96,7 +97,14 @@ class SettingsScreen extends StatelessWidget {
                 context, MaterialPageRoute(builder: (_) => const CategoryManagerScreen())),
           ),
           const Divider(height: 32),
-          const _Header('가져오기'),
+          const _Header('가져오기 / 구독'),
+          ListTile(
+            leading: const Icon(Icons.rss_feed),
+            title: const Text('일정 구독'),
+            subtitle: const Text('아스날 경기, 드라마 방영 일정 등 캘린더 주소(.ics)를 자동으로 받아와'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionsScreen())),
+          ),
           ListTile(
             leading: const Icon(Icons.upload_file),
             title: const Text('구글 캘린더에서 가져오기'),

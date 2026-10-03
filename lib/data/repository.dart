@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/category.dart';
 import '../models/item.dart';
 import '../models/kr_calendar.dart';
+import '../models/subscription.dart';
 
 /// Firestore 구조
 ///   users/{uid}                 { spaceId, name, defaultVisibility }
@@ -257,4 +258,28 @@ class Repository {
 
   Future<void> notifyComplete(String spaceId, String itemId) =>
       _fn.httpsCallable('notifyComplete').call({'spaceId': spaceId, 'itemId': itemId});
+
+  // ---- 일정 구독 ----
+  Stream<List<Subscription>> watchSubscriptions(String spaceId) => _db
+      .collection('spaces')
+      .doc(spaceId)
+      .collection('subscriptions')
+      .snapshots()
+      .map((s) => s.docs.map(Subscription.fromDoc).toList()..sort((a, b) => a.name.compareTo(b.name)));
+
+  Future<String> addSubscription(String spaceId, Subscription sub) async {
+    final ref = _db.collection('spaces').doc(spaceId).collection('subscriptions').doc();
+    await ref.set(sub.toMap());
+    return ref.id;
+  }
+
+  /// 서버가 주소에서 일정을 받아 반영한다. {count, skippedRepeating}
+  Future<Map<String, dynamic>> syncSubscription(String spaceId, String subId) async {
+    final r = await _fn.httpsCallable('syncSubscription', options: HttpsCallableOptions(timeout: const Duration(seconds: 120)))
+        .call({'spaceId': spaceId, 'subId': subId});
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
+  Future<void> removeSubscription(String spaceId, String subId) =>
+      _fn.httpsCallable('removeSubscription').call({'spaceId': spaceId, 'subId': subId});
 }

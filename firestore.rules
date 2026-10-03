@@ -43,6 +43,11 @@ service cloud.firestore {
         allow read, write: if isMember();
       }
 
+      // 일정 구독(.ics 주소): 멤버 모두. 실제 동기화는 서버 함수가 한다.
+      match /subscriptions/{subId} {
+        allow read, write: if isMember();
+      }
+
       match /items/{itemId} {
         // 공유 항목은 멤버 모두, 프라이빗은 소유자만 읽을 수 있다.
         allow read: if isMember()

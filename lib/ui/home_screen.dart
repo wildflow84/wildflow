@@ -1111,6 +1111,7 @@ class ItemTile extends StatelessWidget {
           // 같이 보기 항목은 만든 사람을 보여준다
           if (item.visibility == m.Visibility.shared)
             _Meta(icon: Icons.person_outline, text: s.ownerLabel(item)),
+          if (item.subscriptionId != null) const _Meta(icon: Icons.rss_feed, text: '구독'),
           if (item.hasChecklist)
             _Meta(icon: Icons.checklist, text: '${item.checklist.length - item.checksLeftOn(day)}/${item.checklist.length}'),
           if (item.note.isNotEmpty) _Meta(icon: Icons.notes, text: item.note),

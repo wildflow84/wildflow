@@ -64,6 +64,8 @@ class Item {
   final String assignee;
   /// 목록에 D-day(남은 날/지난 날)를 표시할지
   final bool dday;
+  /// 일정 구독(.ics)에서 가져온 항목이면 그 구독의 id. 서버가 12시간마다 원본대로 갱신한다.
+  final String? subscriptionId;
   /// 반복 항목의 회차별 체크 기록: 날짜(yyyy-MM-dd) → 체크한 항목의 글자. 반복이 아니면 안 쓴다.
   final Map<String, List<String>> checksByDate;
 
@@ -145,6 +147,7 @@ class Item {
         checksByDate: i.checksByDate,
         assignee: i.assignee,
         dday: i.dday,
+        subscriptionId: null, // 복제본은 구독과 무관
       );
 
   /// 이 할 일이 [uid]의 몫인지: 담당자가 정해져 있으면 그 사람, 아니면 만든 사람.
@@ -195,6 +198,7 @@ class Item {
     this.checksByDate = const {},
     this.assignee = '',
     this.dday = false,
+    this.subscriptionId,
   });
 
   Item copyWith({
@@ -269,6 +273,7 @@ class Item {
         checksByDate: checksByDate ?? this.checksByDate,
         assignee: assignee ?? this.assignee,
         dday: dday ?? this.dday,
+        subscriptionId: subscriptionId ?? this.subscriptionId,
       );
 
   Map<String, dynamic> toMap() => {
@@ -304,6 +309,7 @@ class Item {
         'checksByDate': checksByDate,
         'assignee': assignee,
         'dday': dday,
+        'subscriptionId': subscriptionId,
       };
 
   factory Item.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -345,6 +351,7 @@ class Item {
       ],
       assignee: (m['assignee'] as String?) ?? '',
       dday: m['dday'] == true,
+      subscriptionId: m['subscriptionId'] as String?,
       checksByDate: {
         for (final e in ((m['checksByDate'] as Map?) ?? const {}).entries)
           '${e.key}': List<String>.from(e.value as List),
