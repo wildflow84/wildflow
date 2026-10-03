@@ -4,9 +4,13 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
+import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetProvider
-import android.content.SharedPreferences
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class OurDayWidget : HomeWidgetProvider() {
     override fun onUpdate(
@@ -16,17 +20,113 @@ class OurDayWidget : HomeWidgetProvider() {
         widgetData: SharedPreferences
     ) {
         appWidgetIds.forEach { id ->
-            val views = RemoteViews(context.packageName, R.layout.ourday_widget).apply {
-                setTextViewText(R.id.widget_title, widgetData.getString("title", "순대희 캘린더"))
-                setTextViewText(R.id.widget_body, widgetData.getString("body", "앱을 열어서 로그인해줘"))
-                val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
-                val pi = PendingIntent.getActivity(
-                    context, 0, launch ?: Intent(),
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                setOnClickPendingIntent(R.id.widget_root, pi)
+            appWidgetManager.updateAppWidget(id, build(context, id, widgetData))
+        }
+    }
+
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        val prefs = WidgetPrefs(context)
+        appWidgetIds.forEach { prefs.remove(it) }
+        super.onDeleted(context, appWidgetIds)
+    }
+
+    companion object {
+        private val CELL_TEXT = intArrayOf(
+            R.id.cell_00_t, R.id.cell_01_t, R.id.cell_02_t, R.id.cell_03_t, R.id.cell_04_t, R.id.cell_05_t, R.id.cell_06_t,
+            R.id.cell_10_t, R.id.cell_11_t, R.id.cell_12_t, R.id.cell_13_t, R.id.cell_14_t, R.id.cell_15_t, R.id.cell_16_t,
+            R.id.cell_20_t, R.id.cell_21_t, R.id.cell_22_t, R.id.cell_23_t, R.id.cell_24_t, R.id.cell_25_t, R.id.cell_26_t,
+            R.id.cell_30_t, R.id.cell_31_t, R.id.cell_32_t, R.id.cell_33_t, R.id.cell_34_t, R.id.cell_35_t, R.id.cell_36_t,
+            R.id.cell_40_t, R.id.cell_41_t, R.id.cell_42_t, R.id.cell_43_t, R.id.cell_44_t, R.id.cell_45_t, R.id.cell_46_t,
+            R.id.cell_50_t, R.id.cell_51_t, R.id.cell_52_t, R.id.cell_53_t, R.id.cell_54_t, R.id.cell_55_t, R.id.cell_56_t
+        )
+        private val CELL_MARK = intArrayOf(
+            R.id.cell_00_m, R.id.cell_01_m, R.id.cell_02_m, R.id.cell_03_m, R.id.cell_04_m, R.id.cell_05_m, R.id.cell_06_m,
+            R.id.cell_10_m, R.id.cell_11_m, R.id.cell_12_m, R.id.cell_13_m, R.id.cell_14_m, R.id.cell_15_m, R.id.cell_16_m,
+            R.id.cell_20_m, R.id.cell_21_m, R.id.cell_22_m, R.id.cell_23_m, R.id.cell_24_m, R.id.cell_25_m, R.id.cell_26_m,
+            R.id.cell_30_m, R.id.cell_31_m, R.id.cell_32_m, R.id.cell_33_m, R.id.cell_34_m, R.id.cell_35_m, R.id.cell_36_m,
+            R.id.cell_40_m, R.id.cell_41_m, R.id.cell_42_m, R.id.cell_43_m, R.id.cell_44_m, R.id.cell_45_m, R.id.cell_46_m,
+            R.id.cell_50_m, R.id.cell_51_m, R.id.cell_52_m, R.id.cell_53_m, R.id.cell_54_m, R.id.cell_55_m, R.id.cell_56_m
+        )
+
+        /** 위젯 하나를 설정(모양, 투명도, 색)대로 그린다 */
+        fun build(context: Context, id: Int, data: SharedPreferences): RemoteViews {
+            val cfg = WidgetPrefs(context)
+            val theme = WidgetTheme.all[cfg.color(id)]
+            val calendar = cfg.style(id) == "calendar"
+            val views = RemoteViews(
+                context.packageName,
+                if (calendar) R.layout.ourday_widget_cal else R.layout.ourday_widget
+            )
+            // 배경: 색 + 투명도
+            views.setInt(R.id.widget_bg, "setColorFilter", theme.bg)
+            views.setInt(R.id.widget_bg, "setImageAlpha", cfg.opacity(id) * 255 / 100)
+
+            if (calendar) fillCalendar(context, views, theme, data) else fillList(views, theme, data)
+
+            val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            val pi = PendingIntent.getActivity(
+                context, 0, launch ?: Intent(),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_root, pi)
+            return views
+        }
+
+        private fun fillList(views: RemoteViews, theme: WidgetTheme, data: SharedPreferences) {
+            val title = SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Calendar.getInstance().time)
+            views.setTextViewText(R.id.widget_title, title)
+            views.setTextViewText(R.id.widget_body, data.getString("body", "앱을 열어서 로그인해줘"))
+            views.setTextColor(R.id.widget_title, theme.text)
+            views.setTextColor(R.id.widget_body, theme.text)
+        }
+
+        private fun fillCalendar(context: Context, views: RemoteViews, theme: WidgetTheme, data: SharedPreferences) {
+            val events = (data.getString("eventDays", "") ?: "").split(",").filter { it.isNotEmpty() }.toHashSet()
+            val now = Calendar.getInstance()
+            val year = now.get(Calendar.YEAR)
+            val month = now.get(Calendar.MONTH)
+            val today = now.get(Calendar.DAY_OF_MONTH)
+
+            val first = Calendar.getInstance()
+            first.set(year, month, 1)
+            val offset = first.get(Calendar.DAY_OF_WEEK) - 1 // 일요일=0
+            val daysInMonth = first.getActualMaximum(Calendar.DAY_OF_MONTH)
+
+            views.setTextViewText(R.id.cal_title, "${year}년 ${month + 1}월")
+            views.setTextColor(R.id.cal_title, theme.text)
+            val dowIds = intArrayOf(R.id.dow_0, R.id.dow_1, R.id.dow_2, R.id.dow_3, R.id.dow_4, R.id.dow_5, R.id.dow_6)
+            dowIds.forEach { views.setTextColor(it, theme.sub) }
+
+            for (i in 0 until 42) {
+                val textId = CELL_TEXT[i]
+                val markId = CELL_MARK[i]
+                val day = i - offset + 1
+                if (day < 1 || day > daysInMonth) {
+                    views.setTextViewText(textId, "")
+                    views.setViewVisibility(markId, View.GONE)
+                    continue
+                }
+                views.setTextViewText(textId, day.toString())
+                val key = String.format(Locale.US, "%04d%02d%02d", year, month + 1, day)
+                when {
+                    day == today -> {
+                        views.setViewVisibility(markId, View.VISIBLE)
+                        views.setInt(markId, "setColorFilter", theme.accent)
+                        views.setInt(markId, "setImageAlpha", 255)
+                        views.setTextColor(textId, theme.onAccent)
+                    }
+                    events.contains(key) -> {
+                        views.setViewVisibility(markId, View.VISIBLE)
+                        views.setInt(markId, "setColorFilter", theme.accent)
+                        views.setInt(markId, "setImageAlpha", 70)
+                        views.setTextColor(textId, theme.text)
+                    }
+                    else -> {
+                        views.setViewVisibility(markId, View.GONE)
+                        views.setTextColor(textId, theme.text)
+                    }
+                }
             }
-            appWidgetManager.updateAppWidget(id, views)
         }
     }
 }
