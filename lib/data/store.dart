@@ -43,6 +43,7 @@ class Store extends ChangeNotifier {
 
   /// 알림 설정: 기본값은 재촉 받기/완료 알림 켜짐, 반복 할 일 완료 알림 꺼짐
   bool get allowNudge => profile['allowNudge'] != false;
+  bool get notifyReminder => profile['notifyReminder'] != false;
   bool get notifyShared => profile['notifyShared'] != false;
   bool get notifyComplete => profile['notifyComplete'] != false;
   bool get notifyCompleteRepeating => profile['notifyCompleteRepeating'] == true;

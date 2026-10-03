@@ -86,7 +86,44 @@ function deadTokens(tokens, responses) {
   return dead;
 }
 
+const REMIND_WINDOW_MS = 15 * 60 * 1000; // 놓친 알림은 15분까지만 늦게 보낸다
+
+/** 지금 알림을 보낼 차례인지: remindAt이 지났고(최대 15분), 같은 시각으로 이미 보낸 적 없고, 아직 끝난 게 아니면 */
+function dueForReminder(item, nowMs) {
+  const at = millis(item.remindAt);
+  if (!at || at > nowMs || nowMs - at > REMIND_WINDOW_MS) return false;
+  if (millis(item.remindSentFor) === at) return false;
+  if (item.done) return false;
+  return true;
+}
+
+function reminderMessage(item, nowMs) {
+  const startMs = millis(item.start);
+  let when;
+  if (item.allDay) when = '오늘';
+  else {
+    const diff = Math.round((startMs - nowMs) / 60000);
+    when = diff <= 1 ? '지금' : diff < 90 ? `${diff}분 뒤` : diff < 36 * 60 ? `${Math.round(diff / 60)}시간 뒤` : '내일';
+  }
+  const kind = item.type === 'todo' ? '마감' : '일정';
+  return { title: `${when} ${kind}`, body: `"${item.title}"` };
+}
+
+/** 알림 받을 사람들: 만든 사람은 항상, 같이 보기 항목이면 상대도 (상대가 끄지 않았다면) */
+function reminderRecipients(item, members, prefsByUid) {
+  return members.filter((u) => {
+    const p = prefsByUid[u] || {};
+    if (p.notifyReminder === false) return false;
+    if (u === item.ownerUid) return true;
+    return item.visibility === 'shared';
+  });
+}
+
 module.exports = {
+  REMIND_WINDOW_MS,
+  dueForReminder,
+  reminderMessage,
+  reminderRecipients,
   NUDGE_MAX,
   isRepeating,
   nudgeKey,

@@ -41,4 +41,22 @@ void main() {
     expect(c.dday, true);
     expect(c.assignee, 'you');
   });
+
+  test('알림 시각 계산: 시각 일정은 N분 전, 종일은 오전 9시 기준, 반복(규칙)은 없음', () {
+    final timed = Item(
+        id: 'a', type: ItemType.event, title: 't', start: DateTime(2026, 10, 7, 15, 0), allDay: false,
+        ownerUid: 'me', remindMinutes: 30);
+    expect(timed.remindAt, DateTime(2026, 10, 7, 14, 30));
+    expect(timed.toMap()['remindMinutes'], 30);
+    final allDay = timed.copyWith(allDay: true, start: DateTime(2026, 10, 7));
+    expect(allDay.remindAt, DateTime(2026, 10, 7, 8, 30)); // 오전 9시의 30분 전
+    final dayBefore = allDay.copyWith(remindMinutes: 1440);
+    expect(dayBefore.remindAt, DateTime(2026, 10, 6, 9));
+    final weekly = timed.copyWith(rule: const Recurrence(freq: Freq.weekly));
+    expect(weekly.remindAt, isNull);
+    expect(timed.copyWith(clearRemind: true).remindAt, isNull);
+    // 이동형(규칙 반복 아님)은 다음 날짜로 옮기면 알림 시각도 같이 옮겨진다
+    final rolled = timed.copyWith(start: DateTime(2026, 10, 8, 15, 0));
+    expect(rolled.remindAt, DateTime(2026, 10, 8, 14, 30));
+  });
 }

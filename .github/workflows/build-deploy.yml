@@ -116,7 +116,7 @@ jobs:
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           project=$(jq -r .PROJECT_ID firebase_config.json)
-          npx -y firebase-tools@latest deploy --only hosting,firestore:rules --project "$project" --non-interactive
+          npx -y firebase-tools@latest deploy --only hosting,firestore --project "$project" --non-interactive
 
       # 서버 함수는 따로 배포한다: 권한/API 문제로 실패해도 웹 배포는 유지되게 하고, 로그로 원인을 확인한다.
       - name: Firebase 서버 함수 배포

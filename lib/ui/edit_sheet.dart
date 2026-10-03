@@ -71,6 +71,7 @@ class _EditSheetState extends State<_EditSheet> {
   late List<String> _cats; // 항상 하나 (이전 버전에서 여러 개였던 항목은 첫 번째만 쓴다)
   late String _assignee = widget.item?.assignee ?? '';
   late bool _dday = widget.item?.dday ?? false;
+  late int? _remind = widget.item?.remindMinutes;
   late m.Visibility _vis;
   late bool _visTouched = widget.item != null; // 직접 바꾸면 카테고리 기본값으로 덮어쓰지 않는다
   late int? _color = widget.item?.color; // null이면 카테고리 색
@@ -241,6 +242,8 @@ class _EditSheetState extends State<_EditSheet> {
         return;
       }
     }
+    // 알림: 종일/시각 일정에 허용되는 값만, 반복 일정은 없음
+    final remind = rule != null || !(_allDay ? const [0, 1440] : const [0, 10, 30, 60, 1440]).contains(_remind) ? null : _remind;
     final base = widget.item ??
         Item(id: '', type: _type, title: '', start: startDt, ownerUid: s.uid);
     final edited = base.copyWith(
@@ -268,6 +271,8 @@ class _EditSheetState extends State<_EditSheet> {
       clearColor: _color == null,
       visibility: _vis,
       dday: _dday,
+      remindMinutes: remind,
+      clearRemind: remind == null,
       // 담당자는 같이 보기 할 일에서만 (나만 보기면 본인 몫)
       assignee: _type == ItemType.todo && _vis == m.Visibility.shared ? _assignee : '',
       repeat: repeatFor(rule),
@@ -742,6 +747,25 @@ class _EditSheetState extends State<_EditSheet> {
                 ),
               ],
             ],
+            const SizedBox(height: 12),
+            () {
+              // 알림: 종일은 그날/전날 오전 9시, 시각이 있으면 정각/몇 분 전/하루 전
+              final opts = _allDay
+                  ? const [(null, '알림 없음'), (0, '당일 오전 9시'), (1440, '전날 오전 9시')]
+                  : const [(null, '알림 없음'), (0, '정각'), (10, '10분 전'), (30, '30분 전'), (60, '1시간 전'), (1440, '하루 전')];
+              final value = opts.any((o) => o.$1 == _remind) ? _remind : null;
+              return DropdownButtonFormField<int?>(
+                key: ValueKey('remind$_allDay${_rule != null}'),
+                initialValue: _rule != null ? null : value,
+                decoration: InputDecoration(
+                  labelText: _type == ItemType.todo ? '마감 알림' : '알림',
+                  prefixIcon: const Icon(Icons.notifications_none),
+                  helperText: _rule != null ? '반복 일정 알림은 안드로이드 앱 알림으로 준비 중이야' : null,
+                ),
+                items: [for (final o in opts) DropdownMenuItem<int?>(value: o.$1, child: Text(o.$2))],
+                onChanged: _rule != null ? null : (v) => setState(() => _remind = v),
+              );
+            }(),
             const SizedBox(height: 12),
             SegmentedButton<m.Visibility>(
               segments: const [

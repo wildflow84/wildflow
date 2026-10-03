@@ -43,6 +43,13 @@ class SettingsScreen extends StatelessWidget {
             onChanged: (v) => s.setPref('allowNudge', v),
           ),
           SwitchListTile(
+            secondary: const Icon(Icons.alarm),
+            title: const Text('일정/할 일 알림'),
+            subtitle: const Text('등록할 때 정해둔 시각(정각, 30분 전 등)에 알려줘. 같이 보기 항목은 상대에게도 가'),
+            value: s.notifyReminder,
+            onChanged: (v) => s.setPref('notifyReminder', v),
+          ),
+          SwitchListTile(
             secondary: const Icon(Icons.share_outlined),
             title: const Text('새로 공유된 일정/할 일 알림'),
             subtitle: const Text('상대가 같이 보기로 새 항목을 만들거나 공유하면 알려줘'),

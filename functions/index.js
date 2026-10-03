@@ -226,3 +226,32 @@ exports.syncAllSubscriptions = onSchedule({ schedule: 'every 12 hours', timeZone
     }
   }
 });
+
+// ---------------------------------------------------------------------------
+// 일정/할 일 알림 (정해둔 시각에 푸시). 5분마다 확인한다.
+// ---------------------------------------------------------------------------
+exports.sendReminders = onSchedule({ schedule: 'every 5 minutes', timeZone: 'Asia/Seoul', timeoutSeconds: 120 }, async () => {
+  const now = Date.now();
+  const due = await db
+    .collectionGroup('items')
+    .where('remindAt', '>', Timestamp.fromMillis(now - lib.REMIND_WINDOW_MS))
+    .where('remindAt', '<=', Timestamp.fromMillis(now))
+    .get();
+  const spaces = {};
+  for (const d of due.docs) {
+    const item = d.data();
+    if (!lib.dueForReminder(item, now)) continue;
+    const spaceId = d.ref.parent.parent.id;
+    spaces[spaceId] = spaces[spaceId] || ((await db.doc(`spaces/${spaceId}`).get()).data() || {}).members || [];
+    const prefs = {};
+    for (const u of spaces[spaceId]) prefs[u] = (await db.doc(`users/${u}`).get()).data() || {};
+    const message = lib.reminderMessage(item, now);
+    let sent = 0;
+    for (const u of lib.reminderRecipients(item, spaces[spaceId], prefs)) {
+      sent += await pushTo(u, prefs[u], message, { spaceId, itemId: d.id, kind: 'reminder' });
+    }
+    // 같은 알림 시각으로 다시 보내지 않게 표시 (일정 시간을 바꾸면 remindAt이 달라져 새로 보냄)
+    await d.ref.update({ remindSentFor: item.remindAt });
+    console.log('알림', spaceId, d.id, '보낸 기기', sent);
+  }
+});

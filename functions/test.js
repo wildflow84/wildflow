@@ -75,3 +75,21 @@ test('상대에게 맡긴 할 일은 맡겼다고 알림', () => {
   assert.match(lib.shareMessage('나', item, 'other').title, /공유했어/);
   assert.match(lib.shareMessage('나', { type: 'todo', title: 'x', assignee: '' }, 'you').title, /공유했어/);
 });
+
+test('알림: 시각 창, 중복 방지, 문구, 받는 사람', () => {
+  const now = 10_000_000_000;
+  const at = (ms) => ({ toMillis: () => ms });
+  const base = { type: 'event', title: '치과', allDay: false, start: at(now + 30 * 60000), remindAt: at(now - 60000) };
+  assert.equal(lib.dueForReminder(base, now), true);
+  assert.equal(lib.dueForReminder({ ...base, remindAt: at(now + 1000) }, now), false); // 아직
+  assert.equal(lib.dueForReminder({ ...base, remindAt: at(now - 16 * 60000) }, now), false); // 너무 늦음
+  assert.equal(lib.dueForReminder({ ...base, remindSentFor: at(now - 60000) }, now), false); // 이미 보냄
+  assert.equal(lib.dueForReminder({ ...base, remindSentFor: at(now - 999999) }, now), true); // 시각이 바뀌어 새 알림
+  assert.equal(lib.dueForReminder({ ...base, done: true }, now), false);
+  assert.match(lib.reminderMessage(base, now).title, /30분 뒤 일정/);
+  assert.match(lib.reminderMessage({ ...base, type: 'todo', allDay: true }, now).title, /오늘 마감/);
+  const members = ['me', 'you'];
+  assert.deepEqual(lib.reminderRecipients({ ownerUid: 'me', visibility: 'private' }, members, {}), ['me']);
+  assert.deepEqual(lib.reminderRecipients({ ownerUid: 'me', visibility: 'shared' }, members, {}), ['me', 'you']);
+  assert.deepEqual(lib.reminderRecipients({ ownerUid: 'me', visibility: 'shared' }, members, { you: { notifyReminder: false } }), ['me']);
+});

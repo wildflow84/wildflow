@@ -66,6 +66,8 @@ class Item {
   final bool dday;
   /// 일정 구독(.ics)에서 가져온 항목이면 그 구독의 id. 서버가 12시간마다 원본대로 갱신한다.
   final String? subscriptionId;
+  /// 알림: 시작(마감) 몇 분 전에 알릴지. null이면 알림 없음. 종일 항목은 그날 오전 9시 기준(1440=전날 오전 9시).
+  final int? remindMinutes;
   /// 반복 항목의 회차별 체크 기록: 날짜(yyyy-MM-dd) → 체크한 항목의 글자. 반복이 아니면 안 쓴다.
   final Map<String, List<String>> checksByDate;
 
@@ -148,10 +150,20 @@ class Item {
         assignee: i.assignee,
         dday: i.dday,
         subscriptionId: null, // 복제본은 구독과 무관
+        remindMinutes: i.remindMinutes,
       );
 
   /// 이 할 일이 [uid]의 몫인지: 담당자가 정해져 있으면 그 사람, 아니면 만든 사람.
   bool isMineTo(String uid) => assignee.isNotEmpty ? assignee == uid : ownerUid == uid;
+
+  /// 알림을 보낼 시각. 서버가 이 값으로 푸시를 보낸다.
+  /// 반복 일정(규칙)은 다음 회차를 서버가 알 수 없어서 아직 지원하지 않는다 (null).
+  DateTime? get remindAt {
+    final r = remindMinutes;
+    if (r == null || isRecurring) return null;
+    final base = allDay ? DateTime(start.year, start.month, start.day, 9) : start;
+    return base.subtract(Duration(minutes: r));
+  }
 
   int get checksLeft => checklist.where((c) => !c.done).length;
   bool get hasChecklist => checklist.isNotEmpty;
@@ -199,6 +211,7 @@ class Item {
     this.assignee = '',
     this.dday = false,
     this.subscriptionId,
+    this.remindMinutes,
   });
 
   Item copyWith({
@@ -239,6 +252,8 @@ class Item {
     Map<String, List<String>>? checksByDate,
     String? assignee,
     bool? dday,
+    int? remindMinutes,
+    bool clearRemind = false,
   }) =>
       Item(
         id: id,
@@ -274,6 +289,7 @@ class Item {
         assignee: assignee ?? this.assignee,
         dday: dday ?? this.dday,
         subscriptionId: subscriptionId,
+        remindMinutes: clearRemind ? null : (remindMinutes ?? this.remindMinutes),
       );
 
   Map<String, dynamic> toMap() => {
@@ -310,6 +326,8 @@ class Item {
         'assignee': assignee,
         'dday': dday,
         'subscriptionId': subscriptionId,
+        'remindMinutes': remindMinutes,
+        'remindAt': remindAt == null ? null : Timestamp.fromDate(remindAt!),
       };
 
   factory Item.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -352,6 +370,7 @@ class Item {
       assignee: (m['assignee'] as String?) ?? '',
       dday: m['dday'] == true,
       subscriptionId: m['subscriptionId'] as String?,
+      remindMinutes: (m['remindMinutes'] as num?)?.toInt(),
       checksByDate: {
         for (final e in ((m['checksByDate'] as Map?) ?? const {}).entries)
           '${e.key}': List<String>.from(e.value as List),
