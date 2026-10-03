@@ -260,11 +260,13 @@ class Store extends ChangeNotifier {
 
   /// 완료 토글. 이동형 반복은 완료 대신 날짜가 다음 일정으로 넘어간다.
   /// 되돌리기용으로 변경 전 항목을 돌려준다 (이동형일 때만).
-  Future<Item?> toggleDone(Item i, DateTime day) async {
+  /// [checkAll]: 남은 체크리스트를 모두 체크하면서 완료한다.
+  Future<Item?> toggleDone(Item item, DateTime day, {bool checkAll = false}) async {
+    final i = checkAll ? item.copyWith(checklist: allChecked(item.checklist, true)) : item;
     final now = DateTime.now();
     if (i.isRolling) {
       await save(rollNextItem(i, now, uid));
-      return i;
+      return item;
     }
     if (!i.isRecurring) {
       await save(i.copyWith(done: !i.done, lastDoneBy: uid, lastDoneAt: now));
@@ -272,9 +274,18 @@ class Store extends ChangeNotifier {
     }
     final k = dateKey(day);
     final dd = [...i.doneDates];
-    dd.contains(k) ? dd.remove(k) : dd.add(k);
+    final marking = !dd.contains(k);
+    marking ? dd.add(k) : dd.remove(k);
     await save(i.copyWith(doneDates: dd, lastDoneBy: uid, lastDoneAt: now));
     return null;
+  }
+
+  /// 체크리스트 한 줄 체크/해제
+  Future<void> setCheck(Item i, int index, bool done) {
+    final l = [...i.checklist];
+    if (index < 0 || index >= l.length) return Future.value();
+    l[index] = l[index].copyWith(done: done);
+    return save(i.copyWith(checklist: l));
   }
 
   /// 이동형 완료 되돌리기

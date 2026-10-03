@@ -11,6 +11,7 @@ import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, RepeatDelete, dateOnly, hasEndTime, repeatFor;
 import '../models/recurrence.dart';
 import 'category_manager.dart';
+import 'checklist.dart';
 import 'color_picker.dart';
 import 'date_picker.dart';
 import 'lunar_picker.dart';
@@ -41,6 +42,7 @@ class _EditSheetState extends State<_EditSheet> {
   late ItemType _type = widget.item?.type ?? widget.type;
   late final _title = TextEditingController(text: widget.item?.title);
   late final _note = TextEditingController(text: widget.item?.note);
+  late List<m.CheckEntry> _checklist = [...?widget.item?.checklist];
   late final _location = TextEditingController(text: widget.item?.location);
   // 장소 검색으로 고른 좌표 (위치 문구를 직접 고치면 해제)
   late double? _lat = widget.item?.lat;
@@ -208,6 +210,7 @@ class _EditSheetState extends State<_EditSheet> {
       type: _type,
       title: _title.text.trim(),
       note: _note.text.trim(),
+      checklist: [for (final c in _checklist) if (c.text.trim().isNotEmpty) c.copyWith(text: c.text.trim())],
       location: _type == ItemType.event ? _location.text.trim() : '', // 위치는 일정만
       lat: _type == ItemType.event ? _lat : null,
       lng: _type == ItemType.event ? _lng : null,
@@ -685,6 +688,8 @@ class _EditSheetState extends State<_EditSheet> {
               controller: _note,
               decoration: const InputDecoration(labelText: '메모', border: OutlineInputBorder()),
             ),
+            const SizedBox(height: 12),
+            ChecklistEditor(initial: _checklist, onChanged: (l) => _checklist = l),
             const SizedBox(height: 16),
             Row(children: [
               if (widget.item != null && isOwner)

@@ -14,6 +14,7 @@ import '../models/map_links.dart';
 import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, dateOnly, isDoneOn, isOverdue, moveItemByDays, nextRollDate, rollLabel, timeLabel, chipTimeLabel;
 import 'category_manager.dart';
+import 'checklist.dart';
 import 'date_picker.dart';
 import 'settings_screen.dart';
 import 'snack.dart';
@@ -999,7 +1000,14 @@ class _ItemTile extends StatelessWidget {
               onChanged: canEdit
                   ? (_) async {
                       final messenger = ScaffoldMessenger.of(context);
-                      final prev = await s.toggleDone(item, day);
+                      var checkAll = false;
+                      if (!done) {
+                        // 체크리스트가 남아 있으면 확인
+                        final c = await confirmIncompleteChecklist(context, item);
+                        if (c == CompleteChoice.cancel) return;
+                        checkAll = c == CompleteChoice.checkAll;
+                      }
+                      final prev = await s.toggleDone(item, day, checkAll: checkAll);
                       if (prev != null) {
                         final next = DateFormat('M월 d일 (E)', 'ko').format(nextRollDate(prev, DateTime.now()));
                         showTimedSnack(
@@ -1028,6 +1036,8 @@ class _ItemTile extends StatelessWidget {
           // 같이 보기 항목은 만든 사람을 보여준다
           if (item.visibility == m.Visibility.shared)
             _Meta(icon: Icons.person_outline, text: s.ownerLabel(item)),
+          if (item.hasChecklist)
+            _Meta(icon: Icons.checklist, text: '${item.checklist.length - item.checksLeft}/${item.checklist.length}'),
           if (item.note.isNotEmpty) _Meta(icon: Icons.notes, text: item.note),
         ]),
       ),
@@ -1045,18 +1055,21 @@ class _ItemTile extends StatelessWidget {
             ),
       onTap: canEdit ? () => showEditSheet(context, item: item, day: day) : null,
     );
-    if (item.type != ItemType.event || item.photoUrl == null) return tile;
-    // 위치 사진이 있으면 구글 캘린더처럼 일정 위에 배너로 보여준다
+    final hasPhoto = item.type == ItemType.event && item.photoUrl != null;
+    if (!hasPhoto && !item.hasChecklist) return tile;
+    // 위치 사진은 구글 캘린더처럼 일정 위에 배너로, 체크리스트는 바로 아래에 펼쳐서 보여준다
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.network(item.photoUrl!,
-              height: 96, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink()),
+      if (hasPhoto)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.network(item.photoUrl!,
+                height: 96, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink()),
+          ),
         ),
-      ),
       tile,
+      if (item.hasChecklist) ChecklistInline(item: item, canEdit: canEdit),
     ]);
   }
 }

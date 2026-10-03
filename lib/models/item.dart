@@ -57,9 +57,15 @@ class Item {
   /// 달력에는 다음 1회만 보이고, 완료하면 규칙에 맞는 다음 날짜로 옮겨진다. [rule]과는 별개다.
   final Recurrence? rollRule;
 
+  /// 체크리스트 (장보기, 준비물 등). 같이 보기 항목이면 둘 다 보면서 체크한다.
+  final List<CheckEntry> checklist;
+
   /// 마지막으로 완료한 사람/시각 (알림, 이력용)
   final String? lastDoneBy;
   final DateTime? lastDoneAt;
+
+  int get checksLeft => checklist.where((c) => !c.done).length;
+  bool get hasChecklist => checklist.isNotEmpty;
 
   bool get isRolling => rollRule != null || rollEvery > 0;
 
@@ -99,6 +105,7 @@ class Item {
     this.rollRule,
     this.lastDoneBy,
     this.lastDoneAt,
+    this.checklist = const [],
   });
 
   Item copyWith({
@@ -135,6 +142,7 @@ class Item {
     bool clearRollRule = false,
     String? lastDoneBy,
     DateTime? lastDoneAt,
+    List<CheckEntry>? checklist,
   }) =>
       Item(
         id: id,
@@ -165,6 +173,7 @@ class Item {
         rollRule: clearRollRule ? null : (rollRule ?? this.rollRule),
         lastDoneBy: lastDoneBy ?? this.lastDoneBy,
         lastDoneAt: lastDoneAt ?? this.lastDoneAt,
+        checklist: checklist ?? this.checklist,
       );
 
   Map<String, dynamic> toMap() => {
@@ -196,6 +205,7 @@ class Item {
         'rollRule': rollRule?.toMap(),
         'lastDoneBy': lastDoneBy,
         'lastDoneAt': lastDoneAt == null ? null : Timestamp.fromDate(lastDoneAt!),
+        'checklist': [for (final c in checklist) c.toMap()],
       };
 
   factory Item.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -231,6 +241,10 @@ class Item {
       rollRule: m['rollRule'] is Map ? Recurrence.fromMap(Map<String, dynamic>.from(m['rollRule'] as Map)) : null,
       lastDoneBy: m['lastDoneBy'] as String?,
       lastDoneAt: (m['lastDoneAt'] as Timestamp?)?.toDate(),
+      checklist: [
+        for (final c in (m['checklist'] as List? ?? const []))
+          if (c is Map) CheckEntry.fromMap(Map<String, dynamic>.from(c)),
+      ],
     );
   }
 }
@@ -394,6 +408,7 @@ Item rollNextItem(Item item, DateTime now, String? byUid) {
       doneDates: trimmed,
       lastDoneBy: byUid,
       lastDoneAt: now,
+      checklist: allChecked(item.checklist, false), // 다음 회차는 새로 체크
     );
   }
   return item.copyWith(
@@ -402,6 +417,7 @@ Item rollNextItem(Item item, DateTime now, String? byUid) {
     doneDates: trimmed,
     lastDoneBy: byUid,
     lastDoneAt: now,
+    checklist: allChecked(item.checklist, false),
   );
 }
 
@@ -445,3 +461,23 @@ Item moveItemByDays(Item item, int deltaDays) {
     end: item.end == null ? null : shift(item.end!),
   );
 }
+
+/// 체크리스트 한 줄
+class CheckEntry {
+  final String text;
+  final bool done;
+  const CheckEntry(this.text, {this.done = false});
+
+  CheckEntry copyWith({String? text, bool? done}) => CheckEntry(text ?? this.text, done: done ?? this.done);
+
+  Map<String, dynamic> toMap() => {'t': text, 'd': done};
+  factory CheckEntry.fromMap(Map<String, dynamic> m) => CheckEntry('${m['t'] ?? ''}', done: m['d'] == true);
+
+  @override
+  bool operator ==(Object other) => other is CheckEntry && other.text == text && other.done == done;
+  @override
+  int get hashCode => Object.hash(text, done);
+}
+
+/// 모든 체크를 켠 / 끈 체크리스트
+List<CheckEntry> allChecked(List<CheckEntry> l, bool done) => [for (final c in l) c.copyWith(done: done)];
