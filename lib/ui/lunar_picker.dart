@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'palette.dart';
 import 'package:intl/intl.dart';
 
 import '../models/lunar.dart';
@@ -108,10 +109,10 @@ class _LunarDialogState extends State<_LunarDialog> {
           const SizedBox(height: 12),
           Text(
             solar == null ? '없는 날짜야' : '양력 ${DateFormat('y년 M월 d일 (E)', 'ko').format(solar)}',
-            style: const TextStyle(color: Colors.white70),
+            style: const TextStyle(color: kSubtle),
           ),
           const SizedBox(height: 4),
-          const Text('반복은 등록 화면에서 "매년 음력 …"을 고르면 돼', style: TextStyle(fontSize: 12, color: Colors.white54)),
+          const Text('반복은 등록 화면에서 "매년 음력 …"을 고르면 돼', style: TextStyle(fontSize: 12, color: kMuted)),
         ]),
       ),
       actions: [

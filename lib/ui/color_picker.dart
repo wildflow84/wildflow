@@ -1,3 +1,4 @@
+import 'palette.dart';
 import 'package:flutter/material.dart';
 
 import '../models/category.dart';
@@ -49,7 +50,7 @@ class _ColorChooserState extends State<ColorChooser> {
                   color: Color(c),
                   shape: BoxShape.circle,
                   border: Border.all(
-                      color: widget.value == c ? Colors.white : Colors.transparent, width: 2.5),
+                      color: widget.value == c ? kInk : Colors.transparent, width: 2.5),
                 ),
                 child: widget.value == c ? const Icon(Icons.check, size: 18, color: Colors.white) : null,
               ),

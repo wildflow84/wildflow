@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'palette.dart';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -169,7 +170,7 @@ class _EditSheetState extends State<_EditSheet> {
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title, style: TextStyle(fontSize: 16, color: color)),
-              Text(sub, style: const TextStyle(fontSize: 12, color: Colors.white60)),
+              Text(sub, style: const TextStyle(fontSize: 12, color: kMuted)),
             ]),
           ),
         );
@@ -181,7 +182,7 @@ class _EditSheetState extends State<_EditSheet> {
           option(RepeatDelete.thisOnly, '이 날짜만', '$day 하루만 삭제'),
           option(RepeatDelete.following, '이 날짜 이후 모두',
               isLaterOccurrence ? '$day부터 이후 전부 삭제' : '첫 회차라서 전체 삭제와 같아'),
-          option(RepeatDelete.all, '전체 삭제', '과거·현재·미래 모든 반복', color: Colors.redAccent),
+          option(RepeatDelete.all, '전체 삭제', '과거·현재·미래 모든 반복', color: kRed),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
@@ -200,7 +201,7 @@ class _EditSheetState extends State<_EditSheet> {
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title, style: const TextStyle(fontSize: 16)),
-              Text(sub, style: const TextStyle(fontSize: 12, color: Colors.white60)),
+              Text(sub, style: const TextStyle(fontSize: 12, color: kMuted)),
             ]),
           ),
         );
@@ -396,7 +397,7 @@ class _EditSheetState extends State<_EditSheet> {
                     }
                     if (context.mounted) Navigator.pop(context);
                   },
-                  child: const Text('삭제', style: TextStyle(color: Colors.redAccent)),
+                  child: const Text('삭제', style: TextStyle(color: kRed)),
                 ),
               if (widget.item != null)
                 TextButton(
@@ -546,7 +547,7 @@ class _EditSheetState extends State<_EditSheet> {
                 const Padding(
                   padding: EdgeInsets.only(top: 4, left: 12),
                   child: Text('📍 좌표가 저장됐어 (지도/출발 시간 계산용)',
-                      style: TextStyle(fontSize: 12, color: Colors.white54)),
+                      style: TextStyle(fontSize: 12, color: kMuted)),
                 ),
               if (_searchError != null)
                 Padding(
@@ -588,7 +589,7 @@ class _EditSheetState extends State<_EditSheet> {
                 ),
               const SizedBox(height: 12),
             ],
-            const Text('카테고리', style: TextStyle(color: Colors.white70)),
+            const Text('카테고리', style: TextStyle(color: kSubtle)),
             const SizedBox(height: 6),
             if (widget.item?.subscriptionId != null)
               Chip(
@@ -613,7 +614,7 @@ class _EditSheetState extends State<_EditSheet> {
             ]),
             const SizedBox(height: 8),
             Row(children: [
-              const Text('색상', style: TextStyle(color: Colors.white70)),
+              const Text('색상', style: TextStyle(color: kSubtle)),
               const SizedBox(width: 12),
               InkWell(
                 onTap: () async {
@@ -673,11 +674,11 @@ class _EditSheetState extends State<_EditSheet> {
                 padding: const EdgeInsets.only(top: 4),
                 child: Row(children: [
                   if (_preset == RepeatPreset.custom) ...[
-                    const Icon(Icons.repeat, size: 16, color: Colors.white54),
+                    const Icon(Icons.repeat, size: 16, color: kMuted),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(_rule!.describe(_start),
-                          style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                          style: const TextStyle(fontSize: 12, color: kSubtle)),
                     ),
                     TextButton(onPressed: _editCustom, child: const Text('편집')),
                   ] else ...[
@@ -699,12 +700,12 @@ class _EditSheetState extends State<_EditSheet> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Icon(Icons.autorenew, size: 16, color: Colors.white54),
+                    const Icon(Icons.autorenew, size: 16, color: kMuted),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         '"${_rule!.describe(_start)}" 규칙대로, 완료하면 다음 날짜로 이동해.',
-                        style: const TextStyle(color: Colors.white60, fontSize: 12),
+                        style: const TextStyle(color: kMuted, fontSize: 12),
                       ),
                     ),
                   ]),
@@ -713,7 +714,7 @@ class _EditSheetState extends State<_EditSheet> {
                 const Padding(
                   padding: EdgeInsets.only(bottom: 8),
                   child: Text('위에서 반복(예: 매주 목요일)을 고르면 그 규칙대로 이동하고, 고르지 않으면 아래 간격으로 이동해.',
-                      style: TextStyle(color: Colors.white60, fontSize: 12)),
+                      style: TextStyle(color: kMuted, fontSize: 12)),
                 ),
                 Row(children: [
                   const Text('매'),
@@ -752,7 +753,7 @@ class _EditSheetState extends State<_EditSheet> {
                     _rollFromCompletion
                         ? '늦게 완료하면 완료한 날부터 다시 세어. (약 먹기에 알맞아)'
                         : '늦게 완료해도 원래 주기를 유지해. (월세, 정기 점검에 알맞아)',
-                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                    style: const TextStyle(color: kMuted, fontSize: 12),
                   ),
                 ),
               ],
@@ -794,7 +795,7 @@ class _EditSheetState extends State<_EditSheet> {
             ),
             if (_type == ItemType.todo && _vis == m.Visibility.shared && s.names.keys.any((k) => k != s.uid)) ...[
               const SizedBox(height: 12),
-              const Text('담당', style: TextStyle(color: Colors.white70)),
+              const Text('담당', style: TextStyle(color: kSubtle)),
               const SizedBox(height: 6),
               Wrap(spacing: 8, children: [
                 ChoiceChip(
@@ -815,10 +816,10 @@ class _EditSheetState extends State<_EditSheet> {
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Row(children: [
-                  const Icon(Icons.person_outline, size: 14, color: Colors.white54),
+                  const Icon(Icons.person_outline, size: 14, color: kMuted),
                   const SizedBox(width: 4),
                   Text('만든 사람 · ${s.ownerLabel(widget.item!)}',
-                      style: const TextStyle(fontSize: 12, color: Colors.white60)),
+                      style: const TextStyle(fontSize: 12, color: kMuted)),
                 ]),
               ),
             if (!isOwner)
@@ -826,7 +827,7 @@ class _EditSheetState extends State<_EditSheet> {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   '${s.ownerName(widget.item!)}이(가) 만든 같이 보기 항목이라 공개 범위는 만든 사람만 바꿀 수 있어.',
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  style: const TextStyle(color: kMuted, fontSize: 12),
                 ),
               ),
             const SizedBox(height: 12),

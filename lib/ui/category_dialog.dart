@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'palette.dart';
 import 'package:provider/provider.dart';
 
 import '../data/store.dart';
@@ -68,7 +69,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                 Navigator.pop(context);
               }
             },
-            child: const Text('삭제', style: TextStyle(color: Colors.redAccent)),
+            child: const Text('삭제', style: TextStyle(color: kRed)),
           ),
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
         FilledButton(

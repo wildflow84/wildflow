@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'palette.dart';
 import 'package:flutter/services.dart';
 
 import '../models/recurrence.dart';
@@ -77,7 +78,7 @@ class _RecurrenceDialogState extends State<_RecurrenceDialog> {
   Widget _section(String label, Widget child) => Padding(
         padding: const EdgeInsets.only(top: 16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.white60)),
+          Text(label, style: const TextStyle(fontSize: 12, color: kMuted)),
           const SizedBox(height: 8),
           child,
         ]),
@@ -121,7 +122,7 @@ class _RecurrenceDialogState extends State<_RecurrenceDialog> {
                       label: Recurrence.wdShort(wd),
                       selected: _weekdays.contains(wd),
                       size: 34,
-                      color: wd == 7 ? Colors.redAccent : wd == 6 ? Colors.lightBlueAccent : null,
+                      color: wd == 7 ? kRed : wd == 6 ? kBlue : null,
                       onTap: () => setState(() {
                         if (_weekdays.contains(wd)) {
                           if (_weekdays.length > 1) _weekdays.remove(wd); // 최소 하나
@@ -217,7 +218,7 @@ class _RecurrenceDialogState extends State<_RecurrenceDialog> {
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Text('매년 ${s.month}월 ${s.day}일에 반복해.',
-                    style: const TextStyle(color: Colors.white70)),
+                    style: const TextStyle(color: kSubtle)),
               ),
 
             // 종료
@@ -269,9 +270,9 @@ class _RecurrenceDialogState extends State<_RecurrenceDialog> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: kFill, borderRadius: BorderRadius.circular(10)),
               child: Row(children: [
-                const Icon(Icons.repeat, size: 18, color: Colors.white60),
+                const Icon(Icons.repeat, size: 18, color: kMuted),
                 const SizedBox(width: 8),
                 Expanded(child: Text(rule.describe(s), style: const TextStyle(fontWeight: FontWeight.w600))),
               ]),
@@ -310,7 +311,7 @@ class _DayDot extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: selected ? accent : Colors.transparent,
-          border: Border.all(color: selected ? accent : Colors.white24),
+          border: Border.all(color: selected ? accent : kFaint),
         ),
         child: Text(label,
             style: TextStyle(

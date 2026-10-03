@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'palette.dart';
 
 import 'package:flutter/gestures.dart' show PointerScrollEvent;
 import 'package:flutter/material.dart';
@@ -150,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text('${_month.year}년 ${_month.month}월',
                             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                         Text(_lunarRange(_month),
-                            style: const TextStyle(fontSize: 12, color: Colors.white60)),
+                            style: const TextStyle(fontSize: 12, color: kMuted)),
                       ],
                     ),
                   ),
@@ -382,18 +383,18 @@ class _SharedToggle extends StatelessWidget {
             decoration: BoxDecoration(
               color: on ? accent.withValues(alpha: 0.22) : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: on ? accent : Colors.white24),
+              border: Border.all(color: on ? accent : kFaint),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(on ? Icons.people : Icons.people_outline,
-                  size: 17, color: on ? accent : Colors.white54),
+                  size: 17, color: on ? accent : kMuted),
               if (!narrow) ...[
                 const SizedBox(width: 6),
                 Text('공유',
                     style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: on ? accent : Colors.white54)),
+                        color: on ? accent : kMuted)),
               ],
             ]),
           ),
@@ -463,7 +464,7 @@ class _EdgeZoneState extends State<_EdgeZone> {
           alignment: widget.left ? Alignment.centerLeft : Alignment.centerRight,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Icon(widget.left ? Icons.chevron_left : Icons.chevron_right, size: 28, color: Colors.white),
+            child: Icon(widget.left ? Icons.chevron_left : Icons.chevron_right, size: 28, color: kAccent),
           ),
         ),
       ),
@@ -508,9 +509,9 @@ class _MonthGrid extends StatelessWidget {
                   child: Text(dow[i],
                       style: TextStyle(
                           color: i == 0
-                              ? Colors.redAccent
+                              ? kRed
                               : i == 6
-                                  ? Colors.lightBlueAccent
+                                  ? kBlue
                                   : null)),
                 ),
               ),
@@ -652,6 +653,7 @@ class _SpanBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fg = onColor(color);
     final bar = Container(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
@@ -661,8 +663,12 @@ class _SpanBar extends StatelessWidget {
           right: Radius.circular(seg.endsHere ? 4 : 0),
         ),
       ),
-      child: Row(children: [
-        if (!seg.startsHere) const Icon(Icons.arrow_left, size: 12, color: Colors.white70),
+      child: IconTheme(
+        data: IconThemeData(color: fg),
+        child: DefaultTextStyle.merge(
+          style: TextStyle(color: fg),
+          child: Row(children: [
+        if (!seg.startsHere) Icon(Icons.arrow_left, size: 12, color: fg.withValues(alpha: 0.7)),
         if (ownerInitial != null)
           Container(
             width: 11,
@@ -678,8 +684,10 @@ class _SpanBar extends StatelessWidget {
           child: Text(seg.item.title,
               maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9)),
         ),
-        if (!seg.endsHere) const Icon(Icons.arrow_right, size: 12, color: Colors.white70),
+        if (!seg.endsHere) Icon(Icons.arrow_right, size: 12, color: fg.withValues(alpha: 0.7)),
       ]),
+        ),
+      ),
     );
     final tappable = GestureDetector(behavior: HitTestBehavior.opaque, onTap: onTap, child: bar);
     if (!canEdit) return tappable;
@@ -740,9 +748,9 @@ class _DayCell extends StatelessWidget {
     final marks = s0.cal.marksOn(day);
     final isHoliday = marks.any((m) => m.isHoliday);
     final numColor = (day.weekday == DateTime.sunday || isHoliday)
-        ? Colors.redAccent
+        ? kRed
         : day.weekday == DateTime.saturday
-            ? Colors.lightBlueAccent
+            ? kBlue
             : null;
 
     final backdrop = _backdropFor(s0);
@@ -758,7 +766,7 @@ class _DayCell extends StatelessWidget {
     for (final mk in marks.where((m) => !m.isHoliday)) {
       lines.add(_MarkText(
           text: mk.name,
-          color: mk.kind == MarkKind.term ? const Color(0xFFE8A95B) : Colors.white54));
+          color: mk.kind == MarkKind.term ? const Color(0xFFE8A95B) : kMuted));
     }
 
     return DragTarget<_DragData>(
@@ -768,7 +776,7 @@ class _DayCell extends StatelessWidget {
       onTap: () => onTap(day),
       child: Container(
         decoration: BoxDecoration(
-          color: candidates.isNotEmpty ? Colors.lightGreenAccent.withValues(alpha: 0.12) : null,
+          color: candidates.isNotEmpty ? kGreen.withValues(alpha: 0.15) : kCard,
           // 사진이 있는 여러 날 일정(여행 등)이 걸친 날은 그 장소 사진을 옅게 깐다
           image: backdrop == null
               ? null
@@ -779,10 +787,10 @@ class _DayCell extends StatelessWidget {
                   onError: (_, _) {}),
           border: Border.all(
               color: candidates.isNotEmpty
-                  ? Colors.lightGreenAccent
+                  ? kGreen
                   : isSelected
-                      ? Colors.lightBlueAccent
-                      : Colors.white12,
+                      ? kAccent
+                      : kLine,
               width: (isSelected || candidates.isNotEmpty) ? 1.5 : 0.5),
         ),
         padding: const EdgeInsets.all(2),
@@ -800,25 +808,25 @@ class _DayCell extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: isToday
                         ? const BoxDecoration(
-                            color: Color(0xFF3B6FF5),
+                            color: kAccent,
                             borderRadius: BorderRadius.all(Radius.circular(8)))
                         : null,
                     child: Text('${day.day}',
-                        style: TextStyle(fontSize: 11, color: numColor)),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isToday ? Colors.white : numColor)),
                   ),
                   const SizedBox(width: 2),
                   Flexible(
                     child: Text('(${lunarText(day)})',
                         maxLines: 1,
                         overflow: TextOverflow.clip,
-                        style: const TextStyle(fontSize: 9, color: Colors.white38)),
+                        style: const TextStyle(fontSize: 9, color: kFaint)),
                   ),
                 ]),
                 if (laneCount > 0) SizedBox(height: laneCount * _laneH),
                 ...lines.take(shown.clamp(0, lines.length)),
                 if (overflow && room > 0)
                   Text('+${lines.length - shown}',
-                      style: const TextStyle(fontSize: 9, color: Colors.white54)),
+                      style: const TextStyle(fontSize: 9, color: kMuted)),
               ],
             );
           }),
@@ -901,14 +909,19 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fg = isTodo ? kInk : onColor(color);
     return Container(
       margin: const EdgeInsets.only(top: 1),
       padding: const EdgeInsets.symmetric(horizontal: 3),
       decoration: BoxDecoration(
-        color: isTodo ? color.withValues(alpha: 0.45) : color,
-        borderRadius: BorderRadius.circular(3),
+        color: isTodo ? color.withValues(alpha: 0.28) : color,
+        borderRadius: BorderRadius.circular(4),
       ),
-      child: Row(children: [
+      child: IconTheme(
+        data: IconThemeData(color: fg),
+        child: DefaultTextStyle.merge(
+          style: TextStyle(color: fg),
+          child: Row(children: [
         if (ownerInitial != null)
           Container(
             width: 11,
@@ -931,6 +944,8 @@ class _Chip extends StatelessWidget {
                   decoration: done ? TextDecoration.lineThrough : null)),
         ),
       ]),
+        ),
+      ),
     );
   }
 }
@@ -969,12 +984,13 @@ class _DayList extends StatelessWidget {
               for (final m in marks)
                 Chip(
                   visualDensity: VisualDensity.compact,
-                  label: Text(m.name, style: const TextStyle(fontSize: 12)),
+                  label: Text(m.name, style: TextStyle(fontSize: 12, color: m.isHoliday ? Colors.white : kInk)),
+                  side: BorderSide.none,
                   backgroundColor: m.isHoliday
                       ? const Color(0xFF3FA796)
                       : m.kind == MarkKind.term
-                          ? const Color(0xFF6B5A3A)
-                          : Colors.white12,
+                          ? const Color(0xFFEBD9B4)
+                          : kFill,
                   deleteIcon: custom.any((c) => c.name == m.name)
                       ? const Icon(Icons.close, size: 14)
                       : null,
@@ -1008,7 +1024,7 @@ class _Meta extends StatelessWidget {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 220),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (icon != null) Icon(icon, size: 14, color: Colors.white54),
+        if (icon != null) Icon(icon, size: 14, color: kMuted),
         if (dot != null)
           Container(width: 8, height: 8, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
         const SizedBox(width: 4),
@@ -1016,7 +1032,7 @@ class _Meta extends StatelessWidget {
           child: Text(text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: Colors.white70)),
+              style: const TextStyle(fontSize: 12, color: kSubtle)),
         ),
       ]),
     );
@@ -1192,7 +1208,9 @@ class _TodoTabState extends State<_TodoTab> {
     Widget card(List<Item> list, DateTime Function(Item) dayOf) => Padding(
           padding: const EdgeInsets.fromLTRB(10, 4, 10, 0),
           child: Material(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: kCard,
+            elevation: 1,
+            shadowColor: kCardShadow,
             borderRadius: BorderRadius.circular(14),
             clipBehavior: Clip.antiAlias,
             child: Column(children: [
@@ -1227,11 +1245,11 @@ class _TodoTabState extends State<_TodoTab> {
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                     color: d == today
-                        ? Colors.lightBlueAccent
+                        ? kBlue
                         : d.weekday == DateTime.sunday
-                            ? Colors.redAccent
+                            ? kRed
                             : d.weekday == DateTime.saturday
-                                ? Colors.lightBlueAccent
+                                ? kBlue
                                 : null)),
           ),
           card(groups[d]!, dayOf),

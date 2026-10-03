@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'palette.dart';
 import 'package:provider/provider.dart';
 
 import '../data/store.dart';
@@ -64,7 +65,7 @@ class _SpaceScreenState extends State<SpaceScreen> {
                     child: const Text('코드로 참여')),
                 if (_err != null) ...[
                   const SizedBox(height: 12),
-                  Text(_err!, style: const TextStyle(color: Colors.redAccent)),
+                  Text(_err!, style: const TextStyle(color: kRed)),
                 ],
               ],
             ),

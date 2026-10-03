@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'palette.dart';
 import 'package:intl/intl.dart';
 
 /// 날짜 선택. 기본 showDatePicker는 가로로 넓은 화면(PC)에서 제목이 줄바꿈되어 어색해서 직접 구성했다.
@@ -54,7 +55,7 @@ class _DatePickerDialogState extends State<_DatePickerDialog> {
                   alignment: Alignment.centerLeft,
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     if (widget.title != null)
-                      Text(widget.title!, style: const TextStyle(fontSize: 12, color: Colors.white60)),
+                      Text(widget.title!, style: const TextStyle(fontSize: 12, color: kMuted)),
                     const SizedBox(height: 2),
                     FittedBox(
                       fit: BoxFit.scaleDown,

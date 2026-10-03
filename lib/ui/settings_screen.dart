@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'palette.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -91,7 +92,7 @@ class SettingsScreen extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Text(
               '등록할 때 항목마다 바꿀 수 있어. 카테고리에 기본 공개 범위를 따로 정해두면 그게 우선이야.',
-              style: TextStyle(color: Colors.white60, fontSize: 12),
+              style: TextStyle(color: kMuted, fontSize: 12),
             ),
           ),
           const SizedBox(height: 8),

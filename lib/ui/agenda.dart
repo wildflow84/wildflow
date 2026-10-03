@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'palette.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -39,15 +40,15 @@ class _AgendaViewState extends State<AgendaView> {
               style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: isToday
-                      ? Colors.lightBlueAccent
+                      ? kAccent
                       : day.weekday == DateTime.sunday || holidays.isNotEmpty
-                          ? Colors.redAccent
+                          ? kRed
                           : day.weekday == DateTime.saturday
-                              ? Colors.lightBlueAccent
+                              ? kBlue
                               : null)),
           const SizedBox(width: 8),
           if (lunar != null)
-            Text('음력 ${lunar.monthLabel} ${lunar.day}일', style: const TextStyle(fontSize: 11, color: Colors.white54)),
+            Text('음력 ${lunar.monthLabel} ${lunar.day}일', style: const TextStyle(fontSize: 11, color: kMuted)),
           const Spacer(),
           for (final h in holidays.take(2))
             Padding(
@@ -59,7 +60,7 @@ class _AgendaViewState extends State<AgendaView> {
       for (final c in custom) {
         rows.add(Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-          child: Text(c.name, style: const TextStyle(fontSize: 12, color: Colors.white60)),
+          child: Text(c.name, style: const TextStyle(fontSize: 12, color: kMuted)),
         ));
       }
       if (items.isNotEmpty) {
@@ -67,7 +68,9 @@ class _AgendaViewState extends State<AgendaView> {
         rows.add(Padding(
           padding: const EdgeInsets.fromLTRB(10, 4, 10, 0),
           child: Material(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: kCard,
+            elevation: 1,
+            shadowColor: kCardShadow,
             borderRadius: BorderRadius.circular(14),
             clipBehavior: Clip.antiAlias,
             child: Column(children: [
@@ -149,19 +152,19 @@ class _SearchScreenState extends State<SearchScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
           child: _q.trim().isEmpty
-              ? const Center(child: Text('찾을 말을 입력해', style: TextStyle(color: Colors.white54)))
+              ? const Center(child: Text('찾을 말을 입력해', style: TextStyle(color: kMuted)))
               : hits.isEmpty
-                  ? const Center(child: Text('없어', style: TextStyle(color: Colors.white54)))
+                  ? const Center(child: Text('없어', style: TextStyle(color: kMuted)))
                   : ListView(children: [
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                        child: Text('${hits.length}건', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                        child: Text('${hits.length}건', style: const TextStyle(color: kMuted, fontSize: 12)),
                       ),
                       for (final i in hits) ...[
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                           child: Text(i.isRecurring ? '반복 · ${df.format(i.start)}부터' : df.format(i.start),
-                              style: const TextStyle(fontSize: 11, color: Colors.white54)),
+                              style: const TextStyle(fontSize: 11, color: kMuted)),
                         ),
                         ItemTile(item: i, day: keyOf(i)),
                       ],

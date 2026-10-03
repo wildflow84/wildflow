@@ -1,3 +1,4 @@
+import 'palette.dart';
 import 'package:flutter/cupertino.dart' show CupertinoPicker, FixedExtentScrollController;
 import 'package:flutter/material.dart';
 
@@ -51,7 +52,7 @@ class _DigitalTimeDialogState extends State<_DigitalTimeDialog> {
         onSelectedItemChanged: onChanged,
         children: [
           for (var i = 0; i < count; i++)
-            Center(child: Text(_two(i), style: const TextStyle(fontSize: 28, color: Colors.white))),
+            Center(child: Text(_two(i), style: const TextStyle(fontSize: 28, color: kInk))),
         ],
       ),
     );

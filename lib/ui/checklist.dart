@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'palette.dart';
 import 'package:provider/provider.dart';
 
 import '../data/store.dart';
@@ -48,13 +49,13 @@ class ChecklistInline extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(children: [
                 Icon(list[i].done ? Icons.check_box : Icons.check_box_outline_blank,
-                    size: 18, color: list[i].done ? Colors.lightGreenAccent : Colors.white54),
+                    size: 18, color: list[i].done ? kGreen : kMuted),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(list[i].text,
                       style: TextStyle(
                           fontSize: 13,
-                          color: list[i].done ? Colors.white38 : null,
+                          color: list[i].done ? kFaint : null,
                           decoration: list[i].done ? TextDecoration.lineThrough : null)),
                 ),
               ]),
@@ -106,10 +107,10 @@ class _ChecklistEditorState extends State<ChecklistEditor> {
     final left = _items.where((c) => !c.done).length;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        const Icon(Icons.checklist, size: 18, color: Colors.white70),
+        const Icon(Icons.checklist, size: 18, color: kSubtle),
         const SizedBox(width: 6),
-        const Text('체크리스트', style: TextStyle(color: Colors.white70)),
-        if (_items.isNotEmpty && widget.showChecks) Text('  ${_items.length - left}/${_items.length}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        const Text('체크리스트', style: TextStyle(color: kSubtle)),
+        if (_items.isNotEmpty && widget.showChecks) Text('  ${_items.length - left}/${_items.length}', style: const TextStyle(color: kMuted, fontSize: 12)),
         const Spacer(),
         if (widget.showChecks && _items.any((c) => c.done))
           TextButton(
@@ -124,11 +125,11 @@ class _ChecklistEditorState extends State<ChecklistEditor> {
       if (!widget.showChecks)
         const Padding(
           padding: EdgeInsets.only(top: 2, bottom: 4),
-          child: Text('반복 일정은 날짜(회차)마다 따로 체크해', style: TextStyle(fontSize: 12, color: Colors.white54)),
+          child: Text('반복 일정은 날짜(회차)마다 따로 체크해', style: TextStyle(fontSize: 12, color: kMuted)),
         ),
       for (var i = 0; i < _items.length; i++)
         Row(children: [
-          if (!widget.showChecks) const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Icon(Icons.circle, size: 6, color: Colors.white54)),
+          if (!widget.showChecks) const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Icon(Icons.circle, size: 6, color: kMuted)),
           if (widget.showChecks)
           Checkbox(
             visualDensity: VisualDensity.compact,
@@ -144,7 +145,7 @@ class _ChecklistEditorState extends State<ChecklistEditor> {
               initialValue: _items[i].text,
               style: TextStyle(
                   decoration: _items[i].done ? TextDecoration.lineThrough : null,
-                  color: _items[i].done ? Colors.white38 : null),
+                  color: _items[i].done ? kFaint : null),
               decoration: const InputDecoration(isDense: true, border: InputBorder.none),
               onChanged: (t) {
                 _items[i] = _items[i].copyWith(text: t);

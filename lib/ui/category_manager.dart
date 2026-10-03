@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'palette.dart';
 import 'package:provider/provider.dart';
 
 import '../data/store.dart';
@@ -32,7 +33,7 @@ class CategoryManagerScreen extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: Text(
             '항목에는 카테고리를 하나 붙이고, 그 색으로 표시돼. 끌어서 순서를 바꾸고, 눌러서 수정해.',
-            style: TextStyle(color: Colors.white60, fontSize: 12),
+            style: TextStyle(color: kMuted, fontSize: 12),
           ),
         ),
         Expanded(

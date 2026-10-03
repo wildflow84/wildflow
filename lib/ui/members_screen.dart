@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'palette.dart';
 import 'package:provider/provider.dart';
 
 import '../data/store.dart';
@@ -24,7 +25,7 @@ class MembersScreen extends StatelessWidget {
                 subtitle: Text(uid == s.members.first ? '방장' : '초대받은 사람'),
                 trailing: s.isHost && uid != s.uid
                     ? TextButton(
-                        style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                        style: TextButton.styleFrom(foregroundColor: kRed),
                         onPressed: () => _confirmRemove(context, s, uid),
                         child: const Text('내보내기'),
                       )
@@ -34,12 +35,12 @@ class MembersScreen extends StatelessWidget {
               const Padding(
                 padding: EdgeInsets.all(16),
                 child: Text('초대받은 사람은 구성원을 내보낼 수 없어. 방장(공간을 만든 사람)만 할 수 있어.',
-                    style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    style: TextStyle(color: kMuted, fontSize: 12)),
               ),
             if (s.isHost && s.bannedNames.isNotEmpty) ...[
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 24, 16, 4),
-                child: Text('내보낸 사람', style: TextStyle(color: Colors.white70)),
+                child: Text('내보낸 사람', style: TextStyle(color: kSubtle)),
               ),
               for (final e in s.bannedNames.entries)
                 ListTile(
@@ -82,7 +83,7 @@ class MembersScreen extends StatelessWidget {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('취소')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(backgroundColor: kRed),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('내보내기'),
           ),
