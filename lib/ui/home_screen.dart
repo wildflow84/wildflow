@@ -517,6 +517,16 @@ class _MonthGrid extends StatelessWidget {
       if (!placed) lanes.add([g]);
     }
 
+    // 칸마다 그 칸을 지나는 바가 있는 줄까지만 비워 둔다 (바가 없는 칸은 날짜 바로 아래부터 채움)
+    final laneNeed = List<int>.filled(7, 0);
+    for (var li = 0; li < lanes.length; li++) {
+      for (final g in lanes[li]) {
+        for (var col = g.c0; col <= g.c1; col++) {
+          if (laneNeed[col] < li + 1) laneNeed[col] = li + 1;
+        }
+      }
+    }
+
     return LayoutBuilder(builder: (context, c) {
       final cellW = c.maxWidth / 7;
       return Stack(children: [
@@ -531,7 +541,7 @@ class _MonthGrid extends StatelessWidget {
                   isToday: day == today,
                   isSelected: day == selected,
                   items: s.itemsOn(day).where((i) => !isSpanning(i)).toList(),
-                  laneCount: lanes.length,
+                  laneCount: laneNeed[d],
                   onTap: onBlankTap,
                   onTapItem: onItemTap,
                   onDropItem: onMove,
