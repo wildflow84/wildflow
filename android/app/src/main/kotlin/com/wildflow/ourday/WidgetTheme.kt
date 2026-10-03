@@ -60,7 +60,14 @@ class WidgetPrefs(context: Context) {
         sp.edit().putString("style_$id", style).putInt("opacity_$id", opacity).putInt("color_$id", color).apply()
     }
 
+    /** 달력형 위젯이 보여 주는 달: 이번 달에서 몇 달 떨어졌는지 (0=이번 달) */
+    fun monthOffset(id: Int): Int = sp.getInt("month_$id", 0)
+
+    fun setMonthOffset(id: Int, offset: Int) {
+        sp.edit().putInt("month_$id", offset).apply()
+    }
+
     fun remove(id: Int) {
-        sp.edit().remove("style_$id").remove("opacity_$id").remove("color_$id").apply()
+        sp.edit().remove("style_$id").remove("opacity_$id").remove("color_$id").remove("month_$id").apply()
     }
 }

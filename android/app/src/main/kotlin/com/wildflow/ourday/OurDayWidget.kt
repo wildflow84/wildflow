@@ -29,6 +29,26 @@ class OurDayWidget : HomeWidgetProvider() {
         }
     }
 
+    override fun onReceive(context: Context, intent: Intent) {
+        val action = intent.action
+        if (action == ACTION_PREV || action == ACTION_NEXT || action == ACTION_TODAY) {
+            val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+            if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                val cfg = WidgetPrefs(context)
+                val next = when (action) {
+                    ACTION_PREV -> cfg.monthOffset(id) - 1
+                    ACTION_NEXT -> cfg.monthOffset(id) + 1
+                    else -> 0
+                }
+                cfg.setMonthOffset(id, next)
+                val data = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+                AppWidgetManager.getInstance(context).updateAppWidget(id, build(context, id, data))
+            }
+            return
+        }
+        super.onReceive(context, intent)
+    }
+
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
         val prefs = WidgetPrefs(context)
         appWidgetIds.forEach { prefs.remove(it) }
@@ -36,6 +56,20 @@ class OurDayWidget : HomeWidgetProvider() {
     }
 
     companion object {
+        private const val ACTION_PREV = "com.wildflow.ourday.WIDGET_PREV"
+        private const val ACTION_NEXT = "com.wildflow.ourday.WIDGET_NEXT"
+        private const val ACTION_TODAY = "com.wildflow.ourday.WIDGET_TODAY"
+
+        private fun actionIntent(context: Context, id: Int, action: String, code: Int): PendingIntent {
+            val i = Intent(context, OurDayWidget::class.java)
+            i.action = action
+            i.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+            return PendingIntent.getBroadcast(
+                context, id * 10 + code, i,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
         private val CELL_TEXT = intArrayOf(
             R.id.cell_00_t, R.id.cell_01_t, R.id.cell_02_t, R.id.cell_03_t, R.id.cell_04_t, R.id.cell_05_t, R.id.cell_06_t,
             R.id.cell_10_t, R.id.cell_11_t, R.id.cell_12_t, R.id.cell_13_t, R.id.cell_14_t, R.id.cell_15_t, R.id.cell_16_t,
@@ -76,8 +110,11 @@ class OurDayWidget : HomeWidgetProvider() {
             val pi = PendingIntent.getActivity(context, 0, launch ?: Intent(), flags)
 
             if (calendar) {
-                fillCalendar(context, views, theme, data)
+                fillCalendar(context, id, views, theme, data)
                 views.setOnClickPendingIntent(R.id.widget_root, pi)
+                views.setOnClickPendingIntent(R.id.cal_prev, actionIntent(context, id, ACTION_PREV, 1))
+                views.setOnClickPendingIntent(R.id.cal_next, actionIntent(context, id, ACTION_NEXT, 2))
+                views.setOnClickPendingIntent(R.id.cal_title, actionIntent(context, id, ACTION_TODAY, 3))
             } else {
                 fillList(context, id, views, theme, pi)
             }
@@ -95,12 +132,19 @@ class OurDayWidget : HomeWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_empty, pi)
         }
 
-        private fun fillCalendar(context: Context, views: RemoteViews, theme: WidgetTheme, data: SharedPreferences) {
+        private fun fillCalendar(context: Context, id: Int, views: RemoteViews, theme: WidgetTheme, data: SharedPreferences) {
             val events = (data.getString("eventDays", "") ?: "").split(",").filter { it.isNotEmpty() }.toHashSet()
+            val offset0 = WidgetPrefs(context).monthOffset(id)
             val now = Calendar.getInstance()
-            val year = now.get(Calendar.YEAR)
-            val month = now.get(Calendar.MONTH)
-            val today = now.get(Calendar.DAY_OF_MONTH)
+            val realYear = now.get(Calendar.YEAR)
+            val realMonth = now.get(Calendar.MONTH)
+            val shown = Calendar.getInstance()
+            shown.set(Calendar.DAY_OF_MONTH, 1)
+            shown.add(Calendar.MONTH, offset0)
+            val year = shown.get(Calendar.YEAR)
+            val month = shown.get(Calendar.MONTH)
+            // 오늘 표시는 이번 달을 볼 때만
+            val today = if (year == realYear && month == realMonth) now.get(Calendar.DAY_OF_MONTH) else -1
 
             val first = Calendar.getInstance()
             first.set(year, month, 1)
@@ -109,6 +153,8 @@ class OurDayWidget : HomeWidgetProvider() {
 
             views.setTextViewText(R.id.cal_title, "${year}년 ${month + 1}월")
             views.setTextColor(R.id.cal_title, theme.text)
+            views.setTextColor(R.id.cal_prev, theme.accent)
+            views.setTextColor(R.id.cal_next, theme.accent)
             val dowIds = intArrayOf(R.id.dow_0, R.id.dow_1, R.id.dow_2, R.id.dow_3, R.id.dow_4, R.id.dow_5, R.id.dow_6)
             dowIds.forEach { views.setTextColor(it, theme.sub) }
 

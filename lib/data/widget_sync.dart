@@ -100,10 +100,10 @@ class WidgetSync {
     return jsonEncode(days);
   }
 
-  /// 달력형 위젯용: 지난달 1일부터 다음 달 말일까지 일정/할 일이 있는 날
+  /// 달력형 위젯용: 6개월 전부터 1년 뒤까지(위젯에서 달을 넘겨 볼 수 있게) 일정/할 일이 있는 날
   static String eventDays(List<Item> visible, DateTime today) {
-    final start = DateTime(today.year, today.month - 1, 1);
-    final end = DateTime(today.year, today.month + 2, 0);
+    final start = DateTime(today.year, today.month - 6, 1);
+    final end = DateTime(today.year, today.month + 13, 0);
     final f = DateFormat('yyyyMMdd');
     final out = <String>[];
     for (var d = start; !d.isAfter(end); d = DateTime(d.year, d.month, d.day + 1)) {
