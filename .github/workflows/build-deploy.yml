@@ -91,7 +91,7 @@ jobs:
           {
             echo "### 안드로이드 서명 지문 (Firebase 콘솔 > 내 앱 > SHA 인증서 지문에 등록)"
             keytool -list -v -keystore app/ourday.jks -alias ourday -storepass "$KEYSTORE_PASSPHRASE" | grep -E "SHA1|SHA256"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: APK 빌드
         run: flutter build apk --release --dart-define-from-file=firebase_config.json --dart-define=APP_VERSION=${GITHUB_SHA::7}
