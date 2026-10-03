@@ -1187,17 +1187,56 @@ class _TodoTabState extends State<_TodoTab> {
     }
     if (_sort == 'category') upcoming.sort(byCategory);
 
-    Widget section(String title, List<Item> list) => list.isEmpty
-        ? const SizedBox.shrink()
-        : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: Text(title, style: Theme.of(context).textTheme.titleSmall)),
-            for (final i in list)
-              ItemTile(
-                  item: i,
-                  day: !i.isRecurring ? dateOnly(i.start) : today),
-          ]);
+    final df = DateFormat('M월 d일 (E)', 'ko');
+    Widget card(List<Item> list, DateTime Function(Item) dayOf) => Padding(
+          padding: const EdgeInsets.fromLTRB(10, 4, 10, 0),
+          child: Material(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(14),
+            clipBehavior: Clip.antiAlias,
+            child: Column(children: [
+              for (var k = 0; k < list.length; k++) ...[
+                if (k > 0) const Divider(height: 1, indent: 16, endIndent: 16),
+                ItemTile(item: list[k], day: dayOf(list[k])),
+              ],
+            ]),
+          ),
+        );
+    DateTime dayOf(Item i) => !i.isRecurring ? dateOnly(i.start) : today;
+    Widget header(String text, {Color? color}) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 2),
+        child: Text(text, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: color)));
+
+    // 마감 순이면 날짜별로 둥근 카드로 묶고, 카테고리별/완료 목록은 카드 하나로 묶는다.
+    Widget section(String title, List<Item> list, {bool byDay = false}) {
+      if (list.isEmpty) return const SizedBox.shrink();
+      if (!byDay) return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [header(title), card(list, dayOf)]);
+      final groups = <DateTime, List<Item>>{};
+      for (final i in list) {
+        groups.putIfAbsent(dayOf(i), () => []).add(i);
+      }
+      final days = groups.keys.toList()..sort();
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        header(title),
+        for (final d in days) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
+            child: Text(d == today ? '오늘 · ${df.format(d)}' : df.format(d),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: d == today
+                        ? Colors.lightBlueAccent
+                        : d.weekday == DateTime.sunday
+                            ? Colors.redAccent
+                            : d.weekday == DateTime.saturday
+                                ? Colors.lightBlueAccent
+                                : null)),
+          ),
+          card(groups[d]!, dayOf),
+        ],
+      ]);
+    }
 
     return Align(
       alignment: Alignment.topCenter,
@@ -1231,8 +1270,8 @@ class _TodoTabState extends State<_TodoTab> {
           ),
         ]),
       ),
-      section('지난 할 일', overdue),
-      section(_sort == 'category' ? '카테고리별' : '앞으로', upcoming),
+      section('지난 할 일', overdue, byDay: _sort == 'due'),
+      section(_sort == 'category' ? '카테고리별' : '앞으로', upcoming, byDay: _sort == 'due'),
       if (open.isEmpty) const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('할 일 끝! 순대 산책 ㄱㄱ'))),
       if (_showDone) section('완료한 일 (${doneList.length})', doneList.take(30).toList()),
     ]),
