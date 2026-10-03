@@ -11,6 +11,7 @@ import '../data/store.dart';
 import '../models/kr_calendar.dart';
 import '../models/lunar.dart';
 import '../models/map_links.dart';
+import '../models/category.dart' show subscriptionCategory;
 import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, dateOnly, isDoneOn, isOverdue, moveItemByDays, nextRollDate, rollLabel, timeLabel, chipTimeLabel;
 import 'agenda.dart';
@@ -254,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: const Text('모두 보기'),
               ),
             ),
-            for (final c in s.categories)
+            for (final c in [...s.categories, if (s.items.any((i) => i.subscriptionId != null)) subscriptionCategory])
               SwitchListTile(
                 secondary: CircleAvatar(backgroundColor: c.color, radius: 8),
                 title: Text(c.name),

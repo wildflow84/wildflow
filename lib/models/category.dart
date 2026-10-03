@@ -61,6 +61,10 @@ const defaultCategories = <Category>[
   Category(id: 'kid', name: '대희', colorValue: 0xFFD06A9E, order: 5),
 ];
 
+/// 구독(.ics)으로 들어온 일정이 항상 속하는 고정 카테고리. 저장소에는 없고 앱이 내장한다.
+const subscriptionCategoryId = 'subscription';
+const subscriptionCategory = Category(id: subscriptionCategoryId, name: '구독 캘린더', colorValue: 0xFF5B9BD5, order: 999);
+
 /// 색 선택에 쓰는 기본 팔레트 (어두운 배경에서 잘 보이는 색)
 const colorPalette = <int>[
   0xFF6C74D8, 0xFF4C6EF5, 0xFF3FA796, 0xFF2FB5C9, 0xFF8DB04A, 0xFFB5C94A,

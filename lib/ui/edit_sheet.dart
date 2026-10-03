@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../data/place_photo.dart';
 import '../data/place_search.dart';
 import '../data/store.dart';
+import '../models/category.dart' show subscriptionCategory;
 import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, RepeatDelete, RepeatEdit, applyRepeatEdit, dateOnly, hasEndTime, repeatFor;
 import '../models/recurrence.dart';
@@ -589,6 +590,12 @@ class _EditSheetState extends State<_EditSheet> {
             ],
             const Text('카테고리', style: TextStyle(color: Colors.white70)),
             const SizedBox(height: 6),
+            if (widget.item?.subscriptionId != null)
+              Chip(
+                avatar: CircleAvatar(backgroundColor: subscriptionCategory.color, radius: 6),
+                label: Text('${subscriptionCategory.name} (고정)'),
+              )
+            else
             Wrap(spacing: 8, runSpacing: 4, children: [
               for (final c in s.categories)
                 ChoiceChip(

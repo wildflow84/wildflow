@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'category.dart' show subscriptionCategoryId;
 import 'lunar.dart' show solarToLunar;
 import 'recurrence.dart';
 
@@ -357,7 +358,7 @@ class Item {
       allDay: m['allDay'] ?? true,
       done: m['done'] ?? false,
       doneDates: List<String>.from(m['doneDates'] ?? const []),
-      categories: _readCategories(m),
+      categories: m['subscriptionId'] != null ? const [subscriptionCategoryId] : _readCategories(m),
       color: (m['color'] as num?)?.toInt(),
       visibility: byName(Visibility.values, m['visibility'], Visibility.shared),
       ownerUid: m['ownerUid'] ?? '',

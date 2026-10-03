@@ -168,7 +168,7 @@ async function syncOne(spaceId, subId) {
       if (have.has(id)) writes.push((b) => b.set(ref, source, { merge: true }));
       else {
         writes.push((b) => b.set(ref, {
-          ...source, done: false, doneDates: [], categories: [sub.categoryId || 'default'],
+          ...source, done: false, doneDates: [], categories: ['subscription'],
           visibility: sub.visibility || 'shared', ownerUid: sub.ownerUid, repeat: 'none',
           rollEvery: 0, rollUnit: 'day', rollFrom: 'schedule', color: null, checklist: [], exceptions: [],
         }));

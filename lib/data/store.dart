@@ -241,14 +241,16 @@ class Store extends ChangeNotifier {
 
   Future<void> deleteCustomDay(CustomDay c) => repo.deleteCustomDay(spaceId!, c.id);
 
-  Category categoryOf(String id) => categories.firstWhere((c) => c.id == id,
+  Category categoryOf(String id) => id == subscriptionCategoryId
+      ? subscriptionCategory
+      : categories.firstWhere((c) => c.id == id,
       orElse: () => categories.isNotEmpty ? categories.first : defaultCategories.first);
 
   /// 항목의 카테고리들 (삭제된 카테고리는 빼고, 하나도 없으면 첫 카테고리)
   List<Category> categoriesOf(Item i) {
     final list = [
       for (final id in i.categories)
-        for (final c in categories)
+        for (final c in [...categories, subscriptionCategory])
           if (c.id == id) c
     ];
     return list.isEmpty ? [categoryOf(i.category)] : list;

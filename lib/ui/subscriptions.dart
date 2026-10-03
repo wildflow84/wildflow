@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../data/store.dart';
+import '../models/category.dart' show subscriptionCategoryId;
 import '../models/item.dart' as m;
 import '../models/subscription.dart';
 
@@ -132,7 +133,6 @@ class _AddDialog extends StatefulWidget {
 class _AddDialogState extends State<_AddDialog> {
   final _name = TextEditingController();
   final _url = TextEditingController();
-  late String _cat = widget.store.categories.first.id;
   late m.Visibility _vis = widget.store.defaultVisibility;
 
   bool get _valid {
@@ -169,13 +169,6 @@ class _AddDialogState extends State<_AddDialog> {
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _cat,
-              decoration: const InputDecoration(labelText: '카테고리'),
-              items: [for (final c in s.categories) DropdownMenuItem(value: c.id, child: Text(c.name))],
-              onChanged: (v) => setState(() => _cat = v ?? _cat),
-            ),
-            const SizedBox(height: 12),
             SegmentedButton<m.Visibility>(
               segments: const [
                 ButtonSegment(value: m.Visibility.private, icon: Icon(Icons.lock), label: Text('나만')),
@@ -197,7 +190,7 @@ class _AddDialogState extends State<_AddDialog> {
                       id: '',
                       name: _name.text.trim(),
                       url: _url.text.trim(),
-                      categoryId: _cat,
+                      categoryId: subscriptionCategoryId,
                       visibility: _vis,
                       ownerUid: s.uid))
               : null,
