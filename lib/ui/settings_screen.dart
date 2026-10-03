@@ -1,9 +1,13 @@
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../data/push.dart';
 import '../data/store.dart';
+import '../models/ics_export.dart';
 import '../models/item.dart' as m;
 import 'category_manager.dart';
 import 'ics_import.dart';
@@ -111,6 +115,25 @@ class SettingsScreen extends StatelessWidget {
             subtitle: const Text('아스날 경기, 드라마 방영 일정 등 캘린더 주소(.ics)를 자동으로 받아와'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionsScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.download),
+            title: const Text('캘린더 내보내기 (.ics)'),
+            subtitle: const Text('내 일정/할 일 전체를 파일로 저장해 (백업, 다른 캘린더로 옮기기)'),
+            onTap: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final mine = s.items.where((i) => i.ownerUid == s.uid || i.visibility == m.Visibility.shared).toList();
+              final text = exportIcs(mine);
+              try {
+                await FilePicker.saveFile(
+                    fileName: '순대희캘린더.ics',
+                    bytes: Uint8List.fromList(utf8.encode(text)),
+                    mimeType: 'text/calendar');
+                messenger.showSnackBar(SnackBar(content: Text('${mine.length}개를 내보냈어')));
+              } catch (e) {
+                messenger.showSnackBar(SnackBar(content: Text('내보내지 못했어: $e')));
+              }
+            },
           ),
           ListTile(
             leading: const Icon(Icons.upload_file),
