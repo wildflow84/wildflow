@@ -68,3 +68,10 @@ test('공유 알림: 기본 켜짐, 끄면 안 감, 같은 항목은 1분에 한
   const m = lib.shareMessage('민아', { type: 'event', title: '병원' });
   assert.match(m.title, /민아.*일정.*공유/);
 });
+
+test('상대에게 맡긴 할 일은 맡겼다고 알림', () => {
+  const item = { type: 'todo', title: '장보기', assignee: 'you' };
+  assert.match(lib.shareMessage('나', item, 'you').title, /맡겼어/);
+  assert.match(lib.shareMessage('나', item, 'other').title, /공유했어/);
+  assert.match(lib.shareMessage('나', { type: 'todo', title: 'x', assignee: '' }, 'you').title, /공유했어/);
+});

@@ -68,6 +68,7 @@ class _EditSheetState extends State<_EditSheet> {
       ? TimeOfDay(hour: widget.item!.end!.hour, minute: widget.item!.end!.minute)
       : null;
   late List<String> _cats; // 항상 하나 (이전 버전에서 여러 개였던 항목은 첫 번째만 쓴다)
+  late String _assignee = widget.item?.assignee ?? '';
   late m.Visibility _vis;
   late bool _visTouched = widget.item != null; // 직접 바꾸면 카테고리 기본값으로 덮어쓰지 않는다
   late int? _color = widget.item?.color; // null이면 카테고리 색
@@ -264,6 +265,8 @@ class _EditSheetState extends State<_EditSheet> {
       color: _color,
       clearColor: _color == null,
       visibility: _vis,
+      // 담당자는 같이 보기 할 일에서만 (나만 보기면 본인 몫)
+      assignee: _type == ItemType.todo && _vis == m.Visibility.shared ? _assignee : '',
       repeat: repeatFor(rule),
       rule: rule,
       clearRule: rule == null,
@@ -716,6 +719,25 @@ class _EditSheetState extends State<_EditSheet> {
                       })
                   : null,
             ),
+            if (_type == ItemType.todo && _vis == m.Visibility.shared && s.names.keys.any((k) => k != s.uid)) ...[
+              const SizedBox(height: 12),
+              const Text('담당', style: TextStyle(color: Colors.white70)),
+              const SizedBox(height: 6),
+              Wrap(spacing: 8, children: [
+                ChoiceChip(
+                  label: const Text('정하지 않음'),
+                  selected: _assignee.isEmpty,
+                  onSelected: (_) => setState(() => _assignee = ''),
+                ),
+                for (final e in s.names.entries)
+                  ChoiceChip(
+                    avatar: const Icon(Icons.person_outline, size: 16),
+                    label: Text(e.key == s.uid ? '나 (${e.value})' : e.value),
+                    selected: _assignee == e.key,
+                    onSelected: (_) => setState(() => _assignee = e.key),
+                  ),
+              ]),
+            ],
             if (widget.item != null && widget.item!.visibility == m.Visibility.shared)
               Padding(
                 padding: const EdgeInsets.only(top: 6),

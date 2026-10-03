@@ -99,7 +99,7 @@ exports.notifyShared = onCall(async (req) => {
   for (const p of c.partners) {
     const prefs = (await db.doc(`users/${p}`).get()).data() || {};
     if (!lib.acceptsShared(prefs)) continue;
-    sent += await pushTo(p, prefs, lib.shareMessage(c.actorName, c.item), { spaceId, itemId, kind: 'shared' });
+    sent += await pushTo(p, prefs, lib.shareMessage(c.actorName, c.item, p), { spaceId, itemId, kind: 'shared' });
   }
   await c.itemRef.update({ sharedNotifyAt: FieldValue.serverTimestamp() });
   return { sent };

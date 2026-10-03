@@ -59,6 +59,8 @@ class Item {
 
   /// 체크리스트 (장보기, 준비물 등). 같이 보기 항목이면 둘 다 보면서 체크한다.
   final List<CheckEntry> checklist;
+  /// 할 일 담당자 uid. 비어 있으면 담당을 정하지 않음(만든 사람 몫).
+  final String assignee;
   /// 반복 항목의 회차별 체크 기록: 날짜(yyyy-MM-dd) → 체크한 항목의 글자. 반복이 아니면 안 쓴다.
   final Map<String, List<String>> checksByDate;
 
@@ -138,7 +140,11 @@ class Item {
         lastDoneAt: i.lastDoneAt,
         checklist: i.checklist,
         checksByDate: i.checksByDate,
+        assignee: i.assignee,
       );
+
+  /// 이 할 일이 [uid]의 몫인지: 담당자가 정해져 있으면 그 사람, 아니면 만든 사람.
+  bool isMineTo(String uid) => assignee.isNotEmpty ? assignee == uid : ownerUid == uid;
 
   int get checksLeft => checklist.where((c) => !c.done).length;
   bool get hasChecklist => checklist.isNotEmpty;
@@ -183,6 +189,7 @@ class Item {
     this.lastDoneAt,
     this.checklist = const [],
     this.checksByDate = const {},
+    this.assignee = '',
   });
 
   Item copyWith({
@@ -221,6 +228,7 @@ class Item {
     DateTime? lastDoneAt,
     List<CheckEntry>? checklist,
     Map<String, List<String>>? checksByDate,
+    String? assignee,
   }) =>
       Item(
         id: id,
@@ -253,6 +261,7 @@ class Item {
         lastDoneAt: lastDoneAt ?? this.lastDoneAt,
         checklist: checklist ?? this.checklist,
         checksByDate: checksByDate ?? this.checksByDate,
+        assignee: assignee ?? this.assignee,
       );
 
   Map<String, dynamic> toMap() => {
@@ -286,6 +295,7 @@ class Item {
         'lastDoneAt': lastDoneAt == null ? null : Timestamp.fromDate(lastDoneAt!),
         'checklist': [for (final c in checklist) c.toMap()],
         'checksByDate': checksByDate,
+        'assignee': assignee,
       };
 
   factory Item.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -325,6 +335,7 @@ class Item {
         for (final c in (m['checklist'] as List? ?? const []))
           if (c is Map) CheckEntry.fromMap(Map<String, dynamic>.from(c)),
       ],
+      assignee: (m['assignee'] as String?) ?? '',
       checksByDate: {
         for (final e in ((m['checksByDate'] as Map?) ?? const {}).entries)
           '${e.key}': List<String>.from(e.value as List),

@@ -61,8 +61,12 @@ function nudgeMessage(actorName, item, count) {
   };
 }
 
-function shareMessage(actorName, item) {
+function shareMessage(actorName, item, partnerUid) {
   const kind = item.type === 'todo' ? '할 일' : '일정';
+  // 상대에게 맡긴 할 일이면 그렇게 알려준다
+  if (item.type === 'todo' && partnerUid && item.assignee === partnerUid) {
+    return { title: `${actorName}이(가) 할 일을 맡겼어`, body: `"${item.title}"` };
+  }
   return { title: `${actorName}이(가) ${kind}을(를) 공유했어`, body: `"${item.title}"` };
 }
 

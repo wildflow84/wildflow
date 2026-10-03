@@ -1072,6 +1072,8 @@ class ItemTile extends StatelessWidget {
           if (item.isRolling) _Meta(icon: Icons.autorenew, text: rollLabel(item)),
           if (item.isRecurring) _Meta(icon: Icons.repeat, text: item.effectiveRule!.describe(item.start)),
           if (item.visibility == m.Visibility.private) const _Meta(icon: Icons.lock_outline, text: '나만'),
+          if (item.type == ItemType.todo && item.assignee.isNotEmpty)
+            _Meta(icon: Icons.assignment_ind_outlined, text: '담당 ${item.assignee == s.uid ? '나' : (s.names[item.assignee] ?? '상대')}'),
           // 같이 보기 항목은 만든 사람을 보여준다
           if (item.visibility == m.Visibility.shared)
             _Meta(icon: Icons.person_outline, text: s.ownerLabel(item)),
@@ -1103,14 +1105,30 @@ class ItemTile extends StatelessWidget {
 }
 
 /// 날짜 구분 없이 오늘 기준으로 할 일을 모아 본다.
-class _TodoTab extends StatelessWidget {
+class _TodoTab extends StatefulWidget {
   const _TodoTab();
+
+  @override
+  State<_TodoTab> createState() => _TodoTabState();
+}
+
+class _TodoTabState extends State<_TodoTab> {
+  String _who = 'all'; // all / me / partner
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<Store>();
     final today = dateOnly(DateTime.now());
-    final todos = s.visibleItems.where((i) => i.type == ItemType.todo).toList()
+    final partnerUid = s.names.keys.where((k) => k != s.uid).firstOrNull;
+    final partnerName = partnerUid == null ? null : s.names[partnerUid];
+    final todos = s.visibleItems
+        .where((i) => i.type == ItemType.todo)
+        .where((i) => _who == 'all' || partnerUid == null
+            ? true
+            : _who == 'me'
+                ? i.isMineTo(s.uid)
+                : i.isMineTo(partnerUid))
+        .toList()
       ..sort((a, b) => a.start.compareTo(b.start));
     final open = todos.where((i) {
       final d = !i.isRecurring ? i.start : today;
@@ -1137,6 +1155,14 @@ class _TodoTab extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
         child: ListView(children: [
+      if (partnerUid != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Wrap(spacing: 8, children: [
+            for (final (k, label) in [('all', '전체'), ('me', '내 것'), ('partner', '${partnerName ?? '상대'} 것')])
+              ChoiceChip(label: Text(label), selected: _who == k, onSelected: (_) => setState(() => _who = k)),
+          ]),
+        ),
       section('지난 할 일', overdue),
       section('앞으로', upcoming),
       if (open.isEmpty) const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('할 일 끝! 순대 산책 ㄱㄱ'))),
