@@ -306,7 +306,8 @@ class Store extends ChangeNotifier {
     return i.ownerUid == uid ? '나' : '상대';
   }
 
-  Future<void> save(Item i) async {
+  /// [notifyShare]: 새로 공유되는 항목이면 상대에게 알림. 반복 일정 수정으로 갈라져 생기는 항목처럼 사용자가 새로 공유한 게 아닐 땐 끈다.
+  Future<void> save(Item i, {bool notifyShare = true}) async {
     if (_previewUid != null) {
       // 미리보기(Firebase 없음): 로컬 목록만 갱신
       items = [...items.where((x) => x.id != i.id), i];
@@ -315,7 +316,8 @@ class Store extends ChangeNotifier {
     }
     // 상대에게 새로 공유되는 경우(새 같이 보기 항목, 나만 보기 → 같이 보기)에는 알려준다
     final before = i.id.isEmpty ? null : items.where((x) => x.id == i.id).firstOrNull;
-    final newlyShared = i.visibility == m.Visibility.shared &&
+    final newlyShared = notifyShare &&
+        i.visibility == m.Visibility.shared &&
         i.ownerUid == uid &&
         (before == null || before.visibility != m.Visibility.shared);
     final id = await repo.save(spaceId!, i);

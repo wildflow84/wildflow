@@ -293,7 +293,7 @@ class _EditSheetState extends State<_EditSheet> {
       final occDate = _startTouched ? dateOnly(_start) : dateOnly(widget.day);
       final occ = _allDay ? occDate : DateTime(occDate.year, occDate.month, occDate.day, _startTime.hour, _startTime.minute);
       for (final it in applyRepeatEdit(orig, edited, widget.day, scope, occurrenceStart: occ)) {
-        await s.save(it);
+        await s.save(it, notifyShare: false); // 수정으로 갈라진 항목이라 "새로 공유" 알림은 보내지 않는다
       }
     } else {
       await s.save(edited);
