@@ -52,3 +52,6 @@ firebase_config.json
 sa.json
 android/key.properties
 android/app/*.jks
+
+# Firebase 함수
+functions/node_modules/

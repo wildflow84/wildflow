@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_functions/cloud_functions.dart' show FirebaseFunctionsException;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/painting.dart' show Color;
@@ -36,6 +37,20 @@ class Store extends ChangeNotifier {
   String? error;
   List<Item> items = [];
   Map<String, String> names = {};
+
+  /// 내 프로필 문서 (알림 설정 등)
+  Map<String, dynamic> profile = {};
+
+  /// 알림 설정: 기본값은 재촉 받기/완료 알림 켜짐, 반복 할 일 완료 알림 꺼짐
+  bool get allowNudge => profile['allowNudge'] != false;
+  bool get notifyComplete => profile['notifyComplete'] != false;
+  bool get notifyCompleteRepeating => profile['notifyCompleteRepeating'] == true;
+
+  Future<void> setPref(String key, bool value) async {
+    profile = {...profile, key: value};
+    notifyListeners();
+    if (_previewUid == null) await repo.setPref(key, value);
+  }
   List<CustomDay> customDays = [];
   List<Category> categories = defaultCategories;
 
@@ -96,8 +111,12 @@ class Store extends ChangeNotifier {
       }
       notifyListeners();
     });
-    _profileSub = repo.watchDefaultVisibility().listen((v) {
-      defaultVisibility = v ?? m.Visibility.shared;
+    _profileSub = repo.watchProfile().listen((p) {
+      profile = p;
+      final v = p['defaultVisibility'] as String?;
+      defaultVisibility = v == null
+          ? m.Visibility.shared
+          : m.Visibility.values.firstWhere((e) => e.name == v, orElse: () => m.Visibility.shared);
       notifyListeners();
     });
     _customSub = repo.watchCustomDays(id).listen((list) {
@@ -266,10 +285,12 @@ class Store extends ChangeNotifier {
     final now = DateTime.now();
     if (i.isRolling) {
       await save(rollNextItem(i, now, uid));
+      _tellPartnerDone(i);
       return item;
     }
     if (!i.isRecurring) {
       await save(i.copyWith(done: !i.done, lastDoneBy: uid, lastDoneAt: now));
+      if (!i.done) _tellPartnerDone(i);
       return null;
     }
     final k = dateKey(day);
@@ -277,7 +298,30 @@ class Store extends ChangeNotifier {
     final marking = !dd.contains(k);
     marking ? dd.add(k) : dd.remove(k);
     await save(i.copyWith(doneDates: dd, lastDoneBy: uid, lastDoneAt: now));
+    if (marking) _tellPartnerDone(i);
     return null;
+  }
+
+  /// 같이 보기 항목을 완료했다고 상대에게 알린다 (상대 설정에 따라 서버가 보낼지 정함). 실패해도 무시.
+  void _tellPartnerDone(Item i) {
+    if (_previewUid != null || i.visibility != m.Visibility.shared || spaceId == null || i.id.isEmpty) return;
+    repo.notifyComplete(spaceId!, i.id).catchError((_) {});
+  }
+
+  /// 같이 보기 항목 재촉. 사용자에게 보여줄 결과 문구를 돌려준다.
+  Future<String> nudge(Item i) async {
+    final partner = names.entries.where((e) => e.key != uid).map((e) => e.value).firstOrNull ?? '상대';
+    try {
+      final r = await repo.nudge(spaceId!, i.id);
+      return '$partner에게 재촉했어 (${r['count']}/${r['max']})';
+    } on FirebaseFunctionsException catch (e) {
+      if (e.code == 'resource-exhausted') return '이 항목은 3번 다 재촉했어';
+      if (e.message == 'muted') return '$partner이(가) 재촉 알림을 꺼놨어';
+      if (e.message == 'no-device') return '$partner이(가) 아직 알림을 안 켰어 (설정 → 알림)';
+      return e.message ?? '재촉을 못 보냈어';
+    } catch (_) {
+      return '재촉을 못 보냈어. 잠시 뒤에 다시 해봐';
+    }
   }
 
   /// 체크리스트 한 줄 체크/해제

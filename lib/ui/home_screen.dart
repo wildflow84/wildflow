@@ -990,6 +990,36 @@ class _Meta extends StatelessWidget {
   }
 }
 
+/// 같이 보기 항목의 재촉(확인 요청) 버튼과 지도 메뉴
+Widget? _trailing(BuildContext context, Store s, Item item, DateTime day, bool done) {
+  final hasPartner = s.names.keys.any((k) => k != s.uid);
+  final canNudge = item.visibility == m.Visibility.shared && hasPartner && !done && item.id.isNotEmpty;
+  final hasMap = item.type == ItemType.event && item.location.isNotEmpty;
+  if (!canNudge && !hasMap) return null;
+  return Row(mainAxisSize: MainAxisSize.min, children: [
+    if (canNudge)
+      IconButton(
+        tooltip: '확인 요청 (재촉)',
+        visualDensity: VisualDensity.compact,
+        icon: const Icon(Icons.notifications_active_outlined, size: 20),
+        onPressed: () async {
+          final messenger = ScaffoldMessenger.of(context);
+          final msg = await s.nudge(item);
+          showTimedSnack(messenger, msg);
+        },
+      ),
+    if (hasMap)
+      PopupMenuButton<MapApp>(
+        tooltip: '지도에서 보기',
+        icon: const Icon(Icons.map_outlined, size: 20),
+        onSelected: (app) => launchUrl(mapUri(app, item.location), mode: LaunchMode.externalApplication),
+        itemBuilder: (_) => [
+          for (final a in MapApp.values) PopupMenuItem(value: a, child: Text('${mapAppNames[a]}에서 열기')),
+        ],
+      ),
+  ]);
+}
+
 class ItemTile extends StatelessWidget {
   final Item item;
   final DateTime day;
@@ -1050,18 +1080,7 @@ class ItemTile extends StatelessWidget {
           if (item.note.isNotEmpty) _Meta(icon: Icons.notes, text: item.note),
         ]),
       ),
-      trailing: item.type != ItemType.event || item.location.isEmpty
-          ? null
-          : PopupMenuButton<MapApp>(
-              tooltip: '지도에서 보기',
-              icon: const Icon(Icons.map_outlined, size: 20),
-              onSelected: (app) =>
-                  launchUrl(mapUri(app, item.location), mode: LaunchMode.externalApplication),
-              itemBuilder: (_) => [
-                for (final a in MapApp.values)
-                  PopupMenuItem(value: a, child: Text('${mapAppNames[a]}에서 열기')),
-              ],
-            ),
+      trailing: _trailing(context, s, item, day, done),
       onTap: canEdit ? () => showEditSheet(context, item: item, day: day) : null,
     );
     final hasPhoto = item.type == ItemType.event && item.photoUrl != null;

@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
+import 'data/push.dart';
 import 'data/repository.dart';
 import 'data/store.dart';
 import 'firebase_options.dart';
@@ -11,10 +12,14 @@ import 'ui/home_screen.dart';
 import 'ui/login_screen.dart';
 import 'ui/space_screen.dart';
 
+/// 앱이 열려 있는 동안 받은 푸시를 스낵바로 보여주기 위한 키
+final messengerKey = GlobalKey<ScaffoldMessengerState>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ko');
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  Push.listenForeground(messengerKey);
   runApp(ChangeNotifierProvider(
     create: (_) => Store(Repository()),
     child: const OurDayApp(),
@@ -28,6 +33,7 @@ class OurDayApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: messengerKey,
       title: '순대희 캘린더',
       debugShowCheckedModeBanner: false,
       locale: const Locale('ko'),

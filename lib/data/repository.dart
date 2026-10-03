@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -210,4 +211,33 @@ class Repository {
       .collection('users')
       .doc(user!.uid)
       .set({'defaultVisibility': v.name}, SetOptions(merge: true));
+
+  // ---- 알림 설정 / 서버 함수 ----
+  /// 내 프로필 문서(기본 공개 범위, 알림 설정, 기기 토큰)
+  Stream<Map<String, dynamic>> watchProfile() =>
+      _db.collection('users').doc(user!.uid).snapshots().map((s) => s.data() ?? const {});
+
+  Future<void> setPref(String key, Object? value) =>
+      _db.collection('users').doc(user!.uid).set({key: value}, SetOptions(merge: true));
+
+  Future<void> addFcmToken(String token) => _db
+      .collection('users')
+      .doc(user!.uid)
+      .set({'fcmTokens': FieldValue.arrayUnion([token])}, SetOptions(merge: true));
+
+  Future<void> removeFcmToken(String token) => _db
+      .collection('users')
+      .doc(user!.uid)
+      .set({'fcmTokens': FieldValue.arrayRemove([token])}, SetOptions(merge: true));
+
+  FirebaseFunctions get _fn => FirebaseFunctions.instanceFor(region: 'asia-northeast3');
+
+  /// 같이 보기 항목 재촉. 돌려주는 값: {count, max}
+  Future<Map<String, dynamic>> nudge(String spaceId, String itemId) async {
+    final r = await _fn.httpsCallable('nudge').call({'spaceId': spaceId, 'itemId': itemId});
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
+  Future<void> notifyComplete(String spaceId, String itemId) =>
+      _fn.httpsCallable('notifyComplete').call({'spaceId': spaceId, 'itemId': itemId});
 }

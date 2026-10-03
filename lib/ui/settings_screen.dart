@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../data/push.dart';
 import '../data/store.dart';
 import '../models/item.dart' as m;
 import 'category_manager.dart';
@@ -29,6 +30,31 @@ class SettingsScreen extends StatelessWidget {
             trailing: const Icon(Icons.edit_outlined, size: 18),
             onTap: () => _editNickname(context, s),
           ),
+          const Divider(height: 32),
+          const _Header('알림'),
+          const _PushTile(),
+          SwitchListTile(
+            secondary: const Icon(Icons.notifications_active_outlined),
+            title: const Text('상대의 재촉 받기'),
+            subtitle: const Text('끄면 상대가 재촉 버튼을 눌러도 알림이 안 가 (상대에게 꺼놨다고 알려줘)'),
+            value: s.allowNudge,
+            onChanged: (v) => s.setPref('allowNudge', v),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.task_alt),
+            title: const Text('같이 하는 할 일 완료 알림'),
+            subtitle: const Text('상대가 같이 보기 할 일을 완료하면 알려줘'),
+            value: s.notifyComplete,
+            onChanged: (v) => s.setPref('notifyComplete', v),
+          ),
+          if (s.notifyComplete)
+            SwitchListTile(
+              secondary: const Icon(Icons.autorenew),
+              title: const Text('반복 할 일 완료 알림도 받기'),
+              subtitle: const Text('약 먹기처럼 자주 반복되는 건 기본으로 꺼져 있어'),
+              value: s.notifyCompleteRepeating,
+              onChanged: (v) => s.setPref('notifyCompleteRepeating', v),
+            ),
           const Divider(height: 32),
           const _Header('새 일정 / 할 일의 기본 공개 범위'),
           Padding(
@@ -126,4 +152,69 @@ Future<void> _editNickname(BuildContext context, Store s) async {
     ),
   );
   if (v != null && v.trim().isNotEmpty) await s.setNickname(v);
+}
+
+/// 이 기기에서 푸시 알림 받기 켜기/끄기
+class _PushTile extends StatefulWidget {
+  const _PushTile();
+
+  @override
+  State<_PushTile> createState() => _PushTileState();
+}
+
+class _PushTileState extends State<_PushTile> {
+  PushState? _state;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final s = await Push.state();
+    if (mounted) setState(() => _state = s);
+  }
+
+  Future<void> _toggle() async {
+    final repo = context.read<Store>().repo;
+    setState(() => _busy = true);
+    try {
+      if (_state == PushState.on) {
+        await Push.disable(repo);
+      } else {
+        final r = await Push.enable(repo);
+        if (r == PushState.blocked && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('브라우저/기기에서 알림이 차단돼 있어. 사이트 설정에서 허용해줘')));
+        }
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('알림 설정 실패: $e')));
+    }
+    await _refresh();
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final st = _state;
+    final (sub, can) = switch (st) {
+      null => ('확인 중…', false),
+      PushState.unsupported => ('이 브라우저/기기는 푸시를 지원하지 않아', false),
+      PushState.blocked => ('차단됨 · 브라우저 사이트 설정에서 알림을 허용해줘', false),
+      PushState.on => ('켜짐 · 이 기기로 알림이 와', true),
+      PushState.off => ('꺼짐 · 눌러서 켜기', true),
+    };
+    return ListTile(
+      leading: const Icon(Icons.notifications_outlined),
+      title: const Text('이 기기에서 알림 받기'),
+      subtitle: Text(sub),
+      trailing: _busy
+          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+          : Switch(value: st == PushState.on, onChanged: can ? (_) => _toggle() : null),
+      onTap: can && !_busy ? _toggle : null,
+    );
+  }
 }
