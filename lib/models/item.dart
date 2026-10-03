@@ -273,7 +273,7 @@ class Item {
         checksByDate: checksByDate ?? this.checksByDate,
         assignee: assignee ?? this.assignee,
         dday: dday ?? this.dday,
-        subscriptionId: subscriptionId ?? this.subscriptionId,
+        subscriptionId: subscriptionId,
       );
 
   Map<String, dynamic> toMap() => {
