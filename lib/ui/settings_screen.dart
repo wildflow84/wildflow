@@ -6,6 +6,7 @@ import '../data/push.dart';
 import '../data/store.dart';
 import '../models/item.dart' as m;
 import 'category_manager.dart';
+import 'ics_import.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -93,6 +94,14 @@ class SettingsScreen extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const CategoryManagerScreen())),
+          ),
+          const Divider(height: 32),
+          const _Header('가져오기'),
+          ListTile(
+            leading: const Icon(Icons.upload_file),
+            title: const Text('구글 캘린더에서 가져오기'),
+            subtitle: const Text('구글 캘린더 설정 → 가져오기/내보내기 → 내보내기로 받은 .zip 또는 .ics 파일'),
+            onTap: () => importFromGoogleCalendar(context),
           ),
           const Divider(height: 32),
           const _Header('공유 공간'),

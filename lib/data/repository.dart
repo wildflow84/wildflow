@@ -128,6 +128,18 @@ class Repository {
     return ref.id;
   }
 
+  /// 여러 항목을 한 번에 새로 저장(가져오기용). 400개씩 묶어서 쓴다.
+  Future<void> saveMany(String spaceId, List<Item> items) async {
+    final col = _db.collection('spaces').doc(spaceId).collection('items');
+    for (var i = 0; i < items.length; i += 400) {
+      final batch = _db.batch();
+      for (final it in items.skip(i).take(400)) {
+        batch.set(col.doc(), it.toMap());
+      }
+      await batch.commit();
+    }
+  }
+
   Future<void> delete(String spaceId, String id) =>
       _db.collection('spaces').doc(spaceId).collection('items').doc(id).delete();
 

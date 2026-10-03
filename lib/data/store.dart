@@ -272,6 +272,16 @@ class Store extends ChangeNotifier {
     final id = await repo.save(spaceId!, i);
     if (newlyShared) repo.notifyShared(spaceId!, id).catchError((_) {});
   }
+  /// 가져온 항목들을 한꺼번에 저장 (알림은 보내지 않는다)
+  Future<void> importItems(List<Item> list) async {
+    if (_previewUid != null) {
+      items = [...items, ...list];
+      notifyListeners();
+      return;
+    }
+    await repo.saveMany(spaceId!, list);
+  }
+
   Future<void> delete(Item i) => repo.delete(spaceId!, i.id);
 
   /// 반복 항목 삭제: 이 날짜만 / 이 날짜 이후 / 전부
