@@ -88,3 +88,19 @@ exports.notifyComplete = onCall(async (req) => {
   }
   return { sent };
 });
+
+/** 내가 상대에게 새로 공유한 항목이 있다고 알림. 소유자만, 같은 항목은 1분에 한 번. */
+exports.notifyShared = onCall(async (req) => {
+  const { spaceId, itemId } = req.data || {};
+  const c = await context(req, spaceId, itemId);
+  if (c.item.ownerUid !== c.uid) return { sent: 0 };
+  if (!lib.canNotifyShared(c.item, Date.now())) return { sent: 0 };
+  let sent = 0;
+  for (const p of c.partners) {
+    const prefs = (await db.doc(`users/${p}`).get()).data() || {};
+    if (!lib.acceptsShared(prefs)) continue;
+    sent += await pushTo(p, prefs, lib.shareMessage(c.actorName, c.item), { spaceId, itemId, kind: 'shared' });
+  }
+  await c.itemRef.update({ sharedNotifyAt: FieldValue.serverTimestamp() });
+  return { sent };
+});

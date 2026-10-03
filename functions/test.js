@@ -56,3 +56,15 @@ test('메시지 문구와 죽은 토큰 정리', () => {
     ['b'],
   );
 });
+
+test('공유 알림: 기본 켜짐, 끄면 안 감, 같은 항목은 1분에 한 번', () => {
+  assert.equal(lib.acceptsShared(undefined), true);
+  assert.equal(lib.acceptsShared({}), true);
+  assert.equal(lib.acceptsShared({ notifyShared: false }), false);
+  const now = 1_000_000;
+  assert.equal(lib.canNotifyShared({}, now), true);
+  assert.equal(lib.canNotifyShared({ sharedNotifyAt: ts(now - 10_000) }, now), false);
+  assert.equal(lib.canNotifyShared({ sharedNotifyAt: ts(now - 61_000) }, now), true);
+  const m = lib.shareMessage('민아', { type: 'event', title: '병원' });
+  assert.match(m.title, /민아.*일정.*공유/);
+});

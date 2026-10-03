@@ -119,12 +119,14 @@ class Repository {
     return ctrl.stream;
   }
 
-  Future<void> save(String spaceId, Item item) => _db
-      .collection('spaces')
-      .doc(spaceId)
-      .collection('items')
-      .doc(item.id.isEmpty ? null : item.id)
-      .set(item.toMap());
+  /// 항목 저장. 앱이 모르는 서버 쪽 필드(재촉 횟수 등)가 지워지지 않게, 앱이 가진 필드만 덮어쓴다.
+  /// 새 항목이면 만들어진 id를 돌려준다.
+  Future<String> save(String spaceId, Item item) async {
+    final ref = _db.collection('spaces').doc(spaceId).collection('items').doc(item.id.isEmpty ? null : item.id);
+    final map = item.toMap();
+    await ref.set(map, SetOptions(mergeFields: map.keys.toList()));
+    return ref.id;
+  }
 
   Future<void> delete(String spaceId, String id) =>
       _db.collection('spaces').doc(spaceId).collection('items').doc(id).delete();
@@ -237,6 +239,9 @@ class Repository {
     final r = await _fn.httpsCallable('nudge').call({'spaceId': spaceId, 'itemId': itemId});
     return Map<String, dynamic>.from(r.data as Map);
   }
+
+  Future<void> notifyShared(String spaceId, String itemId) =>
+      _fn.httpsCallable('notifyShared').call({'spaceId': spaceId, 'itemId': itemId});
 
   Future<void> notifyComplete(String spaceId, String itemId) =>
       _fn.httpsCallable('notifyComplete').call({'spaceId': spaceId, 'itemId': itemId});

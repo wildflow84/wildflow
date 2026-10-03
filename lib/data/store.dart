@@ -43,6 +43,7 @@ class Store extends ChangeNotifier {
 
   /// 알림 설정: 기본값은 재촉 받기/완료 알림 켜짐, 반복 할 일 완료 알림 꺼짐
   bool get allowNudge => profile['allowNudge'] != false;
+  bool get notifyShared => profile['notifyShared'] != false;
   bool get notifyComplete => profile['notifyComplete'] != false;
   bool get notifyCompleteRepeating => profile['notifyCompleteRepeating'] == true;
 
@@ -263,7 +264,13 @@ class Store extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    await repo.save(spaceId!, i);
+    // 상대에게 새로 공유되는 경우(새 같이 보기 항목, 나만 보기 → 같이 보기)에는 알려준다
+    final before = i.id.isEmpty ? null : items.where((x) => x.id == i.id).firstOrNull;
+    final newlyShared = i.visibility == m.Visibility.shared &&
+        i.ownerUid == uid &&
+        (before == null || before.visibility != m.Visibility.shared);
+    final id = await repo.save(spaceId!, i);
+    if (newlyShared) repo.notifyShared(spaceId!, id).catchError((_) {});
   }
   Future<void> delete(Item i) => repo.delete(spaceId!, i.id);
 

@@ -34,6 +34,17 @@ function acceptsNudge(prefs) {
   return !prefs || prefs.allowNudge !== false;
 }
 
+/** 새로 공유됐다는 알림을 받을지 (기본 켜짐) */
+function acceptsShared(prefs) {
+  return !prefs || prefs.notifyShared !== false;
+}
+
+const SHARE_COOLDOWN_MS = 60 * 1000; // 같은 항목은 1분에 한 번만 알림
+
+function canNotifyShared(item, nowMs) {
+  return nowMs - millis(item.sharedNotifyAt) >= SHARE_COOLDOWN_MS;
+}
+
 /** 완료 알림을 받을지: 기본 켜짐, 반복 항목은 따로 켜야 한다 */
 function acceptsComplete(prefs, item) {
   const p = prefs || {};
@@ -48,6 +59,11 @@ function nudgeMessage(actorName, item, count) {
     title: `${actorName}의 확인 요청 (${count}/${NUDGE_MAX})`,
     body: `${kind} "${item.title}" 확인해줘`,
   };
+}
+
+function shareMessage(actorName, item) {
+  const kind = item.type === 'todo' ? '할 일' : '일정';
+  return { title: `${actorName}이(가) ${kind}을(를) 공유했어`, body: `"${item.title}"` };
 }
 
 function completeMessage(actorName, item) {
@@ -73,6 +89,10 @@ module.exports = {
   nudgeState,
   acceptsNudge,
   acceptsComplete,
+  acceptsShared,
+  canNotifyShared,
+  shareMessage,
+  SHARE_COOLDOWN_MS,
   nudgeMessage,
   completeMessage,
   deadTokens,
