@@ -370,9 +370,45 @@ class _EditSheetState extends State<_EditSheet> {
     final catColor = s.categoryOf(_cats.first).color;
     // 상대가 만든 같이 보기 항목은 내용은 같이 고치되, 공개 범위는 만든 사람만 바꾼다.
     final isOwner = widget.item == null || widget.item!.ownerUid == s.uid;
+    final bar = Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(children: [
+              if (widget.item != null && isOwner)
+                TextButton(
+                  onPressed: () async {
+                    final s = context.read<Store>();
+                    final item = widget.item!;
+                    if (!item.isRecurring) {
+                      await s.delete(item);
+                    } else {
+                      final scope = await _askDeleteScope(item);
+                      if (scope == null) return;
+                      await s.deleteRepeating(item, widget.day, scope);
+                    }
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  child: const Text('삭제', style: TextStyle(color: Colors.redAccent)),
+                ),
+              if (widget.item != null)
+                TextButton(
+                  onPressed: () async {
+                    final nav = Navigator.of(context);
+                    final messenger = ScaffoldMessenger.of(context);
+                    await context.read<Store>().save(m.copyOfItem(widget.item!));
+                    nav.pop();
+                    showTimedSnack(messenger, '복제했어 (제목 뒤에 "(복사)")');
+                  },
+                  child: const Text('복제'),
+                ),
+              const Spacer(),
+              FilledButton(onPressed: _save, child: const Text('저장')),
+            ]),
+    );
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          16, 16, 16, MediaQuery.viewInsetsOf(context).bottom + 16),
+          16, 16, 16, MediaQuery.viewInsetsOf(context).bottom + 12),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Flexible(
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -776,40 +812,13 @@ class _EditSheetState extends State<_EditSheet> {
               onChanged: (v) => setState(() => _dday = v),
             ),
             const SizedBox(height: 16),
-            Row(children: [
-              if (widget.item != null && isOwner)
-                TextButton(
-                  onPressed: () async {
-                    final s = context.read<Store>();
-                    final item = widget.item!;
-                    if (!item.isRecurring) {
-                      await s.delete(item);
-                    } else {
-                      final scope = await _askDeleteScope(item);
-                      if (scope == null) return;
-                      await s.deleteRepeating(item, widget.day, scope);
-                    }
-                    if (context.mounted) Navigator.pop(context);
-                  },
-                  child: const Text('삭제', style: TextStyle(color: Colors.redAccent)),
-                ),
-              if (widget.item != null)
-                TextButton(
-                  onPressed: () async {
-                    final nav = Navigator.of(context);
-                    final messenger = ScaffoldMessenger.of(context);
-                    await context.read<Store>().save(m.copyOfItem(widget.item!));
-                    nav.pop();
-                    showTimedSnack(messenger, '복제했어 (제목 뒤에 "(복사)")');
-                  },
-                  child: const Text('복제'),
-                ),
-              const Spacer(),
-              FilledButton(onPressed: _save, child: const Text('저장')),
-            ]),
+            const SizedBox(height: 8),
           ],
         ),
       ),
+        ),
+        bar, // 저장/삭제 줄은 스크롤과 상관없이 아래에 고정
+      ]),
     );
   }
 }

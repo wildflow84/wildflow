@@ -64,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final s = context.watch<Store>();
     final wide = MediaQuery.sizeOf(context).width > 900;
+    final wideBar = MediaQuery.sizeOf(context).width >= 600; // 좁은 화면은 화살표 대신 밀기/휠로 월 이동
 
     final grid = _MonthGrid(
       month: _month,
@@ -159,28 +160,19 @@ class _HomeScreenState extends State<HomeScreen> {
             : Text(_tab == 1 ? '다가오는 일정' : '할 일'),
         actions: [
           IconButton(
-            tooltip: '카테고리별 보기',
-            icon: Badge(
-              isLabelVisible: s.hiddenCategories.isNotEmpty,
-              smallSize: 8,
-              child: const Icon(Icons.filter_list),
-            ),
-            onPressed: () => _categoryFilter(context),
-          ),
-          IconButton(
             tooltip: '검색',
             icon: const Icon(Icons.search),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
           ),
+          if (_tab == 0 && wideBar) IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => _shift(-1)),
           if (_tab == 0) ...[
-            IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => _shift(-1)),
             TextButton(
                 onPressed: () => setState(() {
                       _month = DateTime(DateTime.now().year, DateTime.now().month);
                       _selected = dateOnly(DateTime.now());
                     }),
                 child: const Text('오늘')),
-            IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => _shift(1)),
+            if (wideBar) IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => _shift(1)),
           ],
           PopupMenuButton<String>(
             onSelected: (v) {
@@ -192,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(
                     context, MaterialPageRoute(builder: (_) => const CategoryManagerScreen()));
               }
+              if (v == 'filter') _categoryFilter(context);
               if (v == 'out') s.repo.signOut();
               if (v == 'code') {
                 Clipboard.setData(ClipboardData(text: s.spaceId!));
@@ -199,11 +192,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SnackBar(content: Text('초대 코드를 복사했어')));
               }
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'categories', child: Text('카테고리 관리')),
-              PopupMenuItem(value: 'settings', child: Text('설정 (기본 공개 범위 등)')),
-              PopupMenuItem(value: 'code', child: Text('초대 코드 복사')),
-              PopupMenuItem(value: 'out', child: Text('로그아웃')),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                  value: 'filter',
+                  child: Text(s.hiddenCategories.isEmpty ? '카테고리별 보기' : '카테고리별 보기 (${s.hiddenCategories.length}개 숨김)')),
+              const PopupMenuItem(value: 'categories', child: Text('카테고리 관리')),
+              const PopupMenuItem(value: 'settings', child: Text('설정 (기본 공개 범위 등)')),
+              const PopupMenuItem(value: 'code', child: Text('초대 코드 복사')),
+              const PopupMenuItem(value: 'out', child: Text('로그아웃')),
             ],
           ),
         ],

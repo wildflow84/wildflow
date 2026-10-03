@@ -26,8 +26,8 @@ class SettingsScreen extends StatelessWidget {
           const _Header('내 정보'),
           ListTile(
             leading: const Icon(Icons.badge_outlined),
-            title: const Text('닉네임'),
-            subtitle: Text(s.myNickname.isEmpty ? '정하지 않음 (구글 이름으로 보여)' : '${s.myNickname} · 상대와 내가 만든 항목에 이 이름으로 보여'),
+            title: Text(s.myNickname.isEmpty ? '닉네임' : '닉네임 · ${s.myNickname}'),
+            subtitle: Text(s.myNickname.isEmpty ? '정하지 않음 (구글 이름으로 보여)' : '상대 화면과 내가 만든 항목에 이 이름으로 보여'),
             trailing: const Icon(Icons.edit_outlined, size: 18),
             onTap: () => _editNickname(context, s),
           ),

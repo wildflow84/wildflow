@@ -62,8 +62,22 @@ class _AgendaViewState extends State<AgendaView> {
           child: Text(c.name, style: const TextStyle(fontSize: 12, color: Colors.white60)),
         ));
       }
-      for (final it in items) {
-        rows.add(ItemTile(item: it, day: day));
+      if (items.isNotEmpty) {
+        // 하루치 항목을 둥근 카드로 묶어 날짜별 구분이 한눈에 보이게
+        rows.add(Padding(
+          padding: const EdgeInsets.fromLTRB(10, 4, 10, 0),
+          child: Material(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(14),
+            clipBehavior: Clip.antiAlias,
+            child: Column(children: [
+              for (var i = 0; i < items.length; i++) ...[
+                if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
+                ItemTile(item: items[i], day: day),
+              ],
+            ]),
+          ),
+        ));
       }
     }
     return Align(
