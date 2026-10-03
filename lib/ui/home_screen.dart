@@ -13,6 +13,7 @@ import '../models/lunar.dart';
 import '../models/map_links.dart';
 import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, dateOnly, isDoneOn, isOverdue, moveItemByDays, nextRollDate, rollLabel, timeLabel, chipTimeLabel;
+import 'agenda.dart';
 import 'category_manager.dart';
 import 'checklist.dart';
 import 'date_picker.dart';
@@ -155,8 +156,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(width: 10),
                 const _SharedToggle(),
               ])
-            : const Text('할 일'),
+            : Text(_tab == 1 ? '다가오는 일정' : '할 일'),
         actions: [
+          IconButton(
+            tooltip: '검색',
+            icon: const Icon(Icons.search),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
+          ),
           if (_tab == 0) ...[
             IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => _shift(-1)),
             TextButton(
@@ -196,8 +202,10 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           Expanded(
-            child: _tab == 1
+            child: _tab == 2
                 ? const _TodoTab()
+                : _tab == 1
+                    ? const AgendaView()
                 : wide
                     ? Row(children: [
                         Expanded(flex: 3, child: calendar),
@@ -209,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showEditSheet(context,
-            day: _selected, type: _tab == 1 ? ItemType.todo : ItemType.event),
+            day: _selected, type: _tab == 2 ? ItemType.todo : ItemType.event),
         child: const Icon(Icons.add),
       ),
       bottomNavigationBar: _BottomBar(
@@ -219,6 +227,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onDestinationSelected: (i) => setState(() => _tab = i),
           destinations: const [
             NavigationDestination(icon: Icon(Icons.calendar_month), label: '캘린더'),
+            NavigationDestination(icon: Icon(Icons.view_agenda_outlined), label: '목록'),
             NavigationDestination(icon: Icon(Icons.checklist), label: '할 일'),
           ],
         ),
@@ -947,7 +956,7 @@ class _DayList extends StatelessWidget {
         child: items.isEmpty
             ? const Center(child: Text('비어 있어'))
             : ListView(controller: controller, children: [
-                for (final i in items) _ItemTile(item: i, day: day),
+                for (final i in items) ItemTile(item: i, day: day),
               ]),
       ),
     ]);
@@ -981,10 +990,10 @@ class _Meta extends StatelessWidget {
   }
 }
 
-class _ItemTile extends StatelessWidget {
+class ItemTile extends StatelessWidget {
   final Item item;
   final DateTime day;
-  const _ItemTile({required this.item, required this.day});
+  const ItemTile({super.key, required this.item, required this.day});
 
   @override
   Widget build(BuildContext context) {
@@ -1099,7 +1108,7 @@ class _TodoTab extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Text(title, style: Theme.of(context).textTheme.titleSmall)),
             for (final i in list)
-              _ItemTile(
+              ItemTile(
                   item: i,
                   day: !i.isRecurring ? dateOnly(i.start) : today),
           ]);
