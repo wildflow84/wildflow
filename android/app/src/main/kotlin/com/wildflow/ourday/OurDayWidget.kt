@@ -116,7 +116,10 @@ class OurDayWidget : HomeWidgetProvider() {
                 views.setOnClickPendingIntent(R.id.cal_next, actionIntent(context, id, ACTION_NEXT, 2))
                 views.setOnClickPendingIntent(R.id.cal_title, actionIntent(context, id, ACTION_TODAY, 3))
             } else {
-                fillList(context, id, views, theme, pi)
+                // 목록 클릭은 화면 없는 중간 다리(WidgetActionActivity)가 받아서, 체크박스면 앱을 열지 않고 완료 처리한다
+                val bridge = Intent(context, WidgetActionActivity::class.java)
+                val bridgePi = PendingIntent.getActivity(context, 1, bridge, flags)
+                fillList(context, id, views, theme, bridgePi)
             }
             return views
         }

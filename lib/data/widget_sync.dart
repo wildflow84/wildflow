@@ -62,6 +62,7 @@ class WidgetSync {
     int Function(Item)? colorOf,
     String Function(Item)? categoryName,
     List<String> Function(DateTime)? holidaysOn,
+    String spaceId = '',
   }) {
     final df = DateFormat('M월 d일 (E)', 'ko');
     final days = <Map<String, dynamic>>[];
@@ -84,6 +85,11 @@ class WidgetSync {
         if (count >= _jsonMaxItems) break;
         count++;
         list.add({
+          'id': i.id,
+          'sp': spaceId,
+          'dk': dateKey(day),
+          // 위젯에서 바로 완료 체크할 수 있나: 할 일이고, 남은 체크리스트가 없어야 함 (있으면 앱에서 확인)
+          'can': i.type == ItemType.todo && i.id.isNotEmpty && spaceId.isNotEmpty && i.checksLeftOn(day) == 0,
           't': i.title,
           'todo': i.type == ItemType.todo,
           'done': isDoneOn(i, day),
@@ -118,6 +124,7 @@ class WidgetSync {
     int Function(Item)? colorOf,
     String Function(Item)? categoryName,
     List<String> Function(DateTime)? holidaysOn,
+    String spaceId = '',
   }) async {
     if (kIsWeb) return;
     final today = dateOnly(DateTime.now());
@@ -126,7 +133,8 @@ class WidgetSync {
       await HomeWidget.saveWidgetData<String>('body', agendaText(visible, today));
       await HomeWidget.saveWidgetData<String>(
           'agendaJson',
-          agendaJson(visible, today, colorOf: colorOf, categoryName: categoryName, holidaysOn: holidaysOn));
+          agendaJson(visible, today,
+              colorOf: colorOf, categoryName: categoryName, holidaysOn: holidaysOn, spaceId: spaceId));
       await HomeWidget.saveWidgetData<String>('eventDays', eventDays(visible, today));
       await HomeWidget.updateWidget(androidName: _provider);
     } catch (_) {

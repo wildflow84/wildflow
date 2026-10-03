@@ -532,6 +532,29 @@ String? timeLabel(Item i) {
   return sameDay ? '$s–${_hhmm(e)}' : '$s → ${e.month}/${e.day} ${_hhmm(e)}';
 }
 
+/// 완료 토글의 결과: 바뀐 항목과, "완료로 표시"한 것인지(상대에게 알릴지 정하는 데 씀)
+class DoneToggle {
+  final Item item;
+  final bool marking;
+  const DoneToggle(this.item, this.marking);
+}
+
+/// 완료 체크를 누른 결과를 계산한다 (저장은 호출한 쪽이). 앱과 홈 화면 위젯이 같은 규칙을 쓴다.
+///  - 이동형 반복: 완료 대신 다음 일정으로 넘어간다
+///  - 단일 항목: 완료 토글
+///  - 규칙 반복: 그 날짜의 완료 기록을 토글
+DoneToggle toggledDone(Item i, DateTime day, String uid, DateTime now) {
+  if (i.isRolling) return DoneToggle(rollNextItem(i, now, uid), true);
+  if (!i.isRecurring) {
+    return DoneToggle(i.copyWith(done: !i.done, lastDoneBy: uid, lastDoneAt: now), !i.done);
+  }
+  final k = dateKey(day);
+  final dd = [...i.doneDates];
+  final marking = !dd.contains(k);
+  marking ? dd.add(k) : dd.remove(k);
+  return DoneToggle(i.copyWith(doneDates: dd, lastDoneBy: uid, lastDoneAt: now), marking);
+}
+
 /// 이동형 반복 완료 후의 새 시작 일시: 다음 날짜로 옮기되 시각은 유지한다.
 DateTime rollStart(Item item, DateTime today) {
   final d = nextRollDate(item, today);

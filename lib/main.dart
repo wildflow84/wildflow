@@ -1,12 +1,15 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 import 'data/location_report.dart';
 import 'data/push.dart';
+import 'data/widget_actions.dart';
 import 'data/repository.dart';
 import 'data/store.dart';
 import 'firebase_options.dart';
@@ -32,6 +35,10 @@ Future<void> main() async {
   await initializeDateFormatting('ko');
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   Push.listenForeground(messengerKey);
+  if (!kIsWeb) {
+    // 홈 화면 위젯의 체크박스(앱을 열지 않고 완료 처리)
+    HomeWidget.registerInteractivityCallback(widgetBackgroundCallback);
+  }
   final store = Store(Repository());
   LocationReporter(store).start(); // 출발 시간 알림용 위치 전달
   runApp(ChangeNotifierProvider.value(

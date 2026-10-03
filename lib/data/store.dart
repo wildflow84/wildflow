@@ -247,6 +247,7 @@ class Store extends ChangeNotifier {
       colorOf: (i) => colorOf(i).toARGB32(),
       categoryName: (i) => categoriesOf(i).first.name,
       holidaysOn: (d) => [for (final m in cal.marksOn(d)) if (m.isHoliday) m.name],
+      spaceId: spaceId ?? '',
     );
   }
 
@@ -374,24 +375,10 @@ class Store extends ChangeNotifier {
   /// [checkAll]: 남은 체크리스트를 모두 체크하면서 완료한다.
   Future<Item?> toggleDone(Item item, DateTime day, {bool checkAll = false}) async {
     final i = checkAll ? item.withAllChecks(day, true) : item;
-    final now = DateTime.now();
-    if (i.isRolling) {
-      await save(rollNextItem(i, now, uid));
-      _tellPartnerDone(i);
-      return item;
-    }
-    if (!i.isRecurring) {
-      await save(i.copyWith(done: !i.done, lastDoneBy: uid, lastDoneAt: now));
-      if (!i.done) _tellPartnerDone(i);
-      return null;
-    }
-    final k = dateKey(day);
-    final dd = [...i.doneDates];
-    final marking = !dd.contains(k);
-    marking ? dd.add(k) : dd.remove(k);
-    await save(i.copyWith(doneDates: dd, lastDoneBy: uid, lastDoneAt: now));
-    if (marking) _tellPartnerDone(i);
-    return null;
+    final r = toggledDone(i, day, uid, DateTime.now());
+    await save(r.item);
+    if (r.marking) _tellPartnerDone(i);
+    return i.isRolling ? item : null;
   }
 
   /// 같이 보기 항목을 완료했다고 상대에게 알린다 (상대 설정에 따라 서버가 보낼지 정함). 실패해도 무시.

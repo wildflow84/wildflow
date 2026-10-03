@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -137,7 +138,18 @@ class WidgetListService : RemoteViewsService() {
             v.setTextViewText(R.id.row_meta, metaText(item, catColor))
             v.setTextColor(R.id.row_meta, theme.sub)
 
+            // 전체 줄은 앱 열기, 체크박스는 앱을 열지 않고 바로 완료 처리
             v.setOnClickFillInIntent(R.id.row_root, Intent())
+            val id = item.optString("id")
+            val space = item.optString("sp")
+            val dk = item.optString("dk")
+            if (todo && item.optBoolean("can") && id.isNotEmpty() && space.isNotEmpty() && dk.isNotEmpty()) {
+                val done = Intent()
+                done.data = Uri.parse(
+                    "ourday://done?space=" + Uri.encode(space) + "&id=" + Uri.encode(id) + "&date=" + Uri.encode(dk)
+                )
+                v.setOnClickFillInIntent(R.id.row_glyph, done)
+            }
             return v
         }
 

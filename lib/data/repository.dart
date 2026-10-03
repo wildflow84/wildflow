@@ -149,6 +149,12 @@ class Repository {
     return ctrl.stream;
   }
 
+  /// 항목 하나를 서버에서 읽는다 (위젯에서 완료 체크할 때처럼 목록을 구독하지 않는 곳에서 씀)
+  Future<Item?> getItem(String spaceId, String itemId) async {
+    final doc = await _db.collection('spaces').doc(spaceId).collection('items').doc(itemId).get();
+    return doc.exists ? Item.fromDoc(doc) : null;
+  }
+
   /// 항목 저장. 앱이 모르는 서버 쪽 필드(재촉 횟수 등)가 지워지지 않게, 앱이 가진 필드만 덮어쓴다.
   /// 새 항목이면 만들어진 id를 돌려준다.
   Future<String> save(String spaceId, Item item) async {
