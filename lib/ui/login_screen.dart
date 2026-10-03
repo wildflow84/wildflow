@@ -15,8 +15,8 @@ class LoginScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const HelloArt(width: 280),
-            const SizedBox(height: 8),
+            const HelloArt(width: 260),
+            const SizedBox(height: 20),
             Text('순대희 캘린더', style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 4),
             const Text('함께 쓰는 일정과 할 일'),

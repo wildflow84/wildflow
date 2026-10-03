@@ -14,8 +14,8 @@ class SplashView extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                HelloArt(width: 300),
-                SizedBox(height: 8),
+                HelloArt(width: 280),
+                SizedBox(height: 20),
                 Text('순대희 캘린더', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: kInk)),
                 SizedBox(height: 6),
                 Text('함께 쓰는 일정과 할 일', style: TextStyle(fontSize: 13, color: kMuted)),
@@ -28,15 +28,27 @@ class SplashView extends StatelessWidget {
       );
 }
 
-/// 아기와 시츄 그림
+/// 아기와 시츄 그림 (둥근 카드)
 class HelloArt extends StatelessWidget {
   final double width;
   const HelloArt({super.key, required this.width});
 
   @override
-  Widget build(BuildContext context) => Image.asset(
-        'assets/images/hello.png',
-        width: width,
-        errorBuilder: (_, _, _) => Icon(Icons.calendar_month, size: width / 4, color: kAccent),
+  Widget build(BuildContext context) => Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: const [BoxShadow(color: kCardShadow, blurRadius: 24, offset: Offset(0, 8))],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Image.asset(
+            'assets/images/hello.webp',
+            width: width,
+            height: width,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => SizedBox(
+                width: width, height: width, child: Icon(Icons.calendar_month, size: width / 4, color: kAccent)),
+          ),
+        ),
       );
 }
