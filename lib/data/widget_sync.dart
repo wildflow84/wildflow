@@ -14,8 +14,8 @@ class WidgetSync {
   static const _provider = 'OurDayWidget';
   static const _agendaDays = 7;
   static const _maxLines = 10;
-  static const _jsonDays = 14;
-  static const _jsonMaxItems = 60;
+  static const _jsonDays = 366;
+  static const _jsonMaxItems = 600;
 
   static String _line(Item i, DateTime day) {
     final t = timeLabel(i);
@@ -54,7 +54,7 @@ class WidgetSync {
     return lines.take(_maxLines).join('\n');
   }
 
-  /// 목록형 위젯용 JSON: 오늘부터 [_jsonDays]일, 일정/할 일이 있거나 공휴일인 날만.
+  /// 목록형 위젯용 JSON: 오늘부터 1년치([_jsonDays]일), 일정/할 일이 있거나 공휴일인 날만. 위젯에서 아래로 계속 스크롤한다.
   /// [{label, kind(today|holiday|sun|sat|day), note, items:[{t, todo, done, time, place, cat, color, rep, priv}]}]
   static String agendaJson(
     List<Item> visible,
