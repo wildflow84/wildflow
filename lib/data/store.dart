@@ -262,7 +262,7 @@ class Store extends ChangeNotifier {
   /// 되돌리기용으로 변경 전 항목을 돌려준다 (이동형일 때만).
   /// [checkAll]: 남은 체크리스트를 모두 체크하면서 완료한다.
   Future<Item?> toggleDone(Item item, DateTime day, {bool checkAll = false}) async {
-    final i = checkAll ? item.copyWith(checklist: allChecked(item.checklist, true)) : item;
+    final i = checkAll ? item.withAllChecks(day, true) : item;
     final now = DateTime.now();
     if (i.isRolling) {
       await save(rollNextItem(i, now, uid));
@@ -281,12 +281,7 @@ class Store extends ChangeNotifier {
   }
 
   /// 체크리스트 한 줄 체크/해제
-  Future<void> setCheck(Item i, int index, bool done) {
-    final l = [...i.checklist];
-    if (index < 0 || index >= l.length) return Future.value();
-    l[index] = l[index].copyWith(done: done);
-    return save(i.copyWith(checklist: l));
-  }
+  Future<void> setCheck(Item i, DateTime day, int index, bool done) => save(i.withCheck(day, index, done));
 
   /// 이동형 완료 되돌리기
   Future<void> undoRoll(Item previous) => save(previous);

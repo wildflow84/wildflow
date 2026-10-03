@@ -59,10 +59,52 @@ class Item {
 
   /// 체크리스트 (장보기, 준비물 등). 같이 보기 항목이면 둘 다 보면서 체크한다.
   final List<CheckEntry> checklist;
+  /// 반복 항목의 회차별 체크 기록: 날짜(yyyy-MM-dd) → 체크한 항목의 글자. 반복이 아니면 안 쓴다.
+  final Map<String, List<String>> checksByDate;
 
   /// 마지막으로 완료한 사람/시각 (알림, 이력용)
   final String? lastDoneBy;
   final DateTime? lastDoneAt;
+
+  /// [day]의 체크리스트. 반복 항목은 회차(날짜)마다 따로 체크 상태를 가진다.
+  List<CheckEntry> checklistOn(DateTime day) {
+    if (!isRecurring) return checklist;
+    final done = checksByDate[dateKey(day)] ?? const <String>[];
+    return [for (final c in checklist) CheckEntry(c.text, done: done.contains(c.text))];
+  }
+
+  int checksLeftOn(DateTime day) => checklistOn(day).where((c) => !c.done).length;
+
+  /// [day] 회차의 체크 상태를 바꾼 항목을 돌려준다 (반복이면 날짜별 기록, 아니면 본문). [done]이 null이면 토글.
+  Item withCheck(DateTime day, int index, [bool? done]) {
+    final cur = checklistOn(day);
+    if (index < 0 || index >= cur.length) return this;
+    final v = done ?? !cur[index].done;
+    if (!isRecurring) {
+      final l = [...checklist];
+      l[index] = l[index].copyWith(done: v);
+      return copyWith(checklist: l);
+    }
+    final key = dateKey(day);
+    final set = {...(checksByDate[key] ?? const <String>[])};
+    v ? set.add(cur[index].text) : set.remove(cur[index].text);
+    return copyWith(checksByDate: _trimChecks({...checksByDate, key: set.toList()}));
+  }
+
+  /// [day] 회차의 체크를 모두 켜거나 끈다.
+  Item withAllChecks(DateTime day, bool done) {
+    if (!isRecurring) return copyWith(checklist: allChecked(checklist, done));
+    final key = dateKey(day);
+    return copyWith(
+        checksByDate: _trimChecks({...checksByDate, key: done ? [for (final c in checklist) c.text] : <String>[]}));
+  }
+
+  static Map<String, List<String>> _trimChecks(Map<String, List<String>> m) {
+    final live = {for (final e in m.entries) if (e.value.isNotEmpty) e.key: e.value};
+    if (live.length <= 60) return live;
+    final keys = live.keys.toList()..sort();
+    return {for (final k in keys.sublist(keys.length - 60)) k: live[k]!};
+  }
 
   int get checksLeft => checklist.where((c) => !c.done).length;
   bool get hasChecklist => checklist.isNotEmpty;
@@ -106,6 +148,7 @@ class Item {
     this.lastDoneBy,
     this.lastDoneAt,
     this.checklist = const [],
+    this.checksByDate = const {},
   });
 
   Item copyWith({
@@ -143,6 +186,7 @@ class Item {
     String? lastDoneBy,
     DateTime? lastDoneAt,
     List<CheckEntry>? checklist,
+    Map<String, List<String>>? checksByDate,
   }) =>
       Item(
         id: id,
@@ -174,6 +218,7 @@ class Item {
         lastDoneBy: lastDoneBy ?? this.lastDoneBy,
         lastDoneAt: lastDoneAt ?? this.lastDoneAt,
         checklist: checklist ?? this.checklist,
+        checksByDate: checksByDate ?? this.checksByDate,
       );
 
   Map<String, dynamic> toMap() => {
@@ -206,6 +251,7 @@ class Item {
         'lastDoneBy': lastDoneBy,
         'lastDoneAt': lastDoneAt == null ? null : Timestamp.fromDate(lastDoneAt!),
         'checklist': [for (final c in checklist) c.toMap()],
+        'checksByDate': checksByDate,
       };
 
   factory Item.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -245,6 +291,10 @@ class Item {
         for (final c in (m['checklist'] as List? ?? const []))
           if (c is Map) CheckEntry.fromMap(Map<String, dynamic>.from(c)),
       ],
+      checksByDate: {
+        for (final e in ((m['checksByDate'] as Map?) ?? const {}).entries)
+          '${e.key}': List<String>.from(e.value as List),
+      },
     );
   }
 }

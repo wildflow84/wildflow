@@ -210,7 +210,11 @@ class _EditSheetState extends State<_EditSheet> {
       type: _type,
       title: _title.text.trim(),
       note: _note.text.trim(),
-      checklist: [for (final c in _checklist) if (c.text.trim().isNotEmpty) c.copyWith(text: c.text.trim())],
+      // 반복 항목은 목록(템플릿)만 저장하고 체크는 회차별 기록(checksByDate)에 둔다
+      checklist: [
+        for (final c in _checklist)
+          if (c.text.trim().isNotEmpty) c.copyWith(text: c.text.trim(), done: rule == null ? c.done : false)
+      ],
       location: _type == ItemType.event ? _location.text.trim() : '', // 위치는 일정만
       lat: _type == ItemType.event ? _lat : null,
       lng: _type == ItemType.event ? _lng : null,
@@ -689,7 +693,7 @@ class _EditSheetState extends State<_EditSheet> {
               decoration: const InputDecoration(labelText: '메모', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
-            ChecklistEditor(initial: _checklist, onChanged: (l) => _checklist = l),
+            ChecklistEditor(initial: _checklist, showChecks: _rule == null, onChanged: (l) => _checklist = l),
             const SizedBox(height: 16),
             Row(children: [
               if (widget.item != null && isOwner)

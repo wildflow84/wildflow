@@ -7,8 +7,8 @@ import '../models/item.dart';
 enum CompleteChoice { cancel, anyway, checkAll }
 
 /// 체크리스트가 남은 할 일을 완료하려 할 때 확인한다. 남은 게 없으면 바로 anyway.
-Future<CompleteChoice> confirmIncompleteChecklist(BuildContext context, Item item) async {
-  final left = item.checksLeft;
+Future<CompleteChoice> confirmIncompleteChecklist(BuildContext context, Item item, DateTime day) async {
+  final left = item.checksLeftOn(day);
   if (left == 0) return CompleteChoice.anyway;
   final r = await showDialog<CompleteChoice>(
     context: context,
@@ -29,31 +29,33 @@ Future<CompleteChoice> confirmIncompleteChecklist(BuildContext context, Item ite
 /// 목록에서 바로 체크할 수 있는 체크리스트 (제목을 누르면 편집 없이 체크만 바뀐다).
 class ChecklistInline extends StatelessWidget {
   final Item item;
+  final DateTime day;
   final bool canEdit;
-  const ChecklistInline({super.key, required this.item, required this.canEdit});
+  const ChecklistInline({super.key, required this.item, required this.day, required this.canEdit});
 
   @override
   Widget build(BuildContext context) {
     final s = context.read<Store>();
+    final list = item.checklistOn(day); // 반복 항목은 이 날짜(회차)의 체크
     return Padding(
       padding: const EdgeInsets.fromLTRB(56, 0, 16, 6),
       child: Column(children: [
-        for (var i = 0; i < item.checklist.length; i++)
+        for (var i = 0; i < list.length; i++)
           InkWell(
             borderRadius: BorderRadius.circular(6),
-            onTap: canEdit ? () => s.setCheck(item, i, !item.checklist[i].done) : null,
+            onTap: canEdit ? () => s.setCheck(item, day, i, !list[i].done) : null,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(children: [
-                Icon(item.checklist[i].done ? Icons.check_box : Icons.check_box_outline_blank,
-                    size: 18, color: item.checklist[i].done ? Colors.lightGreenAccent : Colors.white54),
+                Icon(list[i].done ? Icons.check_box : Icons.check_box_outline_blank,
+                    size: 18, color: list[i].done ? Colors.lightGreenAccent : Colors.white54),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(item.checklist[i].text,
+                  child: Text(list[i].text,
                       style: TextStyle(
                           fontSize: 13,
-                          color: item.checklist[i].done ? Colors.white38 : null,
-                          decoration: item.checklist[i].done ? TextDecoration.lineThrough : null)),
+                          color: list[i].done ? Colors.white38 : null,
+                          decoration: list[i].done ? TextDecoration.lineThrough : null)),
                 ),
               ]),
             ),
@@ -67,7 +69,9 @@ class ChecklistInline extends StatelessWidget {
 class ChecklistEditor extends StatefulWidget {
   final List<CheckEntry> initial;
   final ValueChanged<List<CheckEntry>> onChanged;
-  const ChecklistEditor({super.key, required this.initial, required this.onChanged});
+  /// 반복 항목은 목록만 정하고(체크는 회차마다 따로) 체크 상자는 숨긴다.
+  final bool showChecks;
+  const ChecklistEditor({super.key, required this.initial, required this.onChanged, this.showChecks = true});
 
   @override
   State<ChecklistEditor> createState() => _ChecklistEditorState();
@@ -105,9 +109,9 @@ class _ChecklistEditorState extends State<ChecklistEditor> {
         const Icon(Icons.checklist, size: 18, color: Colors.white70),
         const SizedBox(width: 6),
         const Text('체크리스트', style: TextStyle(color: Colors.white70)),
-        if (_items.isNotEmpty) Text('  ${_items.length - left}/${_items.length}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        if (_items.isNotEmpty && widget.showChecks) Text('  ${_items.length - left}/${_items.length}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
         const Spacer(),
-        if (_items.any((c) => c.done))
+        if (widget.showChecks && _items.any((c) => c.done))
           TextButton(
             style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
             onPressed: () {
@@ -117,8 +121,15 @@ class _ChecklistEditorState extends State<ChecklistEditor> {
             child: const Text('체크한 것 지우기'),
           ),
       ]),
+      if (!widget.showChecks)
+        const Padding(
+          padding: EdgeInsets.only(top: 2, bottom: 4),
+          child: Text('반복 일정은 날짜(회차)마다 따로 체크해', style: TextStyle(fontSize: 12, color: Colors.white54)),
+        ),
       for (var i = 0; i < _items.length; i++)
         Row(children: [
+          if (!widget.showChecks) const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Icon(Icons.circle, size: 6, color: Colors.white54)),
+          if (widget.showChecks)
           Checkbox(
             visualDensity: VisualDensity.compact,
             value: _items[i].done,

@@ -1003,7 +1003,7 @@ class _ItemTile extends StatelessWidget {
                       var checkAll = false;
                       if (!done) {
                         // 체크리스트가 남아 있으면 확인
-                        final c = await confirmIncompleteChecklist(context, item);
+                        final c = await confirmIncompleteChecklist(context, item, day);
                         if (c == CompleteChoice.cancel) return;
                         checkAll = c == CompleteChoice.checkAll;
                       }
@@ -1037,7 +1037,7 @@ class _ItemTile extends StatelessWidget {
           if (item.visibility == m.Visibility.shared)
             _Meta(icon: Icons.person_outline, text: s.ownerLabel(item)),
           if (item.hasChecklist)
-            _Meta(icon: Icons.checklist, text: '${item.checklist.length - item.checksLeft}/${item.checklist.length}'),
+            _Meta(icon: Icons.checklist, text: '${item.checklist.length - item.checksLeftOn(day)}/${item.checklist.length}'),
           if (item.note.isNotEmpty) _Meta(icon: Icons.notes, text: item.note),
         ]),
       ),
@@ -1069,7 +1069,7 @@ class _ItemTile extends StatelessWidget {
           ),
         ),
       tile,
-      if (item.hasChecklist) ChecklistInline(item: item, canEdit: canEdit),
+      if (item.hasChecklist) ChecklistInline(item: item, day: day, canEdit: canEdit),
     ]);
   }
 }
