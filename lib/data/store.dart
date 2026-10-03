@@ -112,6 +112,14 @@ class Store extends ChangeNotifier {
         }
         categories = defaultCategories;
       } else {
+        // 안 건드린 예전 기본 색은 새 기본 색으로 바꿔 둔다
+        for (final c in list) {
+          final old = oldDefaultCategoryColors[c.id];
+          if (old != null && c.colorValue == old) {
+            final nc = defaultCategories.firstWhere((d) => d.id == c.id);
+            repo.saveCategory(id, c.copyWith(colorValue: nc.colorValue)).catchError((_) => '');
+          }
+        }
         categories = [...list]..sort((a, b) {
             final o = a.order.compareTo(b.order);
             return o != 0 ? o : a.name.compareTo(b.name);

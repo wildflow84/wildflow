@@ -839,7 +839,8 @@ class _DayCell extends StatelessWidget {
   Widget _itemChip(BuildContext context, Store s0, Item i) {
     final canEdit = i.ownerUid == s0.uid || i.visibility == m.Visibility.shared;
     final chip = _Chip(
-      text: i.allDay ? i.title : '${chipTimeLabel(i)} ${i.title}',
+      // 폰처럼 좁은 화면에서는 제목이 잘리므로 시간은 빼고 제목만 보여 준다
+      text: i.allDay || MediaQuery.sizeOf(context).width < 600 ? i.title : '${chipTimeLabel(i)} ${i.title}',
       color: s0.colorOf(i),
       ownerInitial: i.ownerUid == s0.uid ? null : _initial(s0.ownerLabel(i)),
       isTodo: i.type == ItemType.todo,
