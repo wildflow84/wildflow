@@ -126,6 +126,7 @@ class Store extends ChangeNotifier {
           });
       }
       notifyListeners();
+      _pushWidget(); // 카테고리 이름/색이 바뀌면 위젯도
     });
     _profileSub = repo.watchProfile().listen((p) {
       profile = p;
@@ -134,6 +135,7 @@ class Store extends ChangeNotifier {
           ? m.Visibility.shared
           : m.Visibility.values.firstWhere((e) => e.name == v, orElse: () => m.Visibility.shared);
       notifyListeners();
+      _pushWidget(); // 다른 기기에서 바꾼 카테고리 보기 설정도 반영
     });
     _customSub = repo.watchCustomDays(id).listen((list) {
       customDays = list;
@@ -214,6 +216,7 @@ class Store extends ChangeNotifier {
     if (hidden) next.add(id);
     profile = {...profile, 'hiddenCategories': next.toList()};
     notifyListeners();
+    _pushWidget(); // 위젯도 같은 보기 설정으로
     if (_previewUid == null) await repo.setPref('hiddenCategories', next.toList());
   }
 
@@ -222,12 +225,14 @@ class Store extends ChangeNotifier {
     final next = hidden ? ids.toList() : <String>[];
     profile = {...profile, 'hiddenCategories': next};
     notifyListeners();
+    _pushWidget();
     if (_previewUid == null) await repo.setPref('hiddenCategories', next);
   }
 
   Future<void> showAllCategories() async {
     profile = {...profile, 'hiddenCategories': <String>[]};
     notifyListeners();
+    _pushWidget();
     if (_previewUid == null) await repo.setPref('hiddenCategories', <String>[]);
   }
 
