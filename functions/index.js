@@ -260,19 +260,25 @@ exports.sendReminders = onSchedule({ schedule: 'every 5 minutes', timeZone: 'Asi
 // 출발 시간 알림: 앞으로 6시간 안에 시작하는 "출발 알림" 일정에 대해, 만든 사람의 마지막 위치에서
 // 장소까지 걸리는 시간을 구해(카카오모빌리티 길찾기, 키가 없으면 직선거리 어림값) 출발할 때 푸시한다.
 // ---------------------------------------------------------------------------
+let lastKakaoError = ''; // 길찾기가 실패한 이유 (알림 문구에 붙여 원인을 알 수 있게)
 async function kakaoDurationSec(oLat, oLng, dLat, dLng) {
   const key = process.env.KAKAO_REST_KEY;
+  lastKakaoError = key ? '' : '키 없음';
   if (!key) return null;
   try {
     const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${oLng},${oLat}&destination=${dLng},${dLat}&priority=TIME`;
     const res = await fetch(url, { headers: { Authorization: `KakaoAK ${key}` } });
     if (!res.ok) {
       console.warn('길찾기 실패', res.status);
+      lastKakaoError = `오류 ${res.status}`;
       return null;
     }
     const json = await res.json();
     const route = json.routes && json.routes[0];
-    if (!route || route.result_code !== 0 || !route.summary) return null;
+    if (!route || route.result_code !== 0 || !route.summary) {
+      lastKakaoError = `결과 ${route ? route.result_code : '없음'}`;
+      return null;
+    }
     return route.summary.duration; // 초
   } catch (err) {
     console.warn('길찾기 오류', err.message);
@@ -303,7 +309,7 @@ exports.sendDepartAlerts = onSchedule({ schedule: 'every 5 minutes', timeZone: '
     if (approximate) sec = rough;
     if (!lib.dueForDepart(item, sec, now)) continue;
     const spaceId = d.ref.parent.parent.id;
-    const message = lib.departMessage(item, sec, approximate);
+    const message = lib.departMessage(item, sec, approximate, approximate ? lastKakaoError : '');
     const sent = await pushTo(item.ownerUid, owner, message, { spaceId, itemId: d.id, kind: 'depart' });
     await d.ref.update({ departSentFor: item.departFrom });
     console.log('출발 알림', spaceId, d.id, '보낸 기기', sent, approximate ? '(어림값)' : '');

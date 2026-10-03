@@ -120,5 +120,6 @@ test('출발 알림: 거리 어림값과 위치 신선도, 문구', () => {
   const m = lib.departMessage({ title: '미용실', location: '헤어유메이', departFrom: { toMillis: () => Date.UTC(2026, 9, 3, 6, 0, 0) } }, 1800, true);
   assert.equal(m.title, '지금 출발해야 해');
   assert.match(m.body, /약 30분\(대략\)/);
+  assert.match(lib.departMessage({ title: 'a', departFrom: { toMillis: () => Date.UTC(2026, 9, 3, 6) } }, 600, true, '오류 403').body, /대략, 길찾기 오류 403/);
   assert.match(m.body, /15:00 시작/);
 });

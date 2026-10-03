@@ -162,13 +162,13 @@ function kstHHmm(ms) {
   return new Date(ms + 9 * 3600 * 1000).toISOString().slice(11, 16);
 }
 
-function departMessage(item, durationSec, approximate) {
+function departMessage(item, durationSec, approximate, reason) {
   const startMs = millis(item.departFrom);
   const min = Math.max(1, Math.round(durationSec / 60));
   const where = item.location ? ` ${item.location}` : '';
   return {
     title: '지금 출발해야 해',
-    body: `"${item.title}"${where} · 약 ${min}분${approximate ? '(대략)' : ''} 걸려, ${kstHHmm(startMs)} 시작`,
+    body: `"${item.title}"${where} · 약 ${min}분${approximate ? '(대략' + (reason ? ', 길찾기 ' + reason : '') + ')' : ''} 걸려, ${kstHHmm(startMs)} 시작`,
   };
 }
 
