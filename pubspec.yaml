@@ -69,7 +69,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/hello.webp
+    - assets/brand/logo.png
 
   fonts:
     - family: Pretendard

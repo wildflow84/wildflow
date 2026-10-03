@@ -14,7 +14,7 @@ class SplashView extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                HelloArt(width: 280),
+                LogoMark(size: 120),
                 SizedBox(height: 20),
                 Text('순대희 캘린더', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: kInk)),
                 SizedBox(height: 6),
@@ -28,27 +28,22 @@ class SplashView extends StatelessWidget {
       );
 }
 
-/// 아기와 시츄 그림 (둥근 카드)
-class HelloArt extends StatelessWidget {
-  final double width;
-  const HelloArt({super.key, required this.width});
+/// 앱 로고 (둥근 네모 아이콘)
+class LogoMark extends StatelessWidget {
+  final double size;
+  const LogoMark({super.key, required this.size});
 
   @override
   Widget build(BuildContext context) => Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(size * 0.23),
           boxShadow: const [BoxShadow(color: kCardShadow, blurRadius: 24, offset: Offset(0, 8))],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: Image.asset(
-            'assets/images/hello.webp',
-            width: width,
-            height: width,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => SizedBox(
-                width: width, height: width, child: Icon(Icons.calendar_month, size: width / 4, color: kAccent)),
-          ),
+        child: Image.asset(
+          'assets/brand/logo.png',
+          width: size,
+          height: size,
+          errorBuilder: (_, _, _) => Icon(Icons.calendar_month, size: size * 0.7, color: kAccent),
         ),
       );
 }
