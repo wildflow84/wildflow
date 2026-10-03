@@ -10,7 +10,7 @@
       <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#6B3208" flood-opacity=".28"/>
     </filter>
   </defs>
-  <rect width="512" height="512" fill="url(#bg)"/><g transform="translate(61.4 61.4) scale(.76)">
+  <g transform="translate(71.7 71.7) scale(.72)">
   <circle cx="256" cy="262" r="196" fill="#FFF3E2" opacity=".35"/>
   <g id="dog" filter="url(#sh)">
     <!-- white chest -->
