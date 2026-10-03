@@ -7,7 +7,7 @@ class SplashView extends StatelessWidget {
   const SplashView({super.key});
 
   @override
-  Widget build(BuildContext context) => const Scaffold(
+  Widget build(BuildContext context) => Scaffold(
         body: Center(
           child: Padding(
             padding: EdgeInsets.all(24),
@@ -37,7 +37,7 @@ class LogoMark extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(size * 0.23),
-          boxShadow: const [BoxShadow(color: kCardShadow, blurRadius: 24, offset: Offset(0, 8))],
+          boxShadow: [BoxShadow(color: kCardShadow, blurRadius: 24, offset: Offset(0, 8))],
         ),
         child: Image.asset(
           'assets/brand/logo.png',

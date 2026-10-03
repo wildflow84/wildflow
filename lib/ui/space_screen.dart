@@ -65,7 +65,7 @@ class _SpaceScreenState extends State<SpaceScreen> {
                     child: const Text('코드로 참여')),
                 if (_err != null) ...[
                   const SizedBox(height: 12),
-                  Text(_err!, style: const TextStyle(color: kRed)),
+                  Text(_err!, style: TextStyle(color: kRed)),
                 ],
               ],
             ),

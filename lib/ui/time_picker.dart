@@ -52,7 +52,7 @@ class _DigitalTimeDialogState extends State<_DigitalTimeDialog> {
         onSelectedItemChanged: onChanged,
         children: [
           for (var i = 0; i < count; i++)
-            Center(child: Text(_two(i), style: const TextStyle(fontSize: 28, color: kInk))),
+            Center(child: Text(_two(i), style: TextStyle(fontSize: 28, color: kInk))),
         ],
       ),
     );

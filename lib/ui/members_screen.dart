@@ -32,13 +32,13 @@ class MembersScreen extends StatelessWidget {
                     : null,
               ),
             if (!s.isHost)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.all(16),
                 child: Text('초대받은 사람은 구성원을 내보낼 수 없어. 방장(공간을 만든 사람)만 할 수 있어.',
                     style: TextStyle(color: kMuted, fontSize: 12)),
               ),
             if (s.isHost && s.bannedNames.isNotEmpty) ...[
-              const Padding(
+              Padding(
                 padding: EdgeInsets.fromLTRB(16, 24, 16, 4),
                 child: Text('내보낸 사람', style: TextStyle(color: kSubtle)),
               ),

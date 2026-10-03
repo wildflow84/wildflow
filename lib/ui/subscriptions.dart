@@ -32,7 +32,7 @@ class SubscriptionsScreen extends StatelessWidget {
             builder: (context, snap) {
               final subs = snap.data ?? const [];
               return ListView(padding: const EdgeInsets.only(bottom: 96), children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
                   child: Text(
                     '캘린더 주소(.ics)를 등록하면 서버가 12시간마다 새로 받아와서 일정에 넣어줘. 킥오프 시간이 바뀌면 자동으로 반영돼.',
@@ -150,7 +150,7 @@ class _AddDialogState extends State<_AddDialog> {
         width: 360,
         child: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('자주 쓰는 구독', style: TextStyle(color: kSubtle)),
+            Text('자주 쓰는 구독', style: TextStyle(color: kSubtle)),
             Wrap(spacing: 8, children: [
               for (final p in subscriptionPresets)
                 ActionChip(

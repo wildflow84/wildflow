@@ -151,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text('${_month.year}년 ${_month.month}월',
                             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                         Text(_lunarRange(_month),
-                            style: const TextStyle(fontSize: 12, color: kMuted)),
+                            style: TextStyle(fontSize: 12, color: kMuted)),
                       ],
                     ),
                   ),
@@ -827,26 +827,26 @@ class _DayCell extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: isToday
-                        ? const BoxDecoration(
+                        ? BoxDecoration(
                             color: kAccent,
                             borderRadius: BorderRadius.all(Radius.circular(8)))
                         : null,
                     child: Text('${day.day}',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isToday ? Colors.white : numColor)),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isToday ? (isDarkTheme ? const Color(0xFF2A1708) : Colors.white) : numColor)),
                   ),
                   const SizedBox(width: 2),
                   Flexible(
                     child: Text('(${lunarText(day)})',
                         maxLines: 1,
                         overflow: TextOverflow.clip,
-                        style: const TextStyle(fontSize: 9, color: kFaint)),
+                        style: TextStyle(fontSize: 9, color: kFaint)),
                   ),
                 ]),
                 if (laneCount > 0) SizedBox(height: laneCount * _laneH),
                 ...lines.take(shown.clamp(0, lines.length)),
                 if (overflow && room > 0)
                   Text('+${lines.length - shown}',
-                      style: const TextStyle(fontSize: 9, color: kMuted)),
+                      style: TextStyle(fontSize: 9, color: kMuted)),
               ],
             );
           }),
@@ -1010,7 +1010,7 @@ class _DayList extends StatelessWidget {
                   backgroundColor: m.isHoliday
                       ? const Color(0xFF3FA796)
                       : m.kind == MarkKind.term
-                          ? const Color(0xFFEBD9B4)
+                          ? (isDarkTheme ? const Color(0xFF5A4630) : const Color(0xFFEBD9B4))
                           : kFill,
                   deleteIcon: custom.any((c) => c.name == m.name)
                       ? const Icon(Icons.close, size: 14)
@@ -1053,7 +1053,7 @@ class _Meta extends StatelessWidget {
           child: Text(text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: kSubtle)),
+              style: TextStyle(fontSize: 12, color: kSubtle)),
         ),
       ]),
     );

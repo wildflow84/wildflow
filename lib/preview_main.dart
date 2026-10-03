@@ -52,7 +52,8 @@ Future<void> main() async {
   ];
   runApp(ChangeNotifierProvider(
     create: (_) => Store.preview(Repository(),
-        uid: 'me', names: {'me': '나', 'mina': '파트너'}, items: items),
+        uid: 'me', names: {'me': '나', 'mina': '파트너'}, items: items)
+      ..profile = {'themeMode': Uri.base.queryParameters['theme'] ?? 'system'},
     child: OurDayApp(home: _start()),
   ));
 }

@@ -78,7 +78,7 @@ class _RecurrenceDialogState extends State<_RecurrenceDialog> {
   Widget _section(String label, Widget child) => Padding(
         padding: const EdgeInsets.only(top: 16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: kMuted)),
+          Text(label, style: TextStyle(fontSize: 12, color: kMuted)),
           const SizedBox(height: 8),
           child,
         ]),
@@ -218,7 +218,7 @@ class _RecurrenceDialogState extends State<_RecurrenceDialog> {
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Text('매년 ${s.month}월 ${s.day}일에 반복해.',
-                    style: const TextStyle(color: kSubtle)),
+                    style: TextStyle(color: kSubtle)),
               ),
 
             // 종료
@@ -272,7 +272,7 @@ class _RecurrenceDialogState extends State<_RecurrenceDialog> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: kFill, borderRadius: BorderRadius.circular(10)),
               child: Row(children: [
-                const Icon(Icons.repeat, size: 18, color: kMuted),
+                Icon(Icons.repeat, size: 18, color: kMuted),
                 const SizedBox(width: 8),
                 Expanded(child: Text(rule.describe(s), style: const TextStyle(fontWeight: FontWeight.w600))),
               ]),

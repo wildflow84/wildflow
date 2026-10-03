@@ -107,10 +107,10 @@ class _ChecklistEditorState extends State<ChecklistEditor> {
     final left = _items.where((c) => !c.done).length;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        const Icon(Icons.checklist, size: 18, color: kSubtle),
+        Icon(Icons.checklist, size: 18, color: kSubtle),
         const SizedBox(width: 6),
-        const Text('체크리스트', style: TextStyle(color: kSubtle)),
-        if (_items.isNotEmpty && widget.showChecks) Text('  ${_items.length - left}/${_items.length}', style: const TextStyle(color: kMuted, fontSize: 12)),
+        Text('체크리스트', style: TextStyle(color: kSubtle)),
+        if (_items.isNotEmpty && widget.showChecks) Text('  ${_items.length - left}/${_items.length}', style: TextStyle(color: kMuted, fontSize: 12)),
         const Spacer(),
         if (widget.showChecks && _items.any((c) => c.done))
           TextButton(
@@ -123,13 +123,13 @@ class _ChecklistEditorState extends State<ChecklistEditor> {
           ),
       ]),
       if (!widget.showChecks)
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(top: 2, bottom: 4),
           child: Text('반복 일정은 날짜(회차)마다 따로 체크해', style: TextStyle(fontSize: 12, color: kMuted)),
         ),
       for (var i = 0; i < _items.length; i++)
         Row(children: [
-          if (!widget.showChecks) const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Icon(Icons.circle, size: 6, color: kMuted)),
+          if (!widget.showChecks) Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Icon(Icons.circle, size: 6, color: kMuted)),
           if (widget.showChecks)
           Checkbox(
             visualDensity: VisualDensity.compact,

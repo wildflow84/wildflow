@@ -55,7 +55,7 @@ class _DatePickerDialogState extends State<_DatePickerDialog> {
                   alignment: Alignment.centerLeft,
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     if (widget.title != null)
-                      Text(widget.title!, style: const TextStyle(fontSize: 12, color: kMuted)),
+                      Text(widget.title!, style: TextStyle(fontSize: 12, color: kMuted)),
                     const SizedBox(height: 2),
                     FittedBox(
                       fit: BoxFit.scaleDown,

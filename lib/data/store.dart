@@ -54,6 +54,12 @@ class Store extends ChangeNotifier {
   bool get notifyComplete => profile['notifyComplete'] != false;
   bool get notifyCompleteRepeating => profile['notifyCompleteRepeating'] == true;
 
+  /// 화면 테마: system(기기 따라감, 기본) / light / dark
+  String get themeMode {
+    final v = profile['themeMode'];
+    return v == 'light' || v == 'dark' ? v as String : 'system';
+  }
+
   Future<void> setPref(String key, Object value) async {
     profile = {...profile, key: value};
     notifyListeners();

@@ -24,14 +24,6 @@ final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // 바탕이 밝은 크림색이라 상태 표시줄/내비게이션 막대 아이콘은 어둡게
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-    statusBarBrightness: Brightness.light,
-    systemNavigationBarColor: kBg,
-    systemNavigationBarIconBrightness: Brightness.dark,
-  ));
   await initializeDateFormatting('ko');
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   Push.listenForeground(messengerKey);
@@ -47,42 +39,29 @@ Future<void> main() async {
   ));
 }
 
-class OurDayApp extends StatelessWidget {
-  final Widget home;
-  const OurDayApp({super.key, this.home = const _Gate()});
+/// 화면 테마 설정: system(기기 설정 따라감) / light / dark
+bool resolveDark(String mode, Brightness platform) =>
+    mode == 'dark' || (mode == 'system' && platform == Brightness.dark);
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      scaffoldMessengerKey: messengerKey,
-      title: '순대희 캘린더',
-      debugShowCheckedModeBanner: false,
-      locale: const Locale('ko'),
-      supportedLocales: const [Locale('ko')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      theme: ThemeData(
+ThemeData buildTheme(bool dark) => ThemeData(
         useMaterial3: true,
         fontFamily: 'Pretendard',
-        brightness: Brightness.light,
-        colorScheme: ColorScheme.fromSeed(seedColor: kAccent).copyWith(
+        brightness: dark ? Brightness.dark : Brightness.light,
+        colorScheme: ColorScheme.fromSeed(seedColor: kAccent, brightness: dark ? Brightness.dark : Brightness.light).copyWith(
           primary: kAccent,
-          onPrimary: Colors.white,
-          primaryContainer: const Color(0xFFFBE3CC),
-          onPrimaryContainer: const Color(0xFF8A4A14),
-          secondaryContainer: const Color(0xFFFBE3CC),
-          onSecondaryContainer: const Color(0xFF8A4A14),
+          onPrimary: dark ? const Color(0xFF2A1708) : Colors.white,
+          primaryContainer: kAccentSoft,
+          onPrimaryContainer: kAccentDeep,
+          secondaryContainer: kAccentSoft,
+          onSecondaryContainer: kAccentDeep,
           surface: kBg,
           onSurface: kInk,
           onSurfaceVariant: kSubtle,
           surfaceContainerLowest: kCard,
           surfaceContainerLow: kBg,
-          surfaceContainer: const Color(0xFFF7EFE1),
-          surfaceContainerHigh: const Color(0xFFF4EBDC),
-          surfaceContainerHighest: const Color(0xFFF0E5D3),
+          surfaceContainer: dark ? const Color(0xFF1B1E26) : const Color(0xFFF7EFE1),
+          surfaceContainerHigh: kFill,
+          surfaceContainerHighest: dark ? const Color(0xFF2E333D) : const Color(0xFFF0E5D3),
           outline: kFaint,
           outlineVariant: kLine,
           error: kRed,
@@ -90,27 +69,27 @@ class OurDayApp extends StatelessWidget {
         scaffoldBackgroundColor: kBg,
         dividerColor: kLine,
         // 모든 화면의 상단 바를 같은 배경으로
-        appBarTheme: const AppBarTheme(
+        appBarTheme: AppBarTheme(
           backgroundColor: Colors.transparent,
           foregroundColor: kInk,
           systemOverlayStyle: SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.dark,
-            statusBarBrightness: Brightness.light,
+            statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+            statusBarBrightness: dark ? Brightness.dark : Brightness.light,
             systemNavigationBarColor: kBg,
-            systemNavigationBarIconBrightness: Brightness.dark,
+            systemNavigationBarIconBrightness: dark ? Brightness.light : Brightness.dark,
           ),
           scrolledUnderElevation: 0,
           surfaceTintColor: Colors.transparent,
         ),
-        navigationBarTheme: const NavigationBarThemeData(
+        navigationBarTheme: NavigationBarThemeData(
           backgroundColor: kCard,
           surfaceTintColor: Colors.transparent,
-          indicatorColor: Color(0xFFFBE3CC),
+          indicatorColor: kAccentSoft,
         ),
         floatingActionButtonTheme: FloatingActionButtonThemeData(
           backgroundColor: kAccent,
-          foregroundColor: Colors.white,
+          foregroundColor: dark ? const Color(0xFF2A1708) : Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),
         cardTheme: CardThemeData(
@@ -125,22 +104,22 @@ class OurDayApp extends StatelessWidget {
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         ),
-        bottomSheetTheme: const BottomSheetThemeData(
+        bottomSheetTheme: BottomSheetThemeData(
           backgroundColor: kBg,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
         ),
         chipTheme: ChipThemeData(
           backgroundColor: kCard,
-          side: const BorderSide(color: kLine),
+          side: BorderSide(color: kLine),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
-          selectedColor: const Color(0xFFFBE3CC),
+          selectedColor: kAccentSoft,
         ),
-        popupMenuTheme: const PopupMenuThemeData(color: kCard, surfaceTintColor: Colors.transparent),
+        popupMenuTheme: PopupMenuThemeData(color: kCard, surfaceTintColor: Colors.transparent),
         // 모든 입력창을 같은 외곽선 스타일로
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: kFaint)),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: kFaint)),
           filled: true,
           fillColor: kCard,
         ),
@@ -149,8 +128,60 @@ class OurDayApp extends StatelessWidget {
           insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-      ),
-      home: home,
+      );
+
+class OurDayApp extends StatefulWidget {
+  final Widget home;
+  const OurDayApp({super.key, this.home = const _Gate()});
+
+  @override
+  State<OurDayApp> createState() => _OurDayAppState();
+}
+
+class _OurDayAppState extends State<OurDayApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // 기기의 어두운 모드가 바뀌면 "시스템" 설정일 때 따라간다
+  @override
+  void didChangePlatformBrightness() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) {
+    final mode = context.select<Store, String>((s) => s.themeMode);
+    final dark = resolveDark(mode, WidgetsBinding.instance.platformDispatcher.platformBrightness);
+    applyPalette(dark); // 이 아래 모든 화면의 k색이 이 값을 따른다
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+      statusBarBrightness: dark ? Brightness.dark : Brightness.light,
+      systemNavigationBarColor: kBg,
+      systemNavigationBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+    ));
+    return MaterialApp(
+      scaffoldMessengerKey: messengerKey,
+      title: '순대희 캘린더',
+      debugShowCheckedModeBanner: false,
+      locale: const Locale('ko'),
+      supportedLocales: const [Locale('ko')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      theme: buildTheme(dark),
+      // 테마가 바뀌면 화면 전체를 새로 그려서 모든 색이 바뀌게 한다
+      builder: (context, child) => KeyedSubtree(key: ValueKey(dark), child: child ?? const SizedBox.shrink()),
+      home: widget.home,
     );
   }
 }

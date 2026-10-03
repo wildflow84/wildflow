@@ -29,7 +29,7 @@ class CategoryManagerScreen extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: Text(
             '항목에는 카테고리를 하나 붙이고, 그 색으로 표시돼. 끌어서 순서를 바꾸고, 눌러서 수정해.',

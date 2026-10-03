@@ -35,6 +35,20 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => _editNickname(context, s),
           ),
           const Divider(height: 32),
+          const _Header('화면'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'system', icon: Icon(Icons.brightness_auto), label: Text('기기 설정')),
+                ButtonSegment(value: 'light', icon: Icon(Icons.light_mode_outlined), label: Text('밝게')),
+                ButtonSegment(value: 'dark', icon: Icon(Icons.dark_mode_outlined), label: Text('어둡게')),
+              ],
+              selected: {s.themeMode},
+              onSelectionChanged: (v) => s.setPref('themeMode', v.first),
+            ),
+          ),
+          const Divider(height: 32),
           const _Header('알림'),
           const _PushTile(),
           SwitchListTile(
@@ -88,7 +102,7 @@ class SettingsScreen extends StatelessWidget {
               onSelectionChanged: (v) => s.setDefaultVisibility(v.first),
             ),
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Text(
               '등록할 때 항목마다 바꿀 수 있어. 카테고리에 기본 공개 범위를 따로 정해두면 그게 우선이야.',
