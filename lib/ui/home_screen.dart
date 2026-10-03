@@ -1149,6 +1149,8 @@ class _TodoTab extends StatefulWidget {
 
 class _TodoTabState extends State<_TodoTab> {
   String _who = 'all'; // all / me / partner
+  String _sort = 'due'; // due=마감 순, category=카테고리별
+  bool _showDone = false;
 
   @override
   Widget build(BuildContext context) {
@@ -1172,6 +1174,18 @@ class _TodoTabState extends State<_TodoTab> {
     final now = DateTime.now();
     final overdue = open.where((i) => isOverdue(i, now)).toList();
     final upcoming = open.where((i) => !overdue.contains(i)).toList();
+    // 완료한 일: 최근에 완료한 순 (되돌리려면 체크를 풀면 돼)
+    final doneList = todos.where((i) {
+      final d = !i.isRecurring ? i.start : today;
+      return isDoneOn(i, d) && (!i.isRecurring || m.occursOn(i, today));
+    }).toList()
+      ..sort((a, b) => (b.lastDoneAt ?? b.start).compareTo(a.lastDoneAt ?? a.start));
+    final catIndex = {for (var k = 0; k < s.categories.length; k++) s.categories[k].id: k};
+    int byCategory(Item a, Item b) {
+      final ca = catIndex[a.categories.firstOrNull] ?? 999, cb = catIndex[b.categories.firstOrNull] ?? 999;
+      return ca != cb ? ca.compareTo(cb) : a.start.compareTo(b.start);
+    }
+    if (_sort == 'category') upcoming.sort(byCategory);
 
     Widget section(String title, List<Item> list) => list.isEmpty
         ? const SizedBox.shrink()
@@ -1190,17 +1204,37 @@ class _TodoTabState extends State<_TodoTab> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
         child: ListView(children: [
-      if (partnerUid != null)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Wrap(spacing: 8, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          if (partnerUid != null)
             for (final (k, label) in [('all', '전체'), ('me', '내 것'), ('partner', '${partnerName ?? '상대'} 것')])
               ChoiceChip(label: Text(label), selected: _who == k, onSelected: (_) => setState(() => _who = k)),
-          ]),
-        ),
+          FilterChip(
+            avatar: const Icon(Icons.task_alt, size: 16),
+            label: const Text('완료한 일'),
+            selected: _showDone,
+            onSelected: (v) => setState(() => _showDone = v),
+          ),
+          PopupMenuButton<String>(
+            tooltip: '정렬',
+            initialValue: _sort,
+            onSelected: (v) => setState(() => _sort = v),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'due', child: Text('마감 빠른 순')),
+              PopupMenuItem(value: 'category', child: Text('카테고리별')),
+            ],
+            child: Chip(
+              avatar: const Icon(Icons.sort, size: 16),
+              label: Text(_sort == 'due' ? '마감 순' : '카테고리별'),
+            ),
+          ),
+        ]),
+      ),
       section('지난 할 일', overdue),
-      section('앞으로', upcoming),
+      section(_sort == 'category' ? '카테고리별' : '앞으로', upcoming),
       if (open.isEmpty) const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('할 일 끝! 순대 산책 ㄱㄱ'))),
+      if (_showDone) section('완료한 일 (${doneList.length})', doneList.take(30).toList()),
     ]),
       ),
     );
