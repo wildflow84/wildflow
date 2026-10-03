@@ -1,0 +1,4 @@
+Pretendard (https://github.com/orioncactus/pretendard)
+Copyright (c) 2021, Kil Hyung-jin, with Reserved Font Name Source Han Sans.
+Licensed under the SIL Open Font License, Version 1.1 (https://openfontlicense.org).
+이 폴더의 글꼴은 한글 2350자와 영문/기호만 남긴 부분 집합입니다.

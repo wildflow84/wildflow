@@ -46,6 +46,7 @@ class OurDayApp extends StatelessWidget {
       ],
       theme: ThemeData(
         useMaterial3: true,
+        fontFamily: 'Pretendard',
         brightness: Brightness.light,
         colorScheme: ColorScheme.fromSeed(seedColor: kAccent).copyWith(
           primary: kAccent,
