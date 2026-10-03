@@ -58,7 +58,7 @@ const defaultCategories = <Category>[
   Category(id: 'family', name: '가족', colorValue: 0xFF3FA45B, order: 2), // 초록
   Category(id: 'money', name: '재테크', colorValue: 0xFFE3A21A, order: 3), // 노랑
   Category(id: 'travel', name: '여행', colorValue: 0xFF8E5BD9, order: 4), // 보라
-  Category(id: 'kid', name: '대희', colorValue: 0xFFE5588C, order: 5), // 분홍
+  Category(id: 'kid', name: '아이', colorValue: 0xFFE5588C, order: 5), // 분홍
 ];
 
 /// 예전 기본 색 (아직 안 바꾼 기본 카테고리는 새 기본 색으로 한 번 바꿔 준다)

@@ -53,8 +53,27 @@
       });
     };
   </script>
+  <style>
+    html, body { margin: 0; background: #FBF5EA; }
+    #splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: #FBF5EA; font-family: -apple-system, 'Pretendard', 'Noto Sans KR', sans-serif; z-index: 10; transition: opacity .25s; }
+    #splash img { width: min(300px, 80vw); height: auto; }
+    #splash h1 { margin: 8px 0 4px; font-size: 22px; color: #3A2E26; }
+    #splash p { margin: 0 0 26px; font-size: 13px; color: #9A8B7D; }
+    #splash i { width: 22px; height: 22px; border: 2.5px solid #F0D3B6; border-top-color: #D9772F; border-radius: 50%; animation: sp 0.9s linear infinite; }
+    @keyframes sp { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
+  <div id="splash"><img src="splash.png" alt=""><h1>순대희 캘린더</h1><p>함께 쓰는 일정과 할 일</p><i></i></div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('splash');
+      if (!el) return;
+      el.style.opacity = '0';
+      setTimeout(function () { el.remove(); }, 300);
+    });
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

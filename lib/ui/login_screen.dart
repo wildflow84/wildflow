@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../data/store.dart';
+import 'splash.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -14,11 +15,11 @@ class LoginScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.calendar_month, size: 72),
-            const SizedBox(height: 12),
+            const HelloArt(width: 280),
+            const SizedBox(height: 8),
             Text('순대희 캘린더', style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 4),
-            const Text('우리 둘의 일정과 할 일'),
+            const Text('함께 쓰는 일정과 할 일'),
             const SizedBox(height: 32),
             FilledButton.icon(
               icon: const Icon(Icons.login),

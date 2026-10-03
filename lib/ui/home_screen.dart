@@ -1292,7 +1292,7 @@ class _TodoTabState extends State<_TodoTab> {
       ),
       section('지난 할 일', overdue, byDay: _sort == 'due'),
       section(_sort == 'category' ? '카테고리별' : '앞으로', upcoming, byDay: _sort == 'due'),
-      if (open.isEmpty) const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('할 일 끝! 순대 산책 ㄱㄱ'))),
+      if (open.isEmpty) const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('할 일 끝! 오늘도 수고했어'))),
       if (_showDone) section('완료한 일 (${doneList.length})', doneList.take(30).toList()),
     ]),
       ),

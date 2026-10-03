@@ -12,6 +12,7 @@ import 'ui/home_screen.dart';
 import 'ui/login_screen.dart';
 import 'ui/space_screen.dart';
 import 'ui/palette.dart';
+import 'ui/splash.dart';
 
 /// 앱이 열려 있는 동안 받은 푸시를 스낵바로 보여주기 위한 키
 final messengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -136,7 +137,7 @@ class _Gate extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<Store>();
     if (s.loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const SplashView();
     }
     if (s.user == null) return const LoginScreen();
     if (s.spaceId == null) return const SpaceScreen();
