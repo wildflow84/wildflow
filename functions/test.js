@@ -123,3 +123,15 @@ test('출발 알림: 거리 어림값과 위치 신선도, 문구', () => {
   assert.match(lib.departMessage({ title: 'a', departFrom: { toMillis: () => Date.UTC(2026, 9, 3, 6) } }, 600, true, '오류 403').body, /대략, 길찾기 오류 403/);
   assert.match(m.body, /15:00 시작/);
 });
+
+test('출발 알림: 이동 수단별 어림 시간', () => {
+  const d = 3000; // 3km
+  const walk = lib.estimateDurationSec('walk', d);
+  const car = lib.estimateDurationSec('car', d);
+  const transit = lib.estimateDurationSec('transit', d);
+  assert.ok(walk > 40 * 60 && walk < 60 * 60, `도보 ${walk}`);
+  assert.ok(car < 15 * 60, `자동차 ${car}`);
+  assert.ok(transit > 15 * 60 && transit < 35 * 60, `대중교통 ${transit}`);
+  const m = lib.departMessage({ title: 'a', departMode: 'walk', departFrom: { toMillis: () => Date.UTC(2026, 9, 3, 6) } }, 1200, true, '');
+  assert.match(m.body, /걸어서 약 20분\(대략\)/);
+});

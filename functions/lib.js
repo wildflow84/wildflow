@@ -141,6 +141,13 @@ function fallbackDurationSec(distM) {
   return Math.round(((distM * 1.4) / (35000 / 3600)));
 }
 
+/** 이동 수단별 어림 시간(초). car는 길찾기 실패 시의 대체값, walk/transit은 직선거리 기반 어림값 */
+function estimateDurationSec(mode, distM) {
+  if (mode === 'walk') return Math.round((distM * 1.3) / (4500 / 3600)); // 시속 4.5km, 굽은 길 1.3배
+  if (mode === 'transit') return Math.round((distM * 1.35) / (22000 / 3600)) + 10 * 60; // 시속 22km + 걷기/대기 10분
+  return fallbackDurationSec(distM);
+}
+
 /** 위치가 쓸 만큼 최근인지 */
 function locFresh(lastLoc, nowMs) {
   if (!lastLoc || typeof lastLoc.lat !== 'number' || typeof lastLoc.lng !== 'number') return false;
@@ -163,12 +170,13 @@ function kstHHmm(ms) {
 }
 
 function departMessage(item, durationSec, approximate, reason) {
+  const modeName = item.departMode === 'walk' ? '걸어서 ' : item.departMode === 'transit' ? '대중교통으로 ' : '';
   const startMs = millis(item.departFrom);
   const min = Math.max(1, Math.round(durationSec / 60));
   const where = item.location ? ` ${item.location}` : '';
   return {
     title: '지금 출발해야 해',
-    body: `"${item.title}"${where} · 약 ${min}분${approximate ? '(대략' + (reason ? ', 길찾기 ' + reason : '') + ')' : ''} 걸려, ${kstHHmm(startMs)} 시작`,
+    body: `"${item.title}"${where} · ${modeName}약 ${min}분${approximate ? '(대략' + (reason ? ', 길찾기 ' + reason : '') + ')' : ''} 걸려, ${kstHHmm(startMs)} 시작`,
   };
 }
 
@@ -178,6 +186,7 @@ module.exports = {
   LOC_FRESH_MS,
   haversineM,
   fallbackDurationSec,
+  estimateDurationSec,
   locFresh,
   dueForDepart,
   departMessage,

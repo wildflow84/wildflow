@@ -75,6 +75,7 @@ class _EditSheetState extends State<_EditSheet> {
   late String _assignee = widget.item?.assignee ?? '';
   late bool _dday = widget.item?.dday ?? false;
   late bool _departAlert = widget.item?.departAlert ?? false;
+  late String _departMode = widget.item?.departMode ?? 'car';
   late int? _annivYear = widget.item?.annivYear;
   late int? _remind = widget.item?.remindMinutes;
   late m.Visibility _vis;
@@ -277,6 +278,7 @@ class _EditSheetState extends State<_EditSheet> {
       visibility: _vis,
       dday: _dday,
       departAlert: _type == ItemType.event && _lat != null && !_allDay && _rule == null && _departAlert,
+      departMode: _departMode,
       annivYear: _rule?.freq == Freq.yearly && _rule?.interval == 1 ? _annivYear : null,
       clearAnniv: !(_rule?.freq == Freq.yearly && _rule?.interval == 1) || _annivYear == null,
       remindMinutes: remind,
@@ -797,6 +799,28 @@ class _EditSheetState extends State<_EditSheet> {
                 value: _departAlert,
                 onChanged: (v) => setState(() => _departAlert = v),
               ),
+            if (_type == ItemType.event && _lat != null && !_allDay && _rule == null && _departAlert) ...[
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'car', icon: Icon(Icons.directions_car_outlined), label: Text('자동차')),
+                  ButtonSegment(value: 'walk', icon: Icon(Icons.directions_walk), label: Text('도보')),
+                  ButtonSegment(value: 'transit', icon: Icon(Icons.directions_bus_outlined), label: Text('대중교통')),
+                ],
+                selected: {_departMode},
+                onSelectionChanged: (v) => setState(() => _departMode = v.first),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 6, 4, 4),
+                child: Text(
+                  _departMode == 'car'
+                      ? '실시간 교통을 반영한 길찾기 시간으로 계산해'
+                      : _departMode == 'walk'
+                          ? '직선거리로 어림잡은 걷는 시간이야 (시속 4.5km, 굽은 길 감안)'
+                          : '직선거리로 어림잡은 값이야 (환승·대기 포함). 정확한 대중교통 시간은 아직 못 구해',
+                  style: TextStyle(color: kMuted, fontSize: 12),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             SegmentedButton<m.Visibility>(
               segments: const [

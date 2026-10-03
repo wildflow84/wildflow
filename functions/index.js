@@ -301,10 +301,13 @@ exports.sendDepartAlerts = onSchedule({ schedule: 'every 5 minutes', timeZone: '
     if (!lib.locFresh(owner.lastLoc, now)) continue;
     const distM = lib.haversineM(owner.lastLoc.lat, owner.lastLoc.lng, item.lat, item.lng);
     // 길찾기 호출을 아끼려고, 직선거리로 봐도 아직 한참 남았으면 건너뛴다
-    const rough = lib.fallbackDurationSec(distM);
+    const mode = item.departMode || 'car';
+    const rough = lib.estimateDurationSec(mode, distM);
     const startMs = item.departFrom.toMillis();
     if (now < startMs - rough * 1000 * 3 - 60 * 60 * 1000) continue;
-    let sec = await kakaoDurationSec(owner.lastLoc.lat, owner.lastLoc.lng, item.lat, item.lng);
+    // 자동차만 길찾기 서비스를 쓴다. 도보/대중교통은 어림값 (문구에 "대략"이 붙는다)
+    let sec = mode === 'car' ? await kakaoDurationSec(owner.lastLoc.lat, owner.lastLoc.lng, item.lat, item.lng) : null;
+    if (mode !== 'car') lastKakaoError = '';
     const approximate = sec == null;
     if (approximate) sec = rough;
     if (!lib.dueForDepart(item, sec, now)) continue;

@@ -135,6 +135,13 @@ class WidgetSync {
           'agendaJson',
           agendaJson(visible, today,
               colorOf: colorOf, categoryName: categoryName, holidaysOn: holidaysOn, spaceId: spaceId));
+      // 앞으로 24시간 안에 출발 알림 일정이 있으면 안드로이드가 15분마다 위치를 서버에 남긴다 (없으면 아무것도 안 함)
+      final now = DateTime.now();
+      final watch = visible.any((i) {
+        final f = i.departFrom;
+        return f != null && f.isAfter(now) && f.difference(now) <= const Duration(hours: 24);
+      });
+      await HomeWidget.saveWidgetData<bool>('departWatch', watch);
       await HomeWidget.saveWidgetData<String>('eventDays', eventDays(visible, today));
       await HomeWidget.updateWidget(androidName: _provider);
     } catch (_) {

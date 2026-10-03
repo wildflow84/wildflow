@@ -67,6 +67,8 @@ class Item {
   final bool dday;
   /// 출발 시간 알림: 현재 위치에서 이 일정 장소까지 걸리는 시간을 계산해서 출발할 때 알려 준다 (장소 좌표가 있는 시각 일정)
   final bool departAlert;
+  /// 출발 시간 계산 기준: car(자동차 길찾기) / walk(도보) / transit(대중교통 어림값)
+  final String departMode;
   /// 기념일 기준 연도. 정해져 있으면 매년 반복 항목에 `N주년`(또는 생일이면 N번째)을 표시. null이면 표시 안 함.
   final int? annivYear;
   /// 일정 구독(.ics)에서 가져온 항목이면 그 구독의 id. 서버가 12시간마다 원본대로 갱신한다.
@@ -155,6 +157,7 @@ class Item {
         assignee: i.assignee,
         dday: i.dday,
         departAlert: i.departAlert,
+        departMode: i.departMode,
         annivYear: i.annivYear,
         subscriptionId: null, // 복제본은 구독과 무관
         remindMinutes: i.remindMinutes,
@@ -222,6 +225,7 @@ class Item {
     this.assignee = '',
     this.dday = false,
     this.departAlert = false,
+    this.departMode = 'car',
     this.annivYear,
     this.subscriptionId,
     this.remindMinutes,
@@ -266,6 +270,7 @@ class Item {
     String? assignee,
     bool? dday,
     bool? departAlert,
+    String? departMode,
     int? annivYear,
     bool clearAnniv = false,
     int? remindMinutes,
@@ -305,6 +310,7 @@ class Item {
         assignee: assignee ?? this.assignee,
         dday: dday ?? this.dday,
         departAlert: departAlert ?? this.departAlert,
+        departMode: departMode ?? this.departMode,
         annivYear: clearAnniv ? null : (annivYear ?? this.annivYear),
         subscriptionId: subscriptionId,
         remindMinutes: clearRemind ? null : (remindMinutes ?? this.remindMinutes),
@@ -344,6 +350,7 @@ class Item {
         'assignee': assignee,
         'dday': dday,
         'departAlert': departAlert,
+        'departMode': departMode,
         'departFrom': departFrom == null ? null : Timestamp.fromDate(departFrom!),
         'annivYear': annivYear,
         'subscriptionId': subscriptionId,
@@ -391,6 +398,7 @@ class Item {
       assignee: (m['assignee'] as String?) ?? '',
       dday: m['dday'] == true,
       departAlert: m['departAlert'] == true,
+      departMode: (m['departMode'] as String?) ?? 'car',
       annivYear: (m['annivYear'] as num?)?.toInt(),
       subscriptionId: m['subscriptionId'] as String?,
       remindMinutes: (m['remindMinutes'] as num?)?.toInt(),

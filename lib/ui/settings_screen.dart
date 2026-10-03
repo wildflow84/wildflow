@@ -1,5 +1,7 @@
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'palette.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -88,6 +90,16 @@ class SettingsScreen extends StatelessWidget {
               onChanged: (v) => s.setPref('notifyCompleteRepeating', v),
             ),
           const Divider(height: 32),
+          if (!kIsWeb) ...[
+            ListTile(
+              leading: const Icon(Icons.my_location_outlined),
+              title: const Text('위치 허용 (출발 시간 알림)'),
+              subtitle: const Text('앱을 안 열어도 위치를 갱신하려면 "항상 허용"으로 바꿔줘'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _askLocation(context),
+            ),
+            const Divider(height: 32),
+          ],
           const _Header('새 일정 / 할 일의 기본 공개 범위'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -265,4 +277,30 @@ class _PushTileState extends State<_PushTile> {
       onTap: can && !_busy ? _toggle : null,
     );
   }
+}
+
+/// 위치 권한을 요청하고, "항상 허용"이 아니면 설정 화면으로 안내한다.
+/// 안드로이드는 "항상 허용"을 앱 안에서 바로 줄 수 없어서 설정에서 직접 골라야 한다.
+Future<void> _askLocation(BuildContext context) async {
+  var p = await Geolocator.checkPermission();
+  if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
+  if (!context.mounted) return;
+  if (p == LocationPermission.always) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('이미 항상 허용돼 있어')));
+    return;
+  }
+  final go = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('위치를 "항상 허용"으로'),
+      content: Text(p == LocationPermission.whileInUse || p == LocationPermission.deniedForever
+          ? '지금은 앱을 쓰는 동안만 위치를 쓸 수 있어. 앱을 안 열어도 출발 시간을 맞추려면 설정 → 위치(권한)에서 "항상 허용"을 골라줘.'
+          : '위치 권한이 필요해. 설정 → 위치(권한)에서 허용해줘.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('나중에')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('설정 열기')),
+      ],
+    ),
+  );
+  if (go == true) await Geolocator.openAppSettings();
 }
