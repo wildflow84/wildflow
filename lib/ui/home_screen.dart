@@ -1025,7 +1025,7 @@ class _DayList extends StatelessWidget {
       Expanded(
         child: items.isEmpty
             ? const Center(child: Text('비어 있어'))
-            : ListView(controller: controller, children: [
+            : ListView(controller: controller, padding: EdgeInsets.only(bottom: MediaQuery.viewPaddingOf(context).bottom), children: [
                 for (final i in items) ItemTile(item: i, day: day),
               ]),
       ),

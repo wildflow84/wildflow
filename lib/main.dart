@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +20,14 @@ final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // 바탕이 밝은 크림색이라 상태 표시줄/내비게이션 막대 아이콘은 어둡게
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    statusBarBrightness: Brightness.light,
+    systemNavigationBarColor: kBg,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ));
   await initializeDateFormatting('ko');
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   Push.listenForeground(messengerKey);
@@ -74,6 +83,13 @@ class OurDayApp extends StatelessWidget {
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
           foregroundColor: kInk,
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.dark,
+            statusBarBrightness: Brightness.light,
+            systemNavigationBarColor: kBg,
+            systemNavigationBarIconBrightness: Brightness.dark,
+          ),
           scrolledUnderElevation: 0,
           surfaceTintColor: Colors.transparent,
         ),

@@ -27,6 +27,7 @@ Future<void> showEditSheet(BuildContext context,
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true, // 위쪽 상태 표시줄과 겹치지 않게
     builder: (_) => _EditSheet(item: item, day: day ?? DateTime.now(), type: type),
   );
 }
@@ -416,7 +417,14 @@ class _EditSheetState extends State<_EditSheet> {
     );
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          16, 16, 16, MediaQuery.viewInsetsOf(context).bottom + 12),
+          16,
+          16,
+          16,
+          // 키보드가 올라오면 키보드 위로, 아니면 아래 시스템 버튼(홈/뒤로가기 막대) 위로
+          (MediaQuery.viewInsetsOf(context).bottom > MediaQuery.viewPaddingOf(context).bottom
+                  ? MediaQuery.viewInsetsOf(context).bottom
+                  : MediaQuery.viewPaddingOf(context).bottom) +
+              12),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Flexible(
       child: SingleChildScrollView(

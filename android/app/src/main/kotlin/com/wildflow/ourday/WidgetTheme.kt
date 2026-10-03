@@ -19,10 +19,14 @@ class WidgetTheme(
     /** 카드(날짜별 묶음) 색 */
     val card: Int
         get() = when {
-            !lightBg -> Color.argb(0x33, 255, 255, 255)
+            !lightBg -> Color.WHITE
             bg == Color.WHITE -> Color.parseColor("#F4F1EA")
             else -> Color.WHITE
         }
+
+    /** 카드 투명도(0~255). 어두운 배경에서는 반투명 흰색으로 */
+    val cardAlpha: Int
+        get() = if (lightBg) 255 else 56
 
     /** 카드 안 구분선 색 */
     val line: Int

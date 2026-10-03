@@ -113,6 +113,7 @@ class WidgetListService : RemoteViewsService() {
             }
             v.setImageViewResource(R.id.row_bg, bg)
             v.setInt(R.id.row_bg, "setColorFilter", theme.card)
+            v.setInt(R.id.row_bg, "setImageAlpha", theme.cardAlpha)
             v.setViewVisibility(R.id.row_divider, if (row.pos == 2 || row.pos == 3) View.VISIBLE else View.GONE)
             v.setInt(R.id.row_divider, "setBackgroundColor", theme.line)
             // 카드가 끝나는 줄 아래 여백
