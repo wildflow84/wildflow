@@ -106,6 +106,40 @@ class Item {
     return {for (final k in keys.sublist(keys.length - 60)) k: live[k]!};
   }
 
+  /// 같은 내용으로 새 항목을 만든다 (저장하면 새 id가 붙는다).
+  factory Item.fresh(Item i) => Item(
+        id: '',
+        type: i.type,
+        title: i.title,
+        note: i.note,
+        location: i.location,
+        lat: i.lat,
+        lng: i.lng,
+        overseas: i.overseas,
+        photoUrl: i.photoUrl,
+        start: i.start,
+        end: i.end,
+        allDay: i.allDay,
+        done: i.done,
+        doneDates: i.doneDates,
+        categories: i.categories,
+        color: i.color,
+        visibility: i.visibility,
+        ownerUid: i.ownerUid,
+        repeat: i.repeat,
+        rule: i.rule,
+        repeatUntil: i.repeatUntil,
+        exceptions: i.exceptions,
+        rollEvery: i.rollEvery,
+        rollUnit: i.rollUnit,
+        rollFromCompletion: i.rollFromCompletion,
+        rollRule: i.rollRule,
+        lastDoneBy: i.lastDoneBy,
+        lastDoneAt: i.lastDoneAt,
+        checklist: i.checklist,
+        checksByDate: i.checksByDate,
+      );
+
   int get checksLeft => checklist.where((c) => !c.done).length;
   bool get hasChecklist => checklist.isNotEmpty;
 
@@ -502,6 +536,53 @@ Item? applyRepeatDelete(Item item, DateTime day, RepeatDelete scope) {
   }
 }
 
+/// 반복 항목 수정 범위: 이 회차만 / 이 회차 이후 모두 / 전체
+enum RepeatEdit { thisOnly, following, all }
+
+/// 반복 항목 [original]의 [day] 회차를 [edited](수정한 내용)로 바꿀 때 저장할 항목들.
+/// - 전체: [edited] 그대로
+/// - 이 회차만: 원본에 그날 제외를 넣고, 그날 하루짜리 새 일정을 만든다
+/// - 이후 모두: 원본은 전날까지로 끊고, 그날부터 [edited] 내용의 새 반복을 만든다 (첫 회차면 전체와 같다)
+/// 새로 만들 항목은 id가 빈 문자열이다. [occurrenceStart]는 새 항목의 시작(날짜+시각).
+List<Item> applyRepeatEdit(Item original, Item edited, DateTime day, RepeatEdit scope,
+    {required DateTime occurrenceStart}) {
+  final d = dateOnly(day);
+  if (scope == RepeatEdit.following && !d.isAfter(dateOnly(original.start))) scope = RepeatEdit.all;
+  switch (scope) {
+    case RepeatEdit.all:
+      return [edited];
+    case RepeatEdit.thisOnly:
+      final single = edited.copyWith(
+        start: occurrenceStart,
+        clearEnd: true,
+        repeat: Repeat.none,
+        clearRule: true,
+        clearRepeatUntil: true,
+        exceptions: const [],
+        doneDates: const [],
+        checksByDate: const {},
+        clearRollRule: true,
+        rollEvery: 0,
+        done: false,
+      );
+      return [
+        Item.fresh(single),
+        original.copyWith(exceptions: [...original.exceptions, dateKey(d)]),
+      ];
+    case RepeatEdit.following:
+      bool from(String k) => k.compareTo(dateKey(d)) >= 0;
+      final next = edited.copyWith(
+        start: occurrenceStart,
+        doneDates: [...original.doneDates.where(from)],
+        exceptions: [...original.exceptions.where(from)],
+        checksByDate: {for (final e in original.checksByDate.entries) if (from(e.key)) e.key: e.value},
+      );
+      return [
+        Item.fresh(next),
+        original.copyWith(repeatUntil: DateTime(d.year, d.month, d.day - 1)),
+      ];
+  }
+}
 
 /// 항목을 [deltaDays]일만큼 옮긴다 (드래그로 날짜 변경). 시각과 기간(여러 날 일정)은 그대로 유지.
 Item moveItemByDays(Item item, int deltaDays) {

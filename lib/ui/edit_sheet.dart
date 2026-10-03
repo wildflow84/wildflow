@@ -8,7 +8,7 @@ import '../data/place_photo.dart';
 import '../data/place_search.dart';
 import '../data/store.dart';
 import '../models/item.dart' as m;
-import '../models/item.dart' show Item, ItemType, RepeatDelete, dateOnly, hasEndTime, repeatFor;
+import '../models/item.dart' show Item, ItemType, RepeatDelete, RepeatEdit, applyRepeatEdit, dateOnly, hasEndTime, repeatFor;
 import '../models/recurrence.dart';
 import 'category_manager.dart';
 import 'checklist.dart';
@@ -56,6 +56,7 @@ class _EditSheetState extends State<_EditSheet> {
   Timer? _photoDebounce;
   late String? _photoUrl = widget.item?.photoUrl;
   late DateTime _start = widget.item?.start ?? dateOnly(widget.day);
+  bool _startTouched = false; // 날짜를 직접 고쳤는지 (반복 항목 수정 시 새 일정의 날짜 결정)
   late DateTime? _end = widget.item?.end == null ? null : dateOnly(widget.item!.end!);
   late bool _allDay = widget.item?.allDay ?? true;
   late TimeOfDay _startTime = widget.item != null && !widget.item!.allDay
@@ -126,6 +127,7 @@ class _EditSheetState extends State<_EditSheet> {
         _end = d.isAtSameMomentAs(_start) || d.isBefore(_start) ? null : d; // null = 시작일과 같은 날
       } else {
         _start = d;
+        _startTouched = true;
         if (_end != null && _end!.isBefore(d)) _end = null;
       }
     });
@@ -136,6 +138,7 @@ class _EditSheetState extends State<_EditSheet> {
     if (d == null) return;
     setState(() {
       _start = d;
+      _startTouched = true;
       if (_end != null && _end!.isBefore(d)) _end = null;
     });
   }
@@ -182,6 +185,37 @@ class _EditSheetState extends State<_EditSheet> {
     );
   }
 
+  Future<RepeatEdit?> _askEditScope(Item item) {
+    final day = DateFormat('M월 d일 (E)', 'ko').format(widget.day);
+    final later = dateOnly(widget.day).isAfter(dateOnly(item.start));
+    Widget option(RepeatEdit v, String title, String sub) => SimpleDialogOption(
+          onPressed: () => Navigator.pop(context, v),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: const TextStyle(fontSize: 16)),
+              Text(sub, style: const TextStyle(fontSize: 12, color: Colors.white60)),
+            ]),
+          ),
+        );
+    return showDialog<RepeatEdit>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text('"${item.title}" 반복 수정'),
+        children: [
+          option(RepeatEdit.thisOnly, '이 일정만', '$day 하루만 바꾸고 나머지는 그대로'),
+          option(RepeatEdit.following, '이 일정 및 이후 일정',
+              later ? '$day부터 이후 전부 바꿔 (이전은 그대로)' : '첫 회차라서 모든 일정과 같아'),
+          option(RepeatEdit.all, '모든 일정', '과거·현재·미래 모든 반복'),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _save() async {
     if (_title.text.trim().isEmpty) return;
     final s = context.read<Store>();
@@ -206,7 +240,7 @@ class _EditSheetState extends State<_EditSheet> {
     }
     final base = widget.item ??
         Item(id: '', type: _type, title: '', start: startDt, ownerUid: s.uid);
-    await s.save(base.copyWith(
+    final edited = base.copyWith(
       type: _type,
       title: _title.text.trim(),
       note: _note.text.trim(),
@@ -239,7 +273,20 @@ class _EditSheetState extends State<_EditSheet> {
       rollFromCompletion: _rollFromCompletion,
       rollRule: rollRule,
       clearRollRule: rollRule == null,
-    ));
+    );
+    final orig = widget.item;
+    if (orig != null && orig.isRecurring && !isRoll) {
+      // 반복 항목: 이 일정만 / 이후 모두 / 전체 중 고른 범위로 저장
+      final scope = await _askEditScope(orig);
+      if (scope == null) return;
+      final occDate = _startTouched ? dateOnly(_start) : dateOnly(widget.day);
+      final occ = _allDay ? occDate : DateTime(occDate.year, occDate.month, occDate.day, _startTime.hour, _startTime.minute);
+      for (final it in applyRepeatEdit(orig, edited, widget.day, scope, occurrenceStart: occ)) {
+        await s.save(it);
+      }
+    } else {
+      await s.save(edited);
+    }
     if (mounted) Navigator.pop(context);
   }
 
