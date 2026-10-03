@@ -52,5 +52,6 @@ class Subscription {
 /// 자주 쓰는 구독 주소 (주소를 직접 붙여넣어도 된다)
 const subscriptionPresets = <(String, String)>[
   ('아스날 경기 일정', 'https://ics.fixtur.es/v2/arsenal.ics'),
+  ('아틀레티코 마드리드 경기 일정', 'https://ics.fixtur.es/v2/atletico-madrid.ics'),
   ('아스날 경기 일정 (다른 서비스)', 'https://twentyclubs.com/calendars/arsenal.ics'),
 ];
