@@ -36,6 +36,10 @@
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
         </activity>
+        <service
+            android:name=".WidgetListService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
         <receiver
             android:name=".OurDayWidget"
             android:exported="true">

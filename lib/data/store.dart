@@ -99,7 +99,7 @@ class Store extends ChangeNotifier {
     _itemsSub = repo.watchItems(id).listen((list) {
       items = list;
       notifyListeners();
-      WidgetSync.push(visibleItems, uid);
+      _pushWidget();
     }, onError: (e) {
       error = '$e';
       notifyListeners();
@@ -234,10 +234,21 @@ class Store extends ChangeNotifier {
   /// "공유 캘린더 보기" 토글 (상대가 올린 같이 보기 항목)
   bool get showShared => filters.contains('partner');
 
+  /// 안드로이드 홈 화면 위젯에 지금 보이는 일정/할 일을 밀어 넣는다
+  void _pushWidget() {
+    WidgetSync.push(
+      visibleItems,
+      uid,
+      colorOf: (i) => colorOf(i).toARGB32(),
+      categoryName: (i) => categoriesOf(i).first.name,
+      holidaysOn: (d) => [for (final m in cal.marksOn(d)) if (m.isHoliday) m.name],
+    );
+  }
+
   void toggleFilter(String f) {
     filters.contains(f) ? filters.remove(f) : filters.add(f);
     notifyListeners();
-    WidgetSync.push(visibleItems, uid);
+    _pushWidget();
   }
 
   List<Item> itemsOn(DateTime day) {

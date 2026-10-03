@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
@@ -12,6 +14,8 @@ class WidgetSync {
   static const _provider = 'OurDayWidget';
   static const _agendaDays = 7;
   static const _maxLines = 10;
+  static const _jsonDays = 14;
+  static const _jsonMaxItems = 60;
 
   static String _line(Item i, DateTime day) {
     final t = timeLabel(i);
@@ -50,6 +54,52 @@ class WidgetSync {
     return lines.take(_maxLines).join('\n');
   }
 
+  /// 목록형 위젯용 JSON: 오늘부터 [_jsonDays]일, 일정/할 일이 있거나 공휴일인 날만.
+  /// [{label, kind(today|holiday|sun|sat|day), note, items:[{t, todo, done, time, place, cat, color, rep, priv}]}]
+  static String agendaJson(
+    List<Item> visible,
+    DateTime today, {
+    int Function(Item)? colorOf,
+    String Function(Item)? categoryName,
+    List<String> Function(DateTime)? holidaysOn,
+  }) {
+    final df = DateFormat('M월 d일 (E)', 'ko');
+    final days = <Map<String, dynamic>>[];
+    var count = 0;
+    for (var d = 0; d < _jsonDays && count < _jsonMaxItems; d++) {
+      final day = DateTime(today.year, today.month, today.day + d);
+      final items = _on(visible, day);
+      final holidays = holidaysOn?.call(day) ?? const <String>[];
+      if (items.isEmpty && holidays.isEmpty && d > 0) continue;
+      final kind = d == 0
+          ? 'today'
+          : (holidays.isNotEmpty || day.weekday == DateTime.sunday)
+              ? 'holiday'
+              : day.weekday == DateTime.saturday
+                  ? 'sat'
+                  : 'day';
+      final label = d == 0 ? '오늘 · ${df.format(day)}' : df.format(day);
+      final list = <Map<String, dynamic>>[];
+      for (final i in items) {
+        if (count >= _jsonMaxItems) break;
+        count++;
+        list.add({
+          't': i.title,
+          'todo': i.type == ItemType.todo,
+          'done': isDoneOn(i, day),
+          'time': timeLabel(i) ?? '',
+          'place': i.location,
+          'cat': categoryName?.call(i) ?? '',
+          'color': colorOf?.call(i) ?? 0xFF4A7BD9,
+          'rep': i.isRecurring ? (i.effectiveRule?.describe(i.start) ?? '') : '',
+          'priv': i.visibility == Visibility.private,
+        });
+      }
+      days.add({'label': label, 'kind': kind, 'note': holidays.take(2).join(' '), 'items': list});
+    }
+    return jsonEncode(days);
+  }
+
   /// 달력형 위젯용: 지난달 1일부터 다음 달 말일까지 일정/할 일이 있는 날
   static String eventDays(List<Item> visible, DateTime today) {
     final start = DateTime(today.year, today.month - 1, 1);
@@ -62,12 +112,21 @@ class WidgetSync {
     return out.join(',');
   }
 
-  static Future<void> push(List<Item> visible, String myUid) async {
+  static Future<void> push(
+    List<Item> visible,
+    String myUid, {
+    int Function(Item)? colorOf,
+    String Function(Item)? categoryName,
+    List<String> Function(DateTime)? holidaysOn,
+  }) async {
     if (kIsWeb) return;
     final today = dateOnly(DateTime.now());
     try {
       await HomeWidget.saveWidgetData<String>('title', DateFormat('M월 d일 (E)', 'ko').format(today));
       await HomeWidget.saveWidgetData<String>('body', agendaText(visible, today));
+      await HomeWidget.saveWidgetData<String>(
+          'agendaJson',
+          agendaJson(visible, today, colorOf: colorOf, categoryName: categoryName, holidaysOn: holidaysOn));
       await HomeWidget.saveWidgetData<String>('eventDays', eventDays(visible, today));
       await HomeWidget.updateWidget(androidName: _provider);
     } catch (_) {

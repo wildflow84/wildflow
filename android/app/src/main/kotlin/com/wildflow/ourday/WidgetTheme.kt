@@ -12,6 +12,27 @@ class WidgetTheme(
     val accent: Int,
     val onAccent: Int
 ) {
+    /** 배경이 밝은 색인지 (밝으면 어두운 글자, 어두우면 밝은 글자) */
+    val lightBg: Boolean
+        get() = (Color.red(bg) * 299 + Color.green(bg) * 587 + Color.blue(bg) * 114) / 1000 > 160
+
+    /** 카드(날짜별 묶음) 색 */
+    val card: Int
+        get() = when {
+            !lightBg -> Color.argb(0x33, 255, 255, 255)
+            bg == Color.WHITE -> Color.parseColor("#F4F1EA")
+            else -> Color.WHITE
+        }
+
+    /** 카드 안 구분선 색 */
+    val line: Int
+        get() = if (lightBg) Color.parseColor("#14000000") else Color.parseColor("#33FFFFFF")
+
+    val red: Int
+        get() = if (lightBg) Color.parseColor("#D9534F") else Color.WHITE
+    val blue: Int
+        get() = if (lightBg) Color.parseColor("#3D7DCA") else Color.WHITE
+
     companion object {
         val all: List<WidgetTheme> = listOf(
             WidgetTheme("크림", Color.parseColor("#FBF5EA"), Color.parseColor("#3A2E26"), Color.parseColor("#9A8B7D"), Color.parseColor("#D9772F"), Color.WHITE),

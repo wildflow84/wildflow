@@ -5,6 +5,8 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
+import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetProvider
@@ -21,6 +23,9 @@ class OurDayWidget : HomeWidgetProvider() {
     ) {
         appWidgetIds.forEach { id ->
             appWidgetManager.updateAppWidget(id, build(context, id, widgetData))
+            if (WidgetPrefs(context).style(id) != "calendar") {
+                appWidgetManager.notifyAppWidgetViewDataChanged(id, R.id.widget_list)
+            }
         }
     }
 
@@ -61,23 +66,33 @@ class OurDayWidget : HomeWidgetProvider() {
             views.setInt(R.id.widget_bg, "setColorFilter", theme.bg)
             views.setInt(R.id.widget_bg, "setImageAlpha", cfg.opacity(id) * 255 / 100)
 
-            if (calendar) fillCalendar(context, views, theme, data) else fillList(views, theme, data)
-
             val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            val pi = PendingIntent.getActivity(
-                context, 0, launch ?: Intent(),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            views.setOnClickPendingIntent(R.id.widget_root, pi)
+            var flags = PendingIntent.FLAG_UPDATE_CURRENT
+            flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                flags or PendingIntent.FLAG_MUTABLE
+            } else {
+                flags
+            }
+            val pi = PendingIntent.getActivity(context, 0, launch ?: Intent(), flags)
+
+            if (calendar) {
+                fillCalendar(context, views, theme, data)
+                views.setOnClickPendingIntent(R.id.widget_root, pi)
+            } else {
+                fillList(context, id, views, theme, pi)
+            }
             return views
         }
 
-        private fun fillList(views: RemoteViews, theme: WidgetTheme, data: SharedPreferences) {
-            val title = SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Calendar.getInstance().time)
-            views.setTextViewText(R.id.widget_title, title)
-            views.setTextViewText(R.id.widget_body, data.getString("body", "앱을 열어서 로그인해줘"))
-            views.setTextColor(R.id.widget_title, theme.text)
-            views.setTextColor(R.id.widget_body, theme.text)
+        private fun fillList(context: Context, id: Int, views: RemoteViews, theme: WidgetTheme, pi: PendingIntent) {
+            val intent = Intent(context, WidgetListService::class.java)
+            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+            intent.data = Uri.parse(intent.toUri(Intent.URI_INTENT_SCHEME))
+            views.setRemoteAdapter(R.id.widget_list, intent)
+            views.setEmptyView(R.id.widget_list, R.id.widget_empty)
+            views.setPendingIntentTemplate(R.id.widget_list, pi)
+            views.setTextColor(R.id.widget_empty, theme.sub)
+            views.setOnClickPendingIntent(R.id.widget_empty, pi)
         }
 
         private fun fillCalendar(context: Context, views: RemoteViews, theme: WidgetTheme, data: SharedPreferences) {
