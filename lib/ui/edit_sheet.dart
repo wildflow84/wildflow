@@ -71,6 +71,7 @@ class _EditSheetState extends State<_EditSheet> {
   late List<String> _cats; // 항상 하나 (이전 버전에서 여러 개였던 항목은 첫 번째만 쓴다)
   late String _assignee = widget.item?.assignee ?? '';
   late bool _dday = widget.item?.dday ?? false;
+  late int? _annivYear = widget.item?.annivYear;
   late int? _remind = widget.item?.remindMinutes;
   late m.Visibility _vis;
   late bool _visTouched = widget.item != null; // 직접 바꾸면 카테고리 기본값으로 덮어쓰지 않는다
@@ -271,6 +272,8 @@ class _EditSheetState extends State<_EditSheet> {
       clearColor: _color == null,
       visibility: _vis,
       dday: _dday,
+      annivYear: _rule?.freq == Freq.yearly && _rule?.interval == 1 ? _annivYear : null,
+      clearAnniv: !(_rule?.freq == Freq.yearly && _rule?.interval == 1) || _annivYear == null,
       remindMinutes: remind,
       clearRemind: remind == null,
       // 담당자는 같이 보기 할 일에서만 (나만 보기면 본인 몫)
@@ -835,6 +838,31 @@ class _EditSheetState extends State<_EditSheet> {
               value: _dday,
               onChanged: (v) => setState(() => _dday = v),
             ),
+            if (_rule?.freq == Freq.yearly && _rule?.interval == 1) ...[
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                secondary: const Icon(Icons.cake_outlined, size: 20),
+                title: const Text('N주년 표시'),
+                subtitle: const Text('기준 연도부터 몇 해째인지 보여줘 (생일이면 태어난 해)'),
+                value: _annivYear != null,
+                onChanged: (v) => setState(() => _annivYear = v ? _start.year : null),
+              ),
+              if (_annivYear != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: TextFormField(
+                    key: ValueKey('anniv$_annivYear'),
+                    initialValue: '$_annivYear',
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: '기준 연도', border: OutlineInputBorder(), isDense: true),
+                    onChanged: (t) {
+                      final y = int.tryParse(t);
+                      if (y != null && y > 1800 && y < 2200) _annivYear = y;
+                    },
+                  ),
+                ),
+            ],
             const SizedBox(height: 16),
             const SizedBox(height: 8),
           ],

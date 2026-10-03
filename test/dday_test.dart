@@ -12,15 +12,17 @@ void main() {
   });
 
   test('매년 반복 N주년: 양력/음력', () {
-    final solar = Item(
+    var solar = Item(
         id: 'a', type: ItemType.event, title: '결혼기념일', start: DateTime(2018, 11, 8), ownerUid: 'me',
         rule: const Recurrence(freq: Freq.yearly));
+    expect(anniversaryLabel(solar, DateTime(2026, 11, 8)), isNull, reason: '기준 연도를 정하지 않으면 표시 안 함');
+    solar = solar.copyWith(annivYear: 2018);
     expect(anniversaryLabel(solar, DateTime(2018, 11, 8)), isNull);
     expect(anniversaryLabel(solar, DateTime(2026, 11, 8)), '8주년');
     final start = lunarToSolar(1990, 5, 15)!;
     final lunar = Item(
         id: 'b', type: ItemType.event, title: '엄마 생신', start: start, ownerUid: 'me',
-        rule: const Recurrence(freq: Freq.yearly, lunar: true));
+        rule: const Recurrence(freq: Freq.yearly, lunar: true), annivYear: 1990);
     expect(anniversaryLabel(lunar, lunarToSolar(2026, 5, 15)!), '36주년');
     final weekly = solar.copyWith(rule: const Recurrence(freq: Freq.weekly));
     expect(anniversaryLabel(weekly, DateTime(2026, 11, 8)), isNull);

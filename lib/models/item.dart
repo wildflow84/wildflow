@@ -64,6 +64,8 @@ class Item {
   final String assignee;
   /// 목록에 D-day(남은 날/지난 날)를 표시할지
   final bool dday;
+  /// 기념일 기준 연도. 정해져 있으면 매년 반복 항목에 `N주년`(또는 생일이면 N번째)을 표시. null이면 표시 안 함.
+  final int? annivYear;
   /// 일정 구독(.ics)에서 가져온 항목이면 그 구독의 id. 서버가 12시간마다 원본대로 갱신한다.
   final String? subscriptionId;
   /// 알림: 시작(마감) 몇 분 전에 알릴지. null이면 알림 없음. 종일 항목은 그날 오전 9시 기준(1440=전날 오전 9시).
@@ -149,6 +151,7 @@ class Item {
         checksByDate: i.checksByDate,
         assignee: i.assignee,
         dday: i.dday,
+        annivYear: i.annivYear,
         subscriptionId: null, // 복제본은 구독과 무관
         remindMinutes: i.remindMinutes,
       );
@@ -210,6 +213,7 @@ class Item {
     this.checksByDate = const {},
     this.assignee = '',
     this.dday = false,
+    this.annivYear,
     this.subscriptionId,
     this.remindMinutes,
   });
@@ -252,6 +256,8 @@ class Item {
     Map<String, List<String>>? checksByDate,
     String? assignee,
     bool? dday,
+    int? annivYear,
+    bool clearAnniv = false,
     int? remindMinutes,
     bool clearRemind = false,
   }) =>
@@ -288,6 +294,7 @@ class Item {
         checksByDate: checksByDate ?? this.checksByDate,
         assignee: assignee ?? this.assignee,
         dday: dday ?? this.dday,
+        annivYear: clearAnniv ? null : (annivYear ?? this.annivYear),
         subscriptionId: subscriptionId,
         remindMinutes: clearRemind ? null : (remindMinutes ?? this.remindMinutes),
       );
@@ -325,6 +332,7 @@ class Item {
         'checksByDate': checksByDate,
         'assignee': assignee,
         'dday': dday,
+        'annivYear': annivYear,
         'subscriptionId': subscriptionId,
         'remindMinutes': remindMinutes,
         'remindAt': remindAt == null ? null : Timestamp.fromDate(remindAt!),
@@ -369,6 +377,7 @@ class Item {
       ],
       assignee: (m['assignee'] as String?) ?? '',
       dday: m['dday'] == true,
+      annivYear: (m['annivYear'] as num?)?.toInt(),
       subscriptionId: m['subscriptionId'] as String?,
       remindMinutes: (m['remindMinutes'] as num?)?.toInt(),
       checksByDate: {
@@ -658,14 +667,15 @@ String ddayLabel(DateTime day, DateTime today) {
 /// 매년 반복(양력/음력) 일정의 "N주년" 문구. 첫 해이거나 매년 반복이 아니면 null.
 String? anniversaryLabel(Item i, DateTime day) {
   final r = i.effectiveRule;
-  if (r == null || r.freq != Freq.yearly || r.interval != 1) return null;
+  final base = i.annivYear;
+  if (base == null || r == null || r.freq != Freq.yearly || r.interval != 1) return null;
   int? n;
   if (r.lunar) {
-    final a = solarToLunar(i.start), b = solarToLunar(day);
-    if (a == null || b == null) return null;
-    n = b.year - a.year;
+    final b = solarToLunar(day);
+    if (b == null) return null;
+    n = b.year - base;
   } else {
-    n = day.year - i.start.year;
+    n = day.year - base;
   }
   return n >= 1 ? '$n주년' : null;
 }
