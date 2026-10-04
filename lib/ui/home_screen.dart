@@ -797,11 +797,9 @@ class _DayCell extends StatelessWidget {
   }
 
   String? _backdropFor(Store s) {
-    for (final i in s.visibleItems) {
-      if (i.type == ItemType.event && i.photoUrl != null && i.end != null && !i.isRecurring) {
-        final a = dateOnly(i.start), b = dateOnly(i.end!);
-        if (b.isAfter(a) && !day.isBefore(a) && !day.isAfter(b)) return i.photoUrl;
-      }
+    for (final i in s.photoSpans) {
+      final a = dateOnly(i.start), b = dateOnly(i.end!);
+      if (!day.isBefore(a) && !day.isAfter(b)) return i.photoUrl;
     }
     return null;
   }

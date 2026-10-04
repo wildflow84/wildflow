@@ -202,7 +202,31 @@ class Store extends ChangeNotifier {
   }
 
   /// 현재 필터에 맞는 항목. 'mine'=내가 소유한 것(공유+프라이빗), 'partner'=상대가 올린 공유 항목.
-  List<Item> get visibleItems {
+  List<Item> get visibleItems => _visibleCache ??= _computeVisible();
+
+  // 같은 상태에서 화면이 여러 번 다시 그려질 때마다 전체 항목을 다시 거르지 않게 결과를 기억해 둔다.
+  // 상태가 바뀌어 notifyListeners()가 불리면 비운다.
+  List<Item>? _visibleCache;
+  List<Item>? _photoSpansCache;
+  final Map<int, List<Item>> _dayCache = {};
+
+  @override
+  void notifyListeners() {
+    _visibleCache = null;
+    _photoSpansCache = null;
+    _dayCache.clear();
+    super.notifyListeners();
+  }
+
+  /// 사진이 있는 여러 날 일정 (달력 칸 배경용)
+  List<Item> get photoSpans => _photoSpansCache ??= [
+        for (final i in visibleItems)
+          if (i.type == ItemType.event && i.photoUrl != null && i.end != null && !i.isRecurring &&
+              dateOnly(i.end!).isAfter(dateOnly(i.start)))
+            i
+      ];
+
+  List<Item> _computeVisible() {
     final me = _previewUid ?? user?.uid;
     final hidden = hiddenCategories;
     return items.where((i) {
@@ -246,7 +270,16 @@ class Store extends ChangeNotifier {
   bool get showShared => filters.contains('partner');
 
   /// 안드로이드 홈 화면 위젯에 지금 보이는 일정/할 일을 밀어 넣는다
+  Timer? _pushTimer;
+
   void _pushWidget() {
+    if (kIsWeb) return; // 위젯은 안드로이드 전용
+    // 항목이 바뀔 때마다(내가 저장하면 두 번씩 오기도 해) 바로 계산하면 화면이 버벅이므로, 잠잠해진 뒤 한 번만 보낸다
+    _pushTimer?.cancel();
+    _pushTimer = Timer(const Duration(seconds: 2), _doPushWidget);
+  }
+
+  void _doPushWidget() {
     WidgetSync.push(
       visibleItems,
       uid,
@@ -264,12 +297,15 @@ class Store extends ChangeNotifier {
   }
 
   List<Item> itemsOn(DateTime day) {
-    final list = visibleItems.where((i) => occursOn(i, day)).toList();
-    list.sort((a, b) {
-      if (a.type != b.type) return a.type == ItemType.event ? -1 : 1;
-      return a.start.compareTo(b.start);
+    final key = day.year * 10000 + day.month * 100 + day.day;
+    return _dayCache.putIfAbsent(key, () {
+      final list = visibleItems.where((i) => occursOn(i, day)).toList();
+      list.sort((a, b) {
+        if (a.type != b.type) return a.type == ItemType.event ? -1 : 1;
+        return a.start.compareTo(b.start);
+      });
+      return list;
     });
-    return list;
   }
 
   List<CustomDay> customDaysOn(DateTime d) =>
@@ -417,6 +453,7 @@ class Store extends ChangeNotifier {
 
   @override
   void dispose() {
+    _pushTimer?.cancel();
     _authSub?.cancel();
     _stop();
     super.dispose();

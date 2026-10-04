@@ -118,6 +118,8 @@ class WidgetSync {
     return out.join(',');
   }
 
+  static String _lastSig = '';
+
   static Future<void> push(
     List<Item> visible,
     String myUid, {
@@ -129,12 +131,17 @@ class WidgetSync {
     if (kIsWeb) return;
     final today = dateOnly(DateTime.now());
     try {
+      final agenda = agendaJson(visible, today,
+          colorOf: colorOf, categoryName: categoryName, holidaysOn: holidaysOn, spaceId: spaceId);
+      await Future<void>.delayed(const Duration(milliseconds: 20)); // 무거운 계산 사이에 화면이 한 프레임 그릴 틈을 준다
+      final days = eventDays(visible, today);
+      // 내용이 그대로면 위젯을 다시 그리게 하지 않는다
+      final sig = '${agenda.hashCode}/${days.hashCode}/${today.day}';
+      if (sig == _lastSig) return;
+      _lastSig = sig;
       await HomeWidget.saveWidgetData<String>('title', DateFormat('M월 d일 (E)', 'ko').format(today));
       await HomeWidget.saveWidgetData<String>('body', agendaText(visible, today));
-      await HomeWidget.saveWidgetData<String>(
-          'agendaJson',
-          agendaJson(visible, today,
-              colorOf: colorOf, categoryName: categoryName, holidaysOn: holidaysOn, spaceId: spaceId));
+      await HomeWidget.saveWidgetData<String>('agendaJson', agenda);
       // 앞으로 24시간 안에 출발 알림 일정이 있으면 안드로이드가 15분마다 위치를 서버에 남긴다 (없으면 아무것도 안 함)
       final now = DateTime.now();
       final watch = visible.any((i) {
@@ -142,7 +149,7 @@ class WidgetSync {
         return f != null && f.isAfter(now) && f.difference(now) <= const Duration(hours: 24);
       });
       await HomeWidget.saveWidgetData<bool>('departWatch', watch);
-      await HomeWidget.saveWidgetData<String>('eventDays', eventDays(visible, today));
+      await HomeWidget.saveWidgetData<String>('eventDays', days);
       await HomeWidget.updateWidget(androidName: _provider);
     } catch (_) {
       // 위젯 갱신 실패는 앱 동작에 영향 없음
