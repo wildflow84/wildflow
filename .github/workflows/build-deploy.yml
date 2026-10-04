@@ -99,7 +99,7 @@ jobs:
       - name: 웹 빌드
         run: flutter build web --release --dart-define-from-file=firebase_config.json --dart-define=APP_VERSION=${GITHUB_SHA::7}
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: ourday-apk
           path: build/app/outputs/flutter-apk/app-release.apk
