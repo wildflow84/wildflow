@@ -139,10 +139,14 @@ class WidgetListService : RemoteViewsService() {
             v.setTextColor(R.id.row_meta, theme.sub)
 
             // 전체 줄은 앱 열기, 체크박스는 앱을 열지 않고 바로 완료 처리
-            v.setOnClickFillInIntent(R.id.row_root, Intent())
             val id = item.optString("id")
             val space = item.optString("sp")
             val dk = item.optString("dk")
+            val edit = Intent()
+            if (id.isNotEmpty() && dk.isNotEmpty()) {
+                edit.data = Uri.parse("ourday://edit?id=" + Uri.encode(id) + "&date=" + Uri.encode(dk))
+            }
+            v.setOnClickFillInIntent(R.id.row_root, edit)
             if (todo && item.optBoolean("can") && id.isNotEmpty() && space.isNotEmpty() && dk.isNotEmpty()) {
                 val done = Intent()
                 done.data = Uri.parse(

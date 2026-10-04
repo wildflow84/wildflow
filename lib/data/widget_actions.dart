@@ -35,11 +35,12 @@ Future<void> widgetBackgroundCallback(Uri? uri) async {
     if (item == null) return;
     final day = DateTime.parse(date);
     final r = toggledDone(item, dateOnly(day), user.uid, DateTime.now());
+    // 서버 저장을 기다리기 전에 위젯부터 바꿔서 바로 보이게 한다
+    await _patchWidgetJson(id, date, r.item, dateOnly(day));
     await repo.save(space, r.item);
     if (r.marking && item.visibility == Visibility.shared) {
       unawaited(repo.notifyComplete(space, id).catchError((_) {}));
     }
-    await _patchWidgetJson(id, date, r.item, dateOnly(day));
   } catch (_) {
     // 실패해도 조용히: 위젯은 다음에 앱을 열 때 맞춰진다
   }

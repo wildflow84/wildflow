@@ -13,6 +13,7 @@ import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, RepeatDelete, RepeatEdit, applyRepeatEdit, dateOnly, hasEndTime, repeatFor;
 import '../models/recurrence.dart';
 import 'category_manager.dart';
+import 'complete_flow.dart';
 import 'checklist.dart';
 import 'color_picker.dart';
 import 'date_picker.dart';
@@ -416,6 +417,18 @@ class _EditSheetState extends State<_EditSheet> {
                   child: const Text('복제'),
                 ),
               const Spacer(),
+              // 할 일: 편집 화면에서 바로 완료/완료 취소 (저장하지 않은 수정은 반영되지 않으니 먼저 저장해줘)
+              if (widget.item != null && widget.item!.type == ItemType.todo) ...[
+                OutlinedButton.icon(
+                  icon: Icon(m.isDoneOn(widget.item!, widget.day) ? Icons.undo : Icons.check),
+                  label: Text(m.isDoneOn(widget.item!, widget.day) ? '완료 취소' : '완료'),
+                  onPressed: () async {
+                    final ok = await toggleDoneWithPrompts(context, context.read<Store>(), widget.item!, widget.day);
+                    if (ok && context.mounted) Navigator.pop(context);
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
               FilledButton(onPressed: _save, child: const Text('저장')),
             ]),
     );

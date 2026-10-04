@@ -2,7 +2,10 @@ import 'dart:async';
 import 'palette.dart';
 
 import 'package:flutter/gestures.dart' show PointerScrollEvent;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -14,10 +17,11 @@ import '../models/lunar.dart';
 import '../models/map_links.dart';
 import '../models/category.dart' show subscriptionCategory;
 import '../models/item.dart' as m;
-import '../models/item.dart' show Item, ItemType, dateOnly, isDoneOn, isOverdue, moveItemByDays, nextRollDate, rollLabel, timeLabel, chipTimeLabel;
+import '../models/item.dart' show Item, ItemType, dateOnly, isDoneOn, isOverdue, moveItemByDays, rollLabel, timeLabel, chipTimeLabel;
 import 'agenda.dart';
 import 'category_manager.dart';
 import 'checklist.dart';
+import 'complete_flow.dart';
 import 'date_picker.dart';
 import 'settings_screen.dart';
 import 'snack.dart';
@@ -31,6 +35,45 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // 홈 화면 위젯에서 항목을 눌러 들어왔을 때(ourday://edit?id=…&date=…) 그 항목의 편집 화면을 연다
+  Uri? _pendingEdit;
+  StreamSubscription<Uri?>? _widgetSub;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!kIsWeb) {
+      HomeWidget.initiallyLaunchedFromHomeWidget().then(_onWidgetUri);
+      _widgetSub = HomeWidget.widgetClicked.listen(_onWidgetUri);
+    }
+  }
+
+  @override
+  void dispose() {
+    _widgetSub?.cancel();
+    super.dispose();
+  }
+
+  void _onWidgetUri(Uri? uri) {
+    if (uri == null || uri.host != 'edit') return;
+    _pendingEdit = uri;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _tryOpenPending());
+  }
+
+  void _tryOpenPending() {
+    final uri = _pendingEdit;
+    if (uri == null || !mounted) return;
+    final s = context.read<Store>();
+    final id = uri.queryParameters['id'] ?? '';
+    final item = s.items.where((i) => i.id == id).firstOrNull;
+    if (item == null) return; // 아직 목록을 못 받았으면 다음에 다시 시도 (build에서)
+    _pendingEdit = null;
+    final day = DateTime.tryParse(uri.queryParameters['date'] ?? '') ?? DateTime.now();
+    final canEdit = item.ownerUid == s.uid || item.visibility == m.Visibility.shared;
+    if (!canEdit) return;
+    showEditSheet(context, item: item, day: dateOnly(day));
+  }
+
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _selected = dateOnly(DateTime.now());
   int _tab = 0;
@@ -64,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_pendingEdit != null) WidgetsBinding.instance.addPostFrameCallback((_) => _tryOpenPending());
     final s = context.watch<Store>();
     final wide = MediaQuery.sizeOf(context).width > 900;
     final wideBar = MediaQuery.sizeOf(context).width >= 600; // 좁은 화면은 화살표 대신 밀기/휠로 월 이동
@@ -1107,26 +1151,7 @@ class ItemTile extends StatelessWidget {
           ? Checkbox(
               value: done,
               onChanged: canEdit
-                  ? (_) async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      var checkAll = false;
-                      if (!done) {
-                        // 체크리스트가 남아 있으면 확인
-                        final c = await confirmIncompleteChecklist(context, item, day);
-                        if (c == CompleteChoice.cancel) return;
-                        checkAll = c == CompleteChoice.checkAll;
-                      }
-                      final prev = await s.toggleDone(item, day, checkAll: checkAll);
-                      if (prev != null) {
-                        final next = DateFormat('M월 d일 (E)', 'ko').format(nextRollDate(prev, DateTime.now()));
-                        showTimedSnack(
-                          messenger,
-                          '"${item.title}" 완료 → $next(으)로 이동',
-                          actionLabel: '되돌리기',
-                          onAction: () => s.undoRoll(prev),
-                        );
-                      }
-                    }
+                  ? (_) => toggleDoneWithPrompts(context, s, item, day)
                   : null)
           : Icon(Icons.circle, color: itemColor, size: 14),
       title: Text(item.title,
