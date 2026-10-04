@@ -1115,9 +1115,9 @@ Widget? _trailing(BuildContext context, Store s, Item item, DateTime day, bool d
         visualDensity: VisualDensity.compact,
         icon: const Icon(Icons.notifications_active_outlined, size: 20),
         onPressed: () async {
-          final messenger = ScaffoldMessenger.of(context);
+          showOverlayToast(context, '재촉 보내는 중…', seconds: 1);
           final msg = await s.nudge(item);
-          showTimedSnack(messenger, msg);
+          if (context.mounted) showOverlayToast(context, msg);
         },
       ),
     if (hasMap)
