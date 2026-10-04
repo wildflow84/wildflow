@@ -94,10 +94,17 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: APK 빌드
-        run: flutter build apk --release --dart-define-from-file=firebase_config.json --dart-define=APP_VERSION=${GITHUB_SHA::7}
+        run: flutter build apk --release --build-number=${GITHUB_RUN_NUMBER} --dart-define-from-file=firebase_config.json --dart-define=APP_VERSION=${GITHUB_SHA::7} --dart-define=APP_BUILD=${GITHUB_RUN_NUMBER}
 
       - name: 웹 빌드
         run: flutter build web --release --dart-define-from-file=firebase_config.json --dart-define=APP_VERSION=${GITHUB_SHA::7}
+
+      # 앱이 새 버전을 알아채고 바로 받을 수 있게, APK와 버전 정보를 웹 호스팅에 같이 올린다 (앱이 켜질 때 app/latest.json을 확인)
+      - name: 앱 업데이트 파일 준비
+        run: |
+          mkdir -p build/web/app
+          cp build/app/outputs/flutter-apk/app-release.apk build/web/app/ourday.apk
+          printf '{"build":%s,"version":"%s","apk":"app/ourday.apk"}\n' "$GITHUB_RUN_NUMBER" "${GITHUB_SHA::7}" > build/web/app/latest.json
 
       - uses: actions/upload-artifact@v6
         with:

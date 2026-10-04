@@ -24,6 +24,7 @@ import 'checklist.dart';
 import 'complete_flow.dart';
 import 'date_picker.dart';
 import 'settings_screen.dart';
+import 'update_dialog.dart';
 import 'snack.dart';
 import 'edit_sheet.dart';
 
@@ -42,6 +43,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // 새 안드로이드 앱이 나왔으면 켤 때 한 번 알려준다
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) askUpdateOnce(context);
+    });
     if (!kIsWeb) {
       HomeWidget.initiallyLaunchedFromHomeWidget().then(_onWidgetUri);
       _widgetSub = HomeWidget.widgetClicked.listen(_onWidgetUri);

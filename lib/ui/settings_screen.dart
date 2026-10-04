@@ -6,12 +6,14 @@ import 'palette.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../data/app_update.dart';
 import '../data/push.dart';
 import '../data/store.dart';
 import '../models/item.dart' as m;
 import 'category_manager.dart';
 import 'members_screen.dart';
 import 'subscriptions.dart';
+import 'update_dialog.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -182,6 +184,13 @@ class SettingsScreen extends StatelessWidget {
             // CI가 빌드할 때 커밋 번호를 넣는다. 새로 배포됐는지 확인할 때 쓴다.
             subtitle: Text(const String.fromEnvironment('APP_VERSION', defaultValue: '개발 빌드')),
           ),
+          if (UpdateChecker.supported)
+            ListTile(
+              leading: const Icon(Icons.system_update),
+              title: const Text('업데이트 확인'),
+              subtitle: const Text('새 버전이 있으면 바로 내려받아 설치할 수 있어'),
+              onTap: () => checkUpdateNow(context),
+            ),
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('로그아웃'),
