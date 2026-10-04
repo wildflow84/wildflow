@@ -139,17 +139,20 @@ jobs:
           project=$(jq -r .PROJECT_ID firebase_config.json)
           npx -y firebase-tools@latest deploy --only functions --project "$project" --non-interactive --force
 
-      # 임시 진단(읽기 전용): 재촉이 UNAUTHENTICATED 로 막히는 원인 확인용. 원인을 찾으면 지운다.
-      - name: 진단 - 함수 호출 권한과 최근 오류 로그
+      # 호출형 함수는 앱이 보낸 로그인 토큰을 함수 안에서 검사한다(req.auth). Cloud Run 앞단 호출 권한이
+      # 비어 있으면 앱 요청이 401 UNAUTHENTICATED 로 막히므로, 호출형 함수만 모두에게 열어둔다.
+      - name: 호출형 함수 호출 권한 열기 (Cloud Run invoker)
         if: ${{ env.FIREBASE_SERVICE_ACCOUNT != '' }}
         continue-on-error: true
         run: |
           project=$(jq -r .PROJECT_ID firebase_config.json)
           gcloud auth activate-service-account --key-file="$RUNNER_TEMP/sa.json" --quiet
-          echo "== nudge 호출 권한(IAM) =="
-          gcloud run services get-iam-policy nudge --region=asia-northeast3 --project="$project" --format=json || true
-          echo "== nudge 최근 요청 상태 =="
-          gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="nudge"' --project="$project" --freshness=1d --limit=20 --format='table(timestamp,severity,httpRequest.status,textPayload,jsonPayload.message)' || true
+          for fn in nudge notifyComplete notifyShared syncSubscription removeSubscription searchPlaces removeMember allowMember; do
+            svc=$(echo "$fn" | tr 'A-Z' 'a-z')
+            echo "== $fn ($svc) =="
+            gcloud run services add-iam-policy-binding "$svc" --region=asia-northeast3 --project="$project" \
+              --member=allUsers --role=roles/run.invoker --quiet --format='value(etag)' || echo "::warning::$fn 호출 권한 설정 실패"
+          done
 
       - name: 배포 건너뜀 안내
         if: ${{ env.FIREBASE_SERVICE_ACCOUNT == '' }}
