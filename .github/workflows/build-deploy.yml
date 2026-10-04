@@ -139,6 +139,18 @@ jobs:
           project=$(jq -r .PROJECT_ID firebase_config.json)
           npx -y firebase-tools@latest deploy --only functions --project "$project" --non-interactive --force
 
+      # 임시 진단(읽기 전용): 재촉이 UNAUTHENTICATED 로 막히는 원인 확인용. 원인을 찾으면 지운다.
+      - name: 진단 - 함수 호출 권한과 최근 오류 로그
+        if: ${{ env.FIREBASE_SERVICE_ACCOUNT != '' }}
+        continue-on-error: true
+        run: |
+          project=$(jq -r .PROJECT_ID firebase_config.json)
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/sa.json" --quiet
+          echo "== nudge 호출 권한(IAM) =="
+          gcloud run services get-iam-policy nudge --region=asia-northeast3 --project="$project" --format=json || true
+          echo "== nudge 최근 요청 상태 =="
+          gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="nudge"' --project="$project" --freshness=1d --limit=20 --format='table(timestamp,severity,httpRequest.status,textPayload,jsonPayload.message)' || true
+
       - name: 배포 건너뜀 안내
         if: ${{ env.FIREBASE_SERVICE_ACCOUNT == '' }}
         run: echo "::warning::FIREBASE_SERVICE_ACCOUNT 시크릿이 없어서 웹/보안 규칙 배포는 건너뛰었어."
