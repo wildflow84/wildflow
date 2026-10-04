@@ -50,6 +50,23 @@ class SettingsScreen extends StatelessWidget {
               onSelectionChanged: (v) => s.setPref('themeMode', v.first),
             ),
           ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Text('앱을 켰을 때 먼저 볼 화면'),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'last', label: Text('마지막')),
+                ButtonSegment(value: 'calendar', label: Text('캘린더')),
+                ButtonSegment(value: 'list', label: Text('목록')),
+                ButtonSegment(value: 'todo', label: Text('할 일')),
+              ],
+              selected: {s.startTab},
+              onSelectionChanged: (v) => s.setPref('startTab', v.first),
+            ),
+          ),
           const Divider(height: 32),
           const _Header('알림'),
           const _PushTile(),

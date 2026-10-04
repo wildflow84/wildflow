@@ -77,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _selected = dateOnly(DateTime.now());
   int _tab = 0;
+  bool _tabChosen = false; // 시작 화면을 한 번 적용했거나 사용자가 직접 탭을 눌렀다
   bool _dragging = false; // 일정을 끌고 있는 동안: 달력 양 끝에 월 이동 영역을 보여준다
   double _swipeDx = 0;
   DateTime _lastWheel = DateTime.fromMillisecondsSinceEpoch(0);
@@ -109,6 +110,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     if (_pendingEdit != null) WidgetsBinding.instance.addPostFrameCallback((_) => _tryOpenPending());
     final s = context.watch<Store>();
+    // 설정을 받아오면 한 번만 시작 화면(마지막으로 본 화면 등)을 적용한다
+    if (!_tabChosen && s.profileLoaded) {
+      _tabChosen = true;
+      _tab = s.initialTab;
+    }
     final wide = MediaQuery.sizeOf(context).width > 900;
     final wideBar = MediaQuery.sizeOf(context).width >= 600; // 좁은 화면은 화살표 대신 밀기/휠로 월 이동
 
@@ -275,7 +281,11 @@ class _HomeScreenState extends State<HomeScreen> {
         child: NavigationBar(
           backgroundColor: Colors.transparent,
           selectedIndex: _tab,
-          onDestinationSelected: (i) => setState(() => _tab = i),
+          onDestinationSelected: (i) {
+            setState(() => _tab = i);
+            _tabChosen = true;
+            context.read<Store>().rememberTab(i);
+          },
           destinations: const [
             NavigationDestination(icon: Icon(Icons.calendar_month), label: '캘린더'),
             NavigationDestination(icon: Icon(Icons.view_agenda_outlined), label: '목록'),

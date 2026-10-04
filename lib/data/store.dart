@@ -60,6 +60,34 @@ class Store extends ChangeNotifier {
     return v == 'light' || v == 'dark' ? v as String : 'system';
   }
 
+  /// 내 설정을 한 번이라도 받아왔는지 (시작 화면을 고르는 데 쓴다)
+  bool profileLoaded = false;
+
+  /// 앱을 켰을 때 먼저 보여줄 탭: last(마지막으로 본 화면, 기본) / calendar / list / todo
+  String get startTab {
+    final v = profile['startTab'];
+    return v == 'calendar' || v == 'list' || v == 'todo' ? v as String : 'last';
+  }
+
+  /// 0=캘린더 1=목록 2=할 일
+  int get initialTab {
+    switch (startTab) {
+      case 'calendar':
+        return 0;
+      case 'list':
+        return 1;
+      case 'todo':
+        return 2;
+    }
+    final last = profile['lastTab'];
+    return last is int && last >= 0 && last <= 2 ? last : 0;
+  }
+
+  /// 탭을 바꿀 때마다 기억해 둔다 (시작 화면이 "마지막으로 본 화면"일 때만)
+  void rememberTab(int i) {
+    if (startTab == 'last' && profile['lastTab'] != i) unawaited(setPref('lastTab', i));
+  }
+
   Future<void> setPref(String key, Object value) async {
     profile = {...profile, key: value};
     notifyListeners();
@@ -136,6 +164,7 @@ class Store extends ChangeNotifier {
     });
     _profileSub = repo.watchProfile().listen((p) {
       profile = p;
+      profileLoaded = true;
       final v = p['defaultVisibility'] as String?;
       defaultVisibility = v == null
           ? m.Visibility.shared
@@ -180,6 +209,7 @@ class Store extends ChangeNotifier {
     await _customSub?.cancel();
     await _catSub?.cancel();
     await _profileSub?.cancel();
+    profileLoaded = false;
     _seeded = false;
     categories = defaultCategories;
     defaultVisibility = m.Visibility.shared;
