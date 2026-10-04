@@ -7,6 +7,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import es.antonborri.home_widget.HomeWidgetBackgroundIntent
 import org.json.JSONArray
 
@@ -61,6 +63,15 @@ class WidgetActionActivity : Activity() {
             val mgr = AppWidgetManager.getInstance(this)
             val ids = mgr.getAppWidgetIds(ComponentName(this, OurDayWidget::class.java))
             mgr.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
+            // 위젯 화면이 첫 알림을 놓치는 경우를 대비해 한 번 더
+            val appCtx = applicationContext
+            Handler(Looper.getMainLooper()).postDelayed({
+                try {
+                    val m = AppWidgetManager.getInstance(appCtx)
+                    m.notifyAppWidgetViewDataChanged(m.getAppWidgetIds(ComponentName(appCtx, OurDayWidget::class.java)), R.id.widget_list)
+                } catch (e: Exception) {
+                }
+            }, 700)
         } catch (e: Exception) {
             // 바로 반영에 실패해도 실제 완료 처리는 계속된다
         }

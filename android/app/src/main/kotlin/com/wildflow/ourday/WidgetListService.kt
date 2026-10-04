@@ -105,16 +105,19 @@ class WidgetListService : RemoteViewsService() {
             val done = item.optBoolean("done")
             val catColor = item.optLong("color", 0xFF4A7BD9L).toInt()
 
-            // 카드 배경 (위치에 따라 모서리 다르게)
-            val bg = when (row.pos) {
-                1 -> R.drawable.card_top
-                2 -> R.drawable.card_mid
-                3 -> R.drawable.card_bottom
-                else -> R.drawable.card_single
+            // 카드 배경 (위치에 따라 모서리 다르게). 재활용되는 행에서 이미지를 바꿔 끼우면 색/투명도가 행마다 달라 보여서,
+            // 모양별 이미지를 미리 겹쳐 두고 보이는 것만 바꾼다. 색과 투명도는 네 개 모두 같은 값으로 준다.
+            val shown = when (row.pos) {
+                1 -> R.id.row_bg_top
+                2 -> R.id.row_bg_mid
+                3 -> R.id.row_bg_bottom
+                else -> R.id.row_bg_single
             }
-            v.setImageViewResource(R.id.row_bg, bg)
-            v.setInt(R.id.row_bg, "setColorFilter", theme.card)
-            v.setInt(R.id.row_bg, "setImageAlpha", theme.cardAlpha)
+            for (bgId in intArrayOf(R.id.row_bg_single, R.id.row_bg_top, R.id.row_bg_mid, R.id.row_bg_bottom)) {
+                v.setViewVisibility(bgId, if (bgId == shown) View.VISIBLE else View.GONE)
+                v.setInt(bgId, "setColorFilter", theme.card)
+                v.setInt(bgId, "setImageAlpha", theme.cardAlpha)
+            }
             v.setViewVisibility(R.id.row_divider, if (row.pos == 2 || row.pos == 3) View.VISIBLE else View.GONE)
             v.setInt(R.id.row_divider, "setBackgroundColor", theme.line)
             // 카드가 끝나는 줄 아래 여백

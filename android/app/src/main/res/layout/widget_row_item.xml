@@ -7,11 +7,32 @@
     android:paddingStart="8dp">
 
     <ImageView
-        android:id="@+id/row_bg"
+        android:id="@+id/row_bg_single"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitXY"
         android:src="@drawable/card_single" />
+    <ImageView
+        android:id="@+id/row_bg_top"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/card_top"
+        android:visibility="gone" />
+    <ImageView
+        android:id="@+id/row_bg_mid"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/card_mid"
+        android:visibility="gone" />
+    <ImageView
+        android:id="@+id/row_bg_bottom"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/card_bottom"
+        android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="match_parent"
