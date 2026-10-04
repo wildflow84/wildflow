@@ -76,6 +76,26 @@ test('상대에게 맡긴 할 일은 맡겼다고 알림', () => {
   assert.match(lib.shareMessage('나', { type: 'todo', title: 'x', assignee: '' }, 'you').title, /공유했어/);
 });
 
+test('반복 일정 알림: 회차 기준 문구, 완료한 회차는 건너뜀, 다음 시각으로 넘김', () => {
+  const at = (ms) => ({ toMillis: () => ms });
+  // 2026-10-04 14:30 KST 에 울리는 알림 (회차는 15:00, 30분 전)
+  const occ = Date.UTC(2026, 9, 4, 6, 0); // 15:00 KST
+  const now = occ - 30 * 60000 + 1000;
+  const item = {
+    type: 'event', title: '약', allDay: false, start: at(Date.UTC(2026, 9, 1, 6, 0)), remindMinutes: 30,
+    remindAt: at(occ - 30 * 60000),
+    remindTimes: [at(occ - 30 * 60000), at(occ + 24 * 3600000 - 30 * 60000), at(occ + 48 * 3600000 - 30 * 60000)],
+  };
+  assert.equal(lib.isRepeatingReminder(item), true);
+  assert.equal(lib.dueForReminder(item, now), true);
+  assert.match(lib.reminderMessage(item, now).title, /30분 뒤 일정/); // 원래 시작(3일 전)이 아니라 이번 회차 기준
+  assert.equal(lib.nextRemindMs(item, now), occ + 24 * 3600000 - 30 * 60000);
+  assert.equal(lib.nextRemindMs({ ...item, remindTimes: [item.remindTimes[0]] }, now), null);
+  assert.equal(lib.kstDateKey(occ), '2026-10-04');
+  assert.equal(lib.dueForReminder({ ...item, doneDates: ['2026-10-04'] }, now), false); // 이미 완료한 회차
+  assert.equal(lib.dueForReminder({ ...item, doneDates: ['2026-10-05'] }, now), true);
+});
+
 test('알림: 시각 창, 중복 방지, 문구, 받는 사람', () => {
   const now = 10_000_000_000;
   const at = (ms) => ({ toMillis: () => ms });
@@ -128,10 +148,8 @@ test('출발 알림: 이동 수단별 어림 시간', () => {
   const d = 3000; // 3km
   const walk = lib.estimateDurationSec('walk', d);
   const car = lib.estimateDurationSec('car', d);
-  const transit = lib.estimateDurationSec('transit', d);
   assert.ok(walk > 40 * 60 && walk < 60 * 60, `도보 ${walk}`);
   assert.ok(car < 15 * 60, `자동차 ${car}`);
-  assert.ok(transit > 15 * 60 && transit < 35 * 60, `대중교통 ${transit}`);
   const m = lib.departMessage({ title: 'a', departMode: 'walk', departFrom: { toMillis: () => Date.UTC(2026, 9, 3, 6) } }, 1200, true, '');
   assert.match(m.body, /걸어서 약 20분\(대략\)/);
 });

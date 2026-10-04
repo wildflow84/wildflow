@@ -88,17 +88,43 @@ function deadTokens(tokens, responses) {
 
 const REMIND_WINDOW_MS = 15 * 60 * 1000; // 놓친 알림은 15분까지만 늦게 보낸다
 
+/** 반복 일정은 앞으로 알릴 시각들을 remindTimes에 저장해 둔다 (앱이 채움). 그렇지 않으면 단일 알림. */
+function isRepeatingReminder(item) {
+  return Array.isArray(item.remindTimes) && item.remindTimes.length > 0;
+}
+
+/** 한국 시각 기준 날짜 (yyyy-MM-dd) */
+function kstDateKey(ms) {
+  return new Date(ms + 9 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+/** 이번 알림이 가리키는 회차의 시작 시각(ms): 알림 시각 + 몇 분 전인지. 반복 알림에서만 의미 있다. */
+function occurrenceMs(item) {
+  return millis(item.remindAt) + (item.remindMinutes || 0) * 60000;
+}
+
+/** 반복 알림에서, 방금 보낸 알림 다음으로 알릴 시각(ms). 더 없으면 null. */
+function nextRemindMs(item, nowMs) {
+  const times = (item.remindTimes || []).map(millis).filter((t) => t > nowMs).sort((a, b) => a - b);
+  return times.length ? times[0] : null;
+}
+
 /** 지금 알림을 보낼 차례인지: remindAt이 지났고(최대 15분), 같은 시각으로 이미 보낸 적 없고, 아직 끝난 게 아니면 */
 function dueForReminder(item, nowMs) {
   const at = millis(item.remindAt);
   if (!at || at > nowMs || nowMs - at > REMIND_WINDOW_MS) return false;
   if (millis(item.remindSentFor) === at) return false;
   if (item.done) return false;
+  // 반복 회차는 그날 이미 완료했으면 알리지 않는다
+  if (isRepeatingReminder(item) && Array.isArray(item.doneDates) && item.doneDates.includes(kstDateKey(occurrenceMs(item)))) {
+    return false;
+  }
   return true;
 }
 
 function reminderMessage(item, nowMs) {
-  const startMs = millis(item.start);
+  // 반복 일정은 원래 시작 시각이 아니라 이번 회차 시각을 기준으로 말한다
+  const startMs = isRepeatingReminder(item) ? occurrenceMs(item) : millis(item.start);
   let when;
   if (item.allDay) when = '오늘';
   else {
@@ -141,10 +167,9 @@ function fallbackDurationSec(distM) {
   return Math.round(((distM * 1.4) / (35000 / 3600)));
 }
 
-/** 이동 수단별 어림 시간(초). car는 길찾기 실패 시의 대체값, walk/transit은 직선거리 기반 어림값 */
+/** 이동 수단별 어림 시간(초). car는 길찾기 실패 시의 대체값, walk는 직선거리 기반 어림값 */
 function estimateDurationSec(mode, distM) {
   if (mode === 'walk') return Math.round((distM * 1.3) / (4500 / 3600)); // 시속 4.5km, 굽은 길 1.3배
-  if (mode === 'transit') return Math.round((distM * 1.35) / (22000 / 3600)) + 10 * 60; // 시속 22km + 걷기/대기 10분
   return fallbackDurationSec(distM);
 }
 
@@ -170,7 +195,7 @@ function kstHHmm(ms) {
 }
 
 function departMessage(item, durationSec, approximate, reason) {
-  const modeName = item.departMode === 'walk' ? '걸어서 ' : item.departMode === 'transit' ? '대중교통으로 ' : '';
+  const modeName = item.departMode === 'walk' ? '걸어서 ' : '';
   const startMs = millis(item.departFrom);
   const min = Math.max(1, Math.round(durationSec / 60));
   const where = item.location ? ` ${item.location}` : '';
@@ -181,6 +206,7 @@ function departMessage(item, durationSec, approximate, reason) {
 }
 
 module.exports = {
+  millis,
   DEPART_WINDOW_MS,
   DEPART_BUFFER_MIN,
   LOC_FRESH_MS,
@@ -192,6 +218,10 @@ module.exports = {
   departMessage,
   REMIND_WINDOW_MS,
   dueForReminder,
+  isRepeatingReminder,
+  nextRemindMs,
+  kstDateKey,
+  occurrenceMs,
   reminderMessage,
   reminderRecipients,
   NUDGE_MAX,

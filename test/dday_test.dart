@@ -44,7 +44,7 @@ void main() {
     expect(c.assignee, 'you');
   });
 
-  test('알림 시각 계산: 시각 일정은 N분 전, 종일은 오전 9시 기준, 반복(규칙)은 없음', () {
+  test('알림 시각 계산: 시각 일정은 N분 전, 종일은 오전 9시 기준, 반복(규칙)은 앞으로 알릴 시각 목록', () {
     final timed = Item(
         id: 'a', type: ItemType.event, title: 't', start: DateTime(2026, 10, 7, 15, 0), allDay: false,
         ownerUid: 'me', remindMinutes: 30);
@@ -54,8 +54,30 @@ void main() {
     expect(allDay.remindAt, DateTime(2026, 10, 7, 8, 30)); // 오전 9시의 30분 전
     final dayBefore = allDay.copyWith(remindMinutes: 1440);
     expect(dayBefore.remindAt, DateTime(2026, 10, 6, 9));
-    final weekly = timed.copyWith(rule: const Recurrence(freq: Freq.weekly));
-    expect(weekly.remindAt, isNull);
+    // 반복(규칙): 매일 15:00 일정, 30분 전 알림 → 지금 이후의 회차들만, 건너뛴 날/완료한 회차는 뺀다
+    final daily = timed.copyWith(start: DateTime(2026, 10, 1, 15, 0), rule: const Recurrence(freq: Freq.daily));
+    final now = DateTime(2026, 10, 4, 12, 0);
+    final times = daily.remindTimes(now);
+    expect(times.first, DateTime(2026, 10, 4, 14, 30));
+    expect(times[1], DateTime(2026, 10, 5, 14, 30));
+    expect(times.length, Item.remindAhead);
+    final skipped = daily.copyWith(exceptions: ['2026-10-04'], doneDates: ['2026-10-05']);
+    expect(skipped.remindTimes(now).first, DateTime(2026, 10, 6, 14, 30));
+    // 하루 전 알림도 회차 하루 전 시각으로
+    expect(daily.copyWith(remindMinutes: 1440).remindTimes(now).first, DateTime(2026, 10, 4, 15, 0));
+    // 끝나는 날이 있으면 거기까지만
+    final ending = daily.copyWith(repeatUntil: DateTime(2026, 10, 6));
+    expect(ending.remindTimes(now).length, 3);
+    // 목록을 새로 채울 때: 저장된 다음 시각이 어긋났거나 바닥이 가까우면
+    final stored = Item(
+        id: 'a', type: ItemType.event, title: 't', start: daily.start, allDay: false, ownerUid: 'me',
+        remindMinutes: 30, rule: daily.rule,
+        remindStoredAt: times.first, remindStoredLast: times.last);
+    expect(stored.needsRemindRefill(now), isFalse);
+    expect(stored.needsRemindRefill(now.add(const Duration(days: 100))), isTrue);
+    expect(Item(id: 'a', type: ItemType.event, title: 't', start: daily.start, allDay: false, ownerUid: 'me',
+        remindMinutes: 30, rule: daily.rule, remindStoredAt: DateTime(2026, 10, 3), remindStoredLast: times.last)
+        .needsRemindRefill(now), isTrue);
     expect(timed.copyWith(clearRemind: true).remindAt, isNull);
     // 이동형(규칙 반복 아님)은 다음 날짜로 옮기면 알림 시각도 같이 옮겨진다
     final rolled = timed.copyWith(start: DateTime(2026, 10, 8, 15, 0));

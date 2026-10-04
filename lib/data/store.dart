@@ -134,6 +134,7 @@ class Store extends ChangeNotifier {
       items = list;
       notifyListeners();
       _pushWidget();
+      _refillRepeatReminders();
     }, onError: (e) {
       error = '$e';
       notifyListeners();
@@ -185,6 +186,20 @@ class Store extends ChangeNotifier {
       // 방장이 나를 내보냈다: 연결을 끊고 공간 선택 화면으로
       if (sp.members.isNotEmpty && !sp.members.contains(uid)) _wasRemoved();
     });
+  }
+
+  final Set<String> _remindRefilled = {};
+
+  /// 반복 일정의 알림 시각 목록은 서버가 하나씩 보내며 줄어든다. 내 일정 중 목록이 어긋났거나 곧 바닥나는 것만 새로 채워 저장한다.
+  void _refillRepeatReminders() {
+    if (_previewUid != null || spaceId == null) return;
+    final now = DateTime.now();
+    for (final i in items) {
+      if (i.ownerUid != uid || i.id.isEmpty || !i.needsRemindRefill(now)) continue;
+      // 같은 항목을 한 번 채운 뒤에는 이 접속에서 다시 채우지 않는다 (저장이 다시 이 검사를 부르는 걸 막는다)
+      if (!_remindRefilled.add('${i.id}|${i.remindStoredAt?.millisecondsSinceEpoch}')) continue;
+      repo.save(spaceId!, i).catchError((_) => '');
+    }
   }
 
   Future<void> _wasRemoved() async {

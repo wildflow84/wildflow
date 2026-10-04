@@ -76,7 +76,8 @@ class _EditSheetState extends State<_EditSheet> {
   late String _assignee = widget.item?.assignee ?? '';
   late bool _dday = widget.item?.dday ?? false;
   late bool _departAlert = widget.item?.departAlert ?? false;
-  late String _departMode = widget.item?.departMode ?? 'car';
+  // 예전에 고른 "대중교통"은 없어졌다: 자동차로 본다
+  late String _departMode = widget.item?.departMode == 'walk' ? 'walk' : 'car';
   late int? _annivYear = widget.item?.annivYear;
   late int? _remind = widget.item?.remindMinutes;
   late m.Visibility _vis;
@@ -249,8 +250,8 @@ class _EditSheetState extends State<_EditSheet> {
         return;
       }
     }
-    // 알림: 종일/시각 일정에 허용되는 값만, 반복 일정은 없음
-    final remind = rule != null || !(_allDay ? const [0, 1440] : const [0, 10, 30, 60, 1440]).contains(_remind) ? null : _remind;
+    // 알림: 종일/시각 일정에 허용되는 값만
+    final remind = !(_allDay ? const [0, 1440] : const [0, 10, 30, 60, 1440]).contains(_remind) ? null : _remind;
     final base = widget.item ??
         Item(id: '', type: _type, title: '', start: startDt, ownerUid: s.uid);
     final edited = base.copyWith(
@@ -791,15 +792,14 @@ class _EditSheetState extends State<_EditSheet> {
                   : const [(null, '알림 없음'), (0, '정각'), (10, '10분 전'), (30, '30분 전'), (60, '1시간 전'), (1440, '하루 전')];
               final value = opts.any((o) => o.$1 == _remind) ? _remind : null;
               return DropdownButtonFormField<int?>(
-                key: ValueKey('remind$_allDay${_rule != null}'),
-                initialValue: _rule != null ? null : value,
+                key: ValueKey('remind$_allDay'),
+                initialValue: value,
                 decoration: InputDecoration(
                   labelText: _type == ItemType.todo ? '마감 알림' : '알림',
                   prefixIcon: const Icon(Icons.notifications_none),
-                  helperText: _rule != null ? '반복 일정 알림은 안드로이드 앱 알림으로 준비 중이야' : null,
                 ),
                 items: [for (final o in opts) DropdownMenuItem<int?>(value: o.$1, child: Text(o.$2))],
-                onChanged: _rule != null ? null : (v) => setState(() => _remind = v),
+                onChanged: (v) => setState(() => _remind = v),
               );
             }(),
             if (_type == ItemType.event && _lat != null && !_allDay && _rule == null)
@@ -817,7 +817,6 @@ class _EditSheetState extends State<_EditSheet> {
                 segments: const [
                   ButtonSegment(value: 'car', icon: Icon(Icons.directions_car_outlined), label: Text('자동차')),
                   ButtonSegment(value: 'walk', icon: Icon(Icons.directions_walk), label: Text('도보')),
-                  ButtonSegment(value: 'transit', icon: Icon(Icons.directions_bus_outlined), label: Text('대중교통')),
                 ],
                 selected: {_departMode},
                 onSelectionChanged: (v) => setState(() => _departMode = v.first),
@@ -827,9 +826,7 @@ class _EditSheetState extends State<_EditSheet> {
                 child: Text(
                   _departMode == 'car'
                       ? '실시간 교통을 반영한 길찾기 시간으로 계산해'
-                      : _departMode == 'walk'
-                          ? '직선거리로 어림잡은 걷는 시간이야 (시속 4.5km, 굽은 길 감안)'
-                          : '직선거리로 어림잡은 값이야 (환승·대기 포함). 정확한 대중교통 시간은 아직 못 구해',
+                      : '직선거리로 어림잡은 걷는 시간이야 (시속 4.5km, 굽은 길 감안)',
                   style: TextStyle(color: kMuted, fontSize: 12),
                 ),
               ),

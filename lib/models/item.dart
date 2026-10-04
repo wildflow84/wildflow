@@ -67,7 +67,7 @@ class Item {
   final bool dday;
   /// 출발 시간 알림: 현재 위치에서 이 일정 장소까지 걸리는 시간을 계산해서 출발할 때 알려 준다 (장소 좌표가 있는 시각 일정)
   final bool departAlert;
-  /// 출발 시간 계산 기준: car(자동차 길찾기) / walk(도보) / transit(대중교통 어림값)
+  /// 출발 시간 계산 기준: car(자동차 길찾기) / walk(도보 어림값). 예전 transit(대중교통)은 car로 본다
   final String departMode;
   /// 기념일 기준 연도. 정해져 있으면 매년 반복 항목에 `N주년`(또는 생일이면 N번째)을 표시. null이면 표시 안 함.
   final int? annivYear;
@@ -75,6 +75,9 @@ class Item {
   final String? subscriptionId;
   /// 알림: 시작(마감) 몇 분 전에 알릴지. null이면 알림 없음. 종일 항목은 그날 오전 9시 기준(1440=전날 오전 9시).
   final int? remindMinutes;
+  /// 서버에 저장돼 있는 반복 알림의 다음 시각과 마지막 시각 (앱이 알림 목록을 새로 채울 때인지 가늠하는 데 쓴다)
+  final DateTime? remindStoredAt;
+  final DateTime? remindStoredLast;
   /// 반복 항목의 회차별 체크 기록: 날짜(yyyy-MM-dd) → 체크한 항목의 글자. 반복이 아니면 안 쓴다.
   final Map<String, List<String>> checksByDate;
 
@@ -167,12 +170,46 @@ class Item {
   bool isMineTo(String uid) => assignee.isNotEmpty ? assignee == uid : ownerUid == uid;
 
   /// 알림을 보낼 시각. 서버가 이 값으로 푸시를 보낸다.
-  /// 반복 일정(규칙)은 다음 회차를 서버가 알 수 없어서 아직 지원하지 않는다 (null).
+  /// 반복 일정(규칙)은 앞으로 알릴 시각들([remindTimes])을 함께 저장해 두고, 서버가 하나씩 보내며 다음 시각으로 넘긴다.
   DateTime? get remindAt {
     final r = remindMinutes;
-    if (r == null || isRecurring) return null;
+    if (r == null) return null;
+    if (isRecurring) {
+      final t = remindTimes(DateTime.now());
+      return t.isEmpty ? null : t.first;
+    }
     final base = allDay ? DateTime(start.year, start.month, start.day, 9) : start;
     return base.subtract(Duration(minutes: r));
+  }
+
+  static const remindAhead = 120; // 반복 알림을 미리 저장해 두는 최대 개수
+  static const remindRefillDays = 30; // 저장해 둔 알림이 이만큼 남으면 앱이 새로 채운다
+
+  /// 반복 일정에서 [now] 이후로 알릴 시각들 (건너뛴 날과 이미 완료한 회차는 뺀다). 반복이 아니면 빈 목록.
+  List<DateTime> remindTimes(DateTime now) {
+    final r = remindMinutes;
+    if (r == null || !isRecurring) return const [];
+    final out = <DateTime>[];
+    final today = dateOnly(now);
+    for (var i = 0; i <= 400 && out.length < remindAhead; i++) {
+      final d = DateTime(today.year, today.month, today.day + i);
+      if (!occursOn(this, d) || doneDates.contains(dateKey(d))) continue;
+      final base = allDay ? DateTime(d.year, d.month, d.day, 9) : DateTime(d.year, d.month, d.day, start.hour, start.minute);
+      final at = base.subtract(Duration(minutes: r));
+      if (at.isAfter(now)) out.add(at);
+    }
+    return out;
+  }
+
+  /// 반복 알림 목록을 새로 채워서 저장해야 하는지 (서버가 다음 시각으로 못 넘겼거나, 저장해 둔 게 곧 바닥날 때)
+  bool needsRemindRefill(DateTime now) {
+    if (remindMinutes == null || !isRecurring) return false;
+    final fresh = remindTimes(now);
+    if (fresh.isEmpty) return remindStoredAt != null;
+    if (remindStoredAt == null || remindStoredAt != fresh.first) return true;
+    final last = remindStoredLast;
+    return last == null ||
+        (last.isBefore(now.add(const Duration(days: remindRefillDays))) && fresh.last.isAfter(last));
   }
 
   /// 출발 시간 알림을 계산할 일정의 시작 시각 (서버가 이 값으로 곧 시작할 일정을 찾는다). 알림 조건이 안 맞으면 null.
@@ -229,6 +266,8 @@ class Item {
     this.annivYear,
     this.subscriptionId,
     this.remindMinutes,
+    this.remindStoredAt,
+    this.remindStoredLast,
   });
 
   Item copyWith({
@@ -314,6 +353,8 @@ class Item {
         annivYear: clearAnniv ? null : (annivYear ?? this.annivYear),
         subscriptionId: subscriptionId,
         remindMinutes: clearRemind ? null : (remindMinutes ?? this.remindMinutes),
+        remindStoredAt: remindStoredAt,
+        remindStoredLast: remindStoredLast,
       );
 
   Map<String, dynamic> toMap() => {
@@ -356,6 +397,7 @@ class Item {
         'subscriptionId': subscriptionId,
         'remindMinutes': remindMinutes,
         'remindAt': remindAt == null ? null : Timestamp.fromDate(remindAt!),
+        'remindTimes': [for (final t in remindTimes(DateTime.now())) Timestamp.fromDate(t)],
       };
 
   factory Item.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -398,10 +440,15 @@ class Item {
       assignee: (m['assignee'] as String?) ?? '',
       dday: m['dday'] == true,
       departAlert: m['departAlert'] == true,
-      departMode: (m['departMode'] as String?) ?? 'car',
+      departMode: m['departMode'] == 'walk' ? 'walk' : 'car',
       annivYear: (m['annivYear'] as num?)?.toInt(),
       subscriptionId: m['subscriptionId'] as String?,
       remindMinutes: (m['remindMinutes'] as num?)?.toInt(),
+      remindStoredAt: (m['remindAt'] as Timestamp?)?.toDate(),
+      remindStoredLast: () {
+        final l = m['remindTimes'];
+        return l is List && l.isNotEmpty && l.last is Timestamp ? (l.last as Timestamp).toDate() : null;
+      }(),
       checksByDate: {
         for (final e in ((m['checksByDate'] as Map?) ?? const {}).entries)
           '${e.key}': List<String>.from(e.value as List),

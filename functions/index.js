@@ -244,7 +244,14 @@ exports.sendReminders = onSchedule({ schedule: 'every 5 minutes', timeZone: 'Asi
   const spaces = {};
   for (const d of due.docs) {
     const item = d.data();
-    if (!lib.dueForReminder(item, now)) continue;
+    // 반복 일정: 이번 알림을 보내든(또는 이미 완료한 회차라 건너뛰든) 다음 알림 시각으로 넘겨 둔다
+    const advance = lib.isRepeatingReminder(item)
+      ? { remindAt: lib.nextRemindMs(item, now) == null ? FieldValue.delete() : Timestamp.fromMillis(lib.nextRemindMs(item, now)) }
+      : {};
+    if (!lib.dueForReminder(item, now)) {
+      if (lib.isRepeatingReminder(item)) await d.ref.update({ remindSentFor: item.remindAt, ...advance });
+      continue;
+    }
     const spaceId = d.ref.parent.parent.id;
     spaces[spaceId] = spaces[spaceId] || ((await db.doc(`spaces/${spaceId}`).get()).data() || {}).members || [];
     const prefs = {};
@@ -255,7 +262,7 @@ exports.sendReminders = onSchedule({ schedule: 'every 5 minutes', timeZone: 'Asi
       sent += await pushTo(u, prefs[u], message, { spaceId, itemId: d.id, kind: 'reminder' });
     }
     // 같은 알림 시각으로 다시 보내지 않게 표시 (일정 시간을 바꾸면 remindAt이 달라져 새로 보냄)
-    await d.ref.update({ remindSentFor: item.remindAt });
+    await d.ref.update({ remindSentFor: item.remindAt, ...advance });
     console.log('알림', spaceId, d.id, '보낸 기기', sent);
   }
 });
@@ -324,11 +331,11 @@ exports.sendDepartAlerts = onSchedule({ schedule: 'every 5 minutes', timeZone: '
     if (!lib.locFresh(owner.lastLoc, now)) continue;
     const distM = lib.haversineM(owner.lastLoc.lat, owner.lastLoc.lng, item.lat, item.lng);
     // 길찾기 호출을 아끼려고, 직선거리로 봐도 아직 한참 남았으면 건너뛴다
-    const mode = item.departMode || 'car';
+    const mode = item.departMode === 'walk' ? 'walk' : 'car'; // 예전 대중교통은 자동차로 본다
     const rough = lib.estimateDurationSec(mode, distM);
     const startMs = item.departFrom.toMillis();
     if (now < startMs - rough * 1000 * 3 - 60 * 60 * 1000) continue;
-    // 자동차만 길찾기 서비스를 쓴다. 도보/대중교통은 어림값 (문구에 "대략"이 붙는다)
+    // 자동차만 길찾기 서비스를 쓴다. 도보는 어림값 (문구에 "대략"이 붙는다)
     let sec = mode === 'car' ? await kakaoDurationSec(owner.lastLoc.lat, owner.lastLoc.lng, item.lat, item.lng) : null;
     if (mode !== 'car') lastKakaoError = '';
     const approximate = sec == null;
