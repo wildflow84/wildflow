@@ -14,6 +14,10 @@ setGlobalOptions({ region: 'asia-northeast3', maxInstances: 3 });
 
 const db = getFirestore();
 
+// 앱이 보내는 로그인 토큰은 함수 안에서 검사한다(req.auth). 그래서 Cloud Run 쪽 호출 권한은 모두에게 열어둔다.
+// 이게 닫혀 있으면 앱에서 401 UNAUTHENTICATED 로 막힌다.
+const PUBLIC_CALL = { invoker: 'public' };
+
 /** 호출자가 공간 멤버인지 확인하고, 공간/항목/상대 정보를 돌려준다. */
 async function context(req, spaceId, itemId) {
   const uid = req.auth && req.auth.uid;
@@ -53,7 +57,7 @@ async function pushTo(partnerUid, prefs, message, data) {
 }
 
 /** 같이 보기 항목에 대해 상대에게 확인 요청(재촉) 푸시. 항목(회차)당 최대 3번. */
-exports.nudge = onCall(async (req) => {
+exports.nudge = onCall(PUBLIC_CALL, async (req) => {
   const { spaceId, itemId } = req.data || {};
   const c = await context(req, spaceId, itemId);
   if (c.item.done) throw new HttpsError('failed-precondition', '이미 완료된 항목이야');
@@ -78,7 +82,7 @@ exports.nudge = onCall(async (req) => {
 });
 
 /** 같이 하는 항목을 완료했을 때 상대에게 알림. 상대 설정(완료 알림, 반복은 별도)에 따른다. */
-exports.notifyComplete = onCall(async (req) => {
+exports.notifyComplete = onCall(PUBLIC_CALL, async (req) => {
   const { spaceId, itemId } = req.data || {};
   const c = await context(req, spaceId, itemId);
   // 방금 내가 완료한 항목만 (아무 항목이나 알림을 보내지 못하게)
@@ -94,7 +98,7 @@ exports.notifyComplete = onCall(async (req) => {
 });
 
 /** 내가 상대에게 새로 공유한 항목이 있다고 알림. 소유자만, 같은 항목은 1분에 한 번. */
-exports.notifyShared = onCall(async (req) => {
+exports.notifyShared = onCall(PUBLIC_CALL, async (req) => {
   const { spaceId, itemId } = req.data || {};
   const c = await context(req, spaceId, itemId);
   if (c.item.ownerUid !== c.uid) return { sent: 0 };
@@ -192,7 +196,7 @@ async function requireMember(req, spaceId) {
   return uid;
 }
 
-exports.syncSubscription = onCall({ timeoutSeconds: 120 }, async (req) => {
+exports.syncSubscription = onCall({ ...PUBLIC_CALL, timeoutSeconds: 120 }, async (req) => {
   const { spaceId, subId } = req.data || {};
   if (!spaceId || !subId) throw new HttpsError('invalid-argument', '잘못된 요청이야');
   await requireMember(req, spaceId);
@@ -200,7 +204,7 @@ exports.syncSubscription = onCall({ timeoutSeconds: 120 }, async (req) => {
 });
 
 /** 구독을 지우고 그 구독에서 만든 일정도 같이 지운다. */
-exports.removeSubscription = onCall({ timeoutSeconds: 120 }, async (req) => {
+exports.removeSubscription = onCall({ ...PUBLIC_CALL, timeoutSeconds: 120 }, async (req) => {
   const { spaceId, subId } = req.data || {};
   if (!spaceId || !subId) throw new HttpsError('invalid-argument', '잘못된 요청이야');
   await requireMember(req, spaceId);
@@ -259,7 +263,7 @@ exports.sendReminders = onSchedule({ schedule: 'every 5 minutes', timeZone: 'Asi
 // ---------------------------------------------------------------------------
 // 장소 검색 (안드로이드 앱용): 카카오 REST 키는 서버에만 두고, 앱은 이 함수를 통해 검색한다.
 // ---------------------------------------------------------------------------
-exports.searchPlaces = onCall(async (req) => {
+exports.searchPlaces = onCall(PUBLIC_CALL, async (req) => {
   if (!req.auth || !req.auth.uid) throw new HttpsError('unauthenticated', '로그인이 필요해');
   const query = req.data && typeof req.data.query === 'string' ? req.data.query.trim() : '';
   if (query.length < 2 || query.length > 60) return { documents: [] };
@@ -356,7 +360,7 @@ async function hostContext(req) {
   return { ref, space, members, spaceId, targetUid, hostUid: uid };
 }
 
-exports.removeMember = onCall({ timeoutSeconds: 120 }, async (req) => {
+exports.removeMember = onCall({ ...PUBLIC_CALL, timeoutSeconds: 120 }, async (req) => {
   const c = await hostContext(req);
   if (!c.members.includes(c.targetUid)) throw new HttpsError('not-found', '이 공간의 구성원이 아니야');
   const name = (c.space.names || {})[c.targetUid] || '상대';
@@ -383,7 +387,7 @@ exports.removeMember = onCall({ timeoutSeconds: 120 }, async (req) => {
   return { removed: c.targetUid };
 });
 
-exports.allowMember = onCall(async (req) => {
+exports.allowMember = onCall(PUBLIC_CALL, async (req) => {
   const c = await hostContext(req);
   await c.ref.update({
     banned: FieldValue.arrayRemove(c.targetUid),
