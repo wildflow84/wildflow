@@ -18,7 +18,7 @@ class Place {
 /// 카카오 JavaScript 키 (공개 값, 카카오 개발자 콘솔에서 사이트 도메인 제한). 비어 있으면 장소 검색을 숨긴다.
 const kakaoJsKey = String.fromEnvironment('KAKAO_JS_KEY');
 
-bool get placeSearchAvailable => kakaoJsKey.isNotEmpty && impl.supported;
+bool get placeSearchAvailable => impl.supported && (!impl.needsKey || kakaoJsKey.isNotEmpty);
 
 /// 카카오 키워드 검색 응답(JSON 배열)을 [Place] 목록으로. x=경도, y=위도.
 List<Place> parseKakaoPlaces(String json) {

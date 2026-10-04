@@ -1,6 +1,7 @@
 import 'dart:js_interop';
 
 const supported = true;
+const needsKey = true; // 웹은 카카오 JavaScript 키로 직접 검색
 
 @JS('ourdayKakaoSearch')
 external JSPromise<JSString> _search(JSString key, JSString query);

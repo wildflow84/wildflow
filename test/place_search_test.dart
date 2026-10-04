@@ -17,8 +17,8 @@ void main() {
     expect(r[1].address, '경기 어딘가');
   });
 
-  test('키가 없으면 검색을 막는다', () async {
-    expect(placeSearchAvailable, false);
-    expect(await searchPlaces('오산'), isEmpty);
+  test('웹이 아닌 곳(앱)은 키 없이 서버 함수로 검색하고, 한 글자는 검색하지 않는다', () async {
+    expect(placeSearchAvailable, true);
+    expect(await searchPlaces('오'), isEmpty);
   });
 }

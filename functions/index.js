@@ -257,6 +257,25 @@ exports.sendReminders = onSchedule({ schedule: 'every 5 minutes', timeZone: 'Asi
 });
 
 // ---------------------------------------------------------------------------
+// 장소 검색 (안드로이드 앱용): 카카오 REST 키는 서버에만 두고, 앱은 이 함수를 통해 검색한다.
+// ---------------------------------------------------------------------------
+exports.searchPlaces = onCall(async (req) => {
+  if (!req.auth || !req.auth.uid) throw new HttpsError('unauthenticated', '로그인이 필요해');
+  const query = req.data && typeof req.data.query === 'string' ? req.data.query.trim() : '';
+  if (query.length < 2 || query.length > 60) return { documents: [] };
+  const key = process.env.KAKAO_REST_KEY;
+  if (!key) throw new HttpsError('failed-precondition', 'no-key');
+  const url = `https://dapi.kakao.com/v2/local/search/keyword.json?size=8&query=${encodeURIComponent(query)}`;
+  const res = await fetch(url, { headers: { Authorization: `KakaoAK ${key}` } });
+  if (!res.ok) {
+    console.warn('장소 검색 실패', res.status);
+    throw new HttpsError('unavailable', `kakao-${res.status}`);
+  }
+  const json = await res.json();
+  return { documents: Array.isArray(json.documents) ? json.documents : [] };
+});
+
+// ---------------------------------------------------------------------------
 // 출발 시간 알림: 앞으로 6시간 안에 시작하는 "출발 알림" 일정에 대해, 만든 사람의 마지막 위치에서
 // 장소까지 걸리는 시간을 구해(카카오모빌리티 길찾기, 키가 없으면 직선거리 어림값) 출발할 때 푸시한다.
 // ---------------------------------------------------------------------------
