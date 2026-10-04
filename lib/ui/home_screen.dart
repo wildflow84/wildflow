@@ -1104,7 +1104,7 @@ class _Meta extends StatelessWidget {
 
 /// 같이 보기 항목의 재촉(확인 요청) 버튼과 지도 메뉴
 Widget? _trailing(BuildContext context, Store s, Item item, DateTime day, bool done) {
-  final hasPartner = s.names.keys.any((k) => k != s.uid);
+  final hasPartner = s.names.keys.any((k) => k != s.uid) || s.members.any((k) => k != s.uid);
   final canNudge = item.visibility == m.Visibility.shared && hasPartner && !done && item.id.isNotEmpty;
   final hasMap = item.type == ItemType.event && item.location.isNotEmpty;
   if (!canNudge && !hasMap) return null;
