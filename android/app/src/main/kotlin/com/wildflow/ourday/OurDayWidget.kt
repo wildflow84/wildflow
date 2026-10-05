@@ -1,6 +1,8 @@
 package com.wildflow.ourday
 
+import android.app.AlarmManager
 import android.app.PendingIntent
+import android.content.ComponentName
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
@@ -27,10 +29,31 @@ class OurDayWidget : HomeWidgetProvider() {
                 appWidgetManager.notifyAppWidgetViewDataChanged(id, R.id.widget_list)
             }
         }
+        scheduleMidnight(context)
+    }
+
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        scheduleMidnight(context)
+    }
+
+    override fun onDisabled(context: Context) {
+        cancelMidnight(context)
+        super.onDisabled(context)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action
+        if (action == ACTION_MIDNIGHT) {
+            // 자정이 지났다: 지난 날을 빼고 "오늘"을 새로 잡아 다시 그린다
+            val mgr = AppWidgetManager.getInstance(context)
+            val ids = mgr.getAppWidgetIds(ComponentName(context, OurDayWidget::class.java))
+            val data = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+            ids.forEach { id -> mgr.updateAppWidget(id, build(context, id, data)) }
+            mgr.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
+            scheduleMidnight(context)
+            return
+        }
         if (action == ACTION_PREV || action == ACTION_NEXT || action == ACTION_TODAY) {
             val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
             if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
@@ -59,6 +82,36 @@ class OurDayWidget : HomeWidgetProvider() {
         private const val ACTION_PREV = "com.wildflow.ourday.WIDGET_PREV"
         private const val ACTION_NEXT = "com.wildflow.ourday.WIDGET_NEXT"
         private const val ACTION_TODAY = "com.wildflow.ourday.WIDGET_TODAY"
+        private const val ACTION_MIDNIGHT = "com.wildflow.ourday.WIDGET_MIDNIGHT"
+
+        private fun midnightIntent(context: Context): PendingIntent {
+            val i = Intent(context, OurDayWidget::class.java)
+            i.action = ACTION_MIDNIGHT
+            return PendingIntent.getBroadcast(context, 77, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        }
+
+        /** 다음 자정 직후에 위젯을 다시 그리도록 알람을 건다 (정확한 알람 권한 없이, 몇 분 늦을 수 있음) */
+        fun scheduleMidnight(context: Context) {
+            try {
+                val c = Calendar.getInstance()
+                c.add(Calendar.DAY_OF_YEAR, 1)
+                c.set(Calendar.HOUR_OF_DAY, 0)
+                c.set(Calendar.MINUTE, 0)
+                c.set(Calendar.SECOND, 5)
+                c.set(Calendar.MILLISECOND, 0)
+                val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                am.set(AlarmManager.RTC, c.timeInMillis, midnightIntent(context))
+            } catch (e: Exception) {
+                // 알람을 못 걸어도 30분마다 도는 기본 갱신이 있다
+            }
+        }
+
+        fun cancelMidnight(context: Context) {
+            try {
+                (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(midnightIntent(context))
+            } catch (e: Exception) {
+            }
+        }
 
         private fun actionIntent(context: Context, id: Int, action: String, code: Int): PendingIntent {
             val i = Intent(context, OurDayWidget::class.java)

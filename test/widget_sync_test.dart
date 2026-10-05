@@ -59,5 +59,20 @@ void agendaJsonTests() {
     final d5 = days.firstWhere((d) => (d as Map)['label'].toString().contains('5일')) as Map;
     expect(d5['kind'], 'holiday');
     expect(d5['note'], contains('개천절'));
+    // 자정이 지난 뒤 위젯이 지난 날을 빼는 데 쓰는 날짜, 이동형 표시
+    expect((days.first as Map)['date'], '2026-10-03');
+    expect(d4['date'], '2026-10-04');
+    expect(item['roll'], false);
+  });
+
+  test('이동형 할 일은 위젯 JSON에 roll 표시', () {
+    final today = DateTime(2026, 10, 3);
+    final roll = Item(
+        id: 'r', type: ItemType.todo, title: '약', start: DateTime(2026, 10, 3), ownerUid: 'me',
+        rollEvery: 1, rollUnit: RollUnit.day);
+    final days = jsonDecode(WidgetSync.agendaJson([roll], today, spaceId: 's')) as List;
+    final it = ((days.first as Map)['items'] as List).first as Map;
+    expect(it['roll'], true);
+    expect(it['can'], true);
   });
 }

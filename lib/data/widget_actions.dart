@@ -34,9 +34,11 @@ Future<void> widgetBackgroundCallback(Uri? uri) async {
     final item = await repo.getItem(space, id);
     if (item == null) return;
     final day = DateTime.parse(date);
+    // 이동형은 완료하면 다음 날짜로 넘어간다. 이미 넘어간 항목을 또 누르면 한 번 더 넘어가 버리니 막는다.
+    if (item.isRolling && dateOnly(item.start) != dateOnly(day)) return;
     final r = toggledDone(item, dateOnly(day), user.uid, DateTime.now());
     // 서버 저장을 기다리기 전에 위젯부터 바꿔서 바로 보이게 한다
-    await _patchWidgetJson(id, date, r.item, dateOnly(day));
+    await _patchWidgetJson(id, date, r.marking);
     await repo.save(space, r.item);
     if (r.marking && item.visibility == Visibility.shared) {
       unawaited(repo.notifyComplete(space, id).catchError((_) {}));
@@ -47,12 +49,13 @@ Future<void> widgetBackgroundCallback(Uri? uri) async {
 }
 
 /// 위젯 목록 데이터에서 방금 바꾼 항목의 완료 표시만 고쳐서 바로 반영한다.
-Future<void> _patchWidgetJson(String id, String date, Item updated, DateTime day) async {
+/// [done]은 이번에 누른 결과(완료=true). 이동형 할 일은 완료하면 항목이 다음 날짜로 넘어가서
+/// 그날 기준으로 다시 따지면 "미완료"로 보이므로, 누른 결과를 그대로 쓴다.
+Future<void> _patchWidgetJson(String id, String date, bool done) async {
   try {
     final raw = await HomeWidget.getWidgetData<String>('agendaJson');
     if (raw == null) return;
     final days = jsonDecode(raw) as List;
-    final done = isDoneOn(updated, day);
     for (final d in days) {
       for (final it in (d['items'] as List)) {
         if (it['id'] == id && it['dk'] == date) it['done'] = done;

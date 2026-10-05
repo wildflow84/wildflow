@@ -55,7 +55,7 @@ class WidgetSync {
   }
 
   /// 목록형 위젯용 JSON: 오늘부터 1년치([_jsonDays]일), 일정/할 일이 있거나 공휴일인 날만. 위젯에서 아래로 계속 스크롤한다.
-  /// [{label, kind(today|holiday|sun|sat|day), note, items:[{t, todo, done, time, place, cat, color, rep, priv}]}]
+  /// [{date, label, kind(today|holiday|sun|sat|day), note, items:[{t, todo, done, time, place, cat, color, rep, priv}]}]
   static String agendaJson(
     List<Item> visible,
     DateTime today, {
@@ -92,6 +92,7 @@ class WidgetSync {
           'can': i.type == ItemType.todo && i.id.isNotEmpty && spaceId.isNotEmpty && i.checksLeftOn(day) == 0,
           't': i.title,
           'todo': i.type == ItemType.todo,
+          'roll': i.isRolling, // 이동형은 완료하면 다음 날짜로 넘어가서 위젯에서 되돌릴 수 없다
           'done': isDoneOn(i, day),
           'time': timeLabel(i) ?? '',
           'place': i.location,
@@ -101,7 +102,8 @@ class WidgetSync {
           'priv': i.visibility == Visibility.private,
         });
       }
-      days.add({'label': label, 'kind': kind, 'note': holidays.take(2).join(' '), 'items': list});
+      // date: 위젯이 자정 뒤에 지난 날을 빼는 데 쓴다
+      days.add({'date': dateKey(day), 'label': label, 'kind': kind, 'note': holidays.take(2).join(' '), 'items': list});
     }
     return jsonEncode(days);
   }

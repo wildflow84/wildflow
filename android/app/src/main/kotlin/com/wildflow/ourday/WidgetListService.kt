@@ -54,10 +54,21 @@ class WidgetListService : RemoteViewsService() {
             val out = ArrayList<Row>()
             try {
                 val days = JSONArray(json)
+                // 위젯 데이터는 앱이 만든 시점의 스냅샷이다. 자정이 지나면 지난 날을 빼고 오늘 머리글을 새로 단다.
+                val todayKey = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
                 for (d in 0 until days.length()) {
                     val day = days.getJSONObject(d)
                     val items = day.getJSONArray("items")
-                    out.add(Row(true, day.optString("label"), day.optString("kind"), day.optString("note"), null, 0))
+                    var dateKey = day.optString("date")
+                    if (dateKey.isEmpty() && items.length() > 0) dateKey = items.getJSONObject(0).optString("dk")
+                    if (dateKey.isNotEmpty() && dateKey < todayKey) continue // 지난 날
+                    var label = day.optString("label")
+                    var kind = day.optString("kind")
+                    if (dateKey == todayKey && kind != "today") {
+                        kind = "today"
+                        if (!label.startsWith("오늘")) label = "오늘 · $label"
+                    }
+                    out.add(Row(true, label, kind, day.optString("note"), null, 0))
                     for (i in 0 until items.length()) {
                         val pos = when {
                             items.length() == 1 -> 0
@@ -150,7 +161,7 @@ class WidgetListService : RemoteViewsService() {
                 edit.data = Uri.parse("ourday://edit?id=" + Uri.encode(id) + "&date=" + Uri.encode(dk))
             }
             v.setOnClickFillInIntent(R.id.row_root, edit)
-            if (todo && item.optBoolean("can") && id.isNotEmpty() && space.isNotEmpty() && dk.isNotEmpty()) {
+            if (todo && item.optBoolean("can") && !(done && item.optBoolean("roll")) && id.isNotEmpty() && space.isNotEmpty() && dk.isNotEmpty()) {
                 val done = Intent()
                 done.data = Uri.parse(
                     "ourday://done?space=" + Uri.encode(space) + "&id=" + Uri.encode(id) + "&date=" + Uri.encode(dk)
