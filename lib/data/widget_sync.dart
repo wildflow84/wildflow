@@ -13,6 +13,7 @@ import '../models/item.dart';
 class WidgetSync {
   static const _provider = 'OurDayWidget';
   static const _agendaDays = 7;
+  static const _pastDays = 14;
   static const _maxLines = 10;
   static const _jsonDays = 366;
   static const _jsonMaxItems = 600;
@@ -67,11 +68,12 @@ class WidgetSync {
     final df = DateFormat('M월 d일 (E)', 'ko');
     final days = <Map<String, dynamic>>[];
     var count = 0;
-    for (var d = 0; d < _jsonDays && count < _jsonMaxItems; d++) {
+    // 지난 [_pastDays]일부터 담는다 (위젯은 오늘 위치에서 시작하고, 위로 올리면 지난 날을 볼 수 있다)
+    for (var d = -_pastDays; d < _jsonDays && count < _jsonMaxItems; d++) {
       final day = DateTime(today.year, today.month, today.day + d);
       final items = _on(visible, day);
       final holidays = holidaysOn?.call(day) ?? const <String>[];
-      if (items.isEmpty && holidays.isEmpty && d > 0) continue;
+      if (items.isEmpty && holidays.isEmpty && d != 0) continue;
       final kind = d == 0
           ? 'today'
           : (holidays.isNotEmpty || day.weekday == DateTime.sunday)

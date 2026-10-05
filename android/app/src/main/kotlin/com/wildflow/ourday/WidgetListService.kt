@@ -15,6 +15,45 @@ import android.widget.RemoteViewsService
 import org.json.JSONArray
 import org.json.JSONObject
 
+/** 위젯 목록 날짜 규칙 (목록을 그리는 쪽과 "오늘 위치로 스크롤"하는 쪽이 같은 기준을 쓴다) */
+object WidgetDates {
+    const val PAST_DAYS = 14
+
+    fun key(offsetDays: Int = 0): String {
+        val c = java.util.Calendar.getInstance()
+        c.add(java.util.Calendar.DAY_OF_YEAR, offsetDays)
+        return java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(c.time)
+    }
+
+    /** 날짜 문자열(yyyy-MM-dd)을 구한다: 날 머리글의 date, 없으면 첫 항목의 dk */
+    fun dateOf(day: org.json.JSONObject): String {
+        var k = day.optString("date")
+        val items = day.optJSONArray("items")
+        if (k.isEmpty() && items != null && items.length() > 0) k = items.getJSONObject(0).optString("dk")
+        return k
+    }
+
+    /** 목록에서 오늘 머리글이 시작되는 줄 번호 (위젯을 처음 그릴 때 거기로 스크롤). 오늘 이후 날이 없으면 0 */
+    fun todayRowIndex(agendaJson: String): Int {
+        return try {
+            val days = org.json.JSONArray(agendaJson)
+            val today = key()
+            val cutoff = key(-PAST_DAYS)
+            var row = 0
+            for (d in 0 until days.length()) {
+                val day = days.getJSONObject(d)
+                val k = dateOf(day)
+                if (k.isNotEmpty() && k < cutoff) continue
+                if (k.isNotEmpty() && k >= today) return row
+                row += 1 + day.getJSONArray("items").length()
+            }
+            0
+        } catch (e: Exception) {
+            0
+        }
+    }
+}
+
 /** 목록형 위젯의 스크롤 목록: 앱의 "목록" 탭처럼 날짜 머리글 + 날짜별 둥근 카드 */
 class WidgetListService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsService.RemoteViewsFactory {
@@ -54,14 +93,14 @@ class WidgetListService : RemoteViewsService() {
             val out = ArrayList<Row>()
             try {
                 val days = JSONArray(json)
-                // 위젯 데이터는 앱이 만든 시점의 스냅샷이다. 자정이 지나면 지난 날을 빼고 오늘 머리글을 새로 단다.
-                val todayKey = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                // 위젯 데이터는 앱이 만든 시점의 스냅샷이다. 자정이 지나면 오늘 머리글을 새로 달고, 지난 날은 위에 남겨 둔다(위로 올리면 보인다).
+                val todayKey = WidgetDates.key()
+                val cutoffKey = WidgetDates.key(-WidgetDates.PAST_DAYS)
                 for (d in 0 until days.length()) {
                     val day = days.getJSONObject(d)
                     val items = day.getJSONArray("items")
-                    var dateKey = day.optString("date")
-                    if (dateKey.isEmpty() && items.length() > 0) dateKey = items.getJSONObject(0).optString("dk")
-                    if (dateKey.isNotEmpty() && dateKey < todayKey) continue // 지난 날
+                    val dateKey = WidgetDates.dateOf(day)
+                    if (dateKey.isNotEmpty() && dateKey < cutoffKey) continue // 너무 오래된 날
                     var label = day.optString("label")
                     var kind = day.optString("kind")
                     if (dateKey == todayKey && kind != "today") {
