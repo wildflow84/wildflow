@@ -324,7 +324,15 @@ class Store extends ChangeNotifier {
     _pushTimer = Timer(const Duration(seconds: 2), _doPushWidget);
   }
 
-  void _doPushWidget() {
+  /// 앱을 켜거나 끌 때: 기다리던 위젯 갱신을 바로 보내고, 내용이 그대로여도 위젯을 다시 그리게 한다
+  /// (위젯이 오늘 위치/이번 달로 돌아오고, 날짜가 바뀐 경우도 바로 반영된다)
+  void refreshWidgetNow() {
+    if (kIsWeb || spaceId == null || _previewUid != null) return;
+    _pushTimer?.cancel();
+    _doPushWidget(force: true);
+  }
+
+  void _doPushWidget({bool force = false}) {
     WidgetSync.push(
       visibleItems,
       uid,
@@ -332,6 +340,7 @@ class Store extends ChangeNotifier {
       categoryName: (i) => categoriesOf(i).first.name,
       holidaysOn: (d) => [for (final m in cal.marksOn(d)) if (m.isHoliday) m.name],
       spaceId: spaceId ?? '',
+      force: force,
     );
   }
 

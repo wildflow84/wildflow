@@ -155,6 +155,19 @@ class _OurDayAppState extends State<OurDayApp> with WidgetsBindingObserver {
   @override
   void didChangePlatformBrightness() => setState(() {});
 
+  // 앱을 켜거나(되돌아오거나) 끌 때마다 홈 화면 위젯을 새로 그린다
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      context.read<Store>().refreshWidgetNow();
+    } else if (state == AppLifecycleState.resumed) {
+      // 앱이 열리는 화면 전환이 끝난 뒤에 보낸다
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) context.read<Store>().refreshWidgetNow();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final mode = context.select<Store, String>((s) => s.themeMode);

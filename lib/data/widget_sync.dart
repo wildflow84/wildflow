@@ -159,6 +159,7 @@ class WidgetSync {
     String Function(Item)? categoryName,
     List<String> Function(DateTime)? holidaysOn,
     String spaceId = '',
+    bool force = false, // true면 내용이 그대로여도 위젯을 다시 그리게 한다 (앱을 켜고 끌 때)
   }) async {
     if (kIsWeb) return;
     final today = dateOnly(DateTime.now());
@@ -171,7 +172,7 @@ class WidgetSync {
       final days = cells.keys.join(',');
       // 내용이 그대로면 위젯을 다시 그리게 하지 않는다
       final sig = '${agenda.hashCode}/${cellsJson.hashCode}/${today.day}';
-      if (sig == _lastSig) return;
+      if (!force && sig == _lastSig) return;
       _lastSig = sig;
       await HomeWidget.saveWidgetData<String>('title', DateFormat('M월 d일 (E)', 'ko').format(today));
       await HomeWidget.saveWidgetData<String>('body', agendaText(visible, today));
