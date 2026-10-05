@@ -1,16 +1,15 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/widgets.dart' hide Visibility;
 import 'package:geolocator/geolocator.dart';
-import 'package:home_widget/home_widget.dart';
 
 import '../firebase_options.dart';
 import '../models/item.dart';
 import 'repository.dart';
+import 'widget_sync.dart';
 
 /// 홈 화면 위젯에서 할 일 체크박스를 눌렀을 때 앱을 열지 않고 백그라운드에서 완료 처리한다.
 /// 네이티브(WidgetActionActivity)가 `ourday://done?space=…&id=…&date=yyyy-MM-dd` 로 이 함수를 부른다.
@@ -38,7 +37,7 @@ Future<void> widgetBackgroundCallback(Uri? uri) async {
     if (item.isRolling && dateOnly(item.start) != dateOnly(day)) return;
     final r = toggledDone(item, dateOnly(day), user.uid, DateTime.now());
     // 서버 저장을 기다리기 전에 위젯부터 바꿔서 바로 보이게 한다
-    await _patchWidgetJson(id, date, r.marking);
+    await WidgetSync.patchDone(id, date, r.marking);
     await repo.save(space, r.item);
     if (r.marking && item.visibility == Visibility.shared) {
       unawaited(repo.notifyComplete(space, id).catchError((_) {}));
@@ -46,24 +45,6 @@ Future<void> widgetBackgroundCallback(Uri? uri) async {
   } catch (_) {
     // 실패해도 조용히: 위젯은 다음에 앱을 열 때 맞춰진다
   }
-}
-
-/// 위젯 목록 데이터에서 방금 바꾼 항목의 완료 표시만 고쳐서 바로 반영한다.
-/// [done]은 이번에 누른 결과(완료=true). 이동형 할 일은 완료하면 항목이 다음 날짜로 넘어가서
-/// 그날 기준으로 다시 따지면 "미완료"로 보이므로, 누른 결과를 그대로 쓴다.
-Future<void> _patchWidgetJson(String id, String date, bool done) async {
-  try {
-    final raw = await HomeWidget.getWidgetData<String>('agendaJson');
-    if (raw == null) return;
-    final days = jsonDecode(raw) as List;
-    for (final d in days) {
-      for (final it in (d['items'] as List)) {
-        if (it['id'] == id && it['dk'] == date) it['done'] = done;
-      }
-    }
-    await HomeWidget.saveWidgetData<String>('agendaJson', jsonEncode(days));
-    await HomeWidget.updateWidget(androidName: 'OurDayWidget');
-  } catch (_) {}
 }
 
 /// 앱을 안 열어도 15분마다(안드로이드 WorkManager) 불리는 위치 갱신.

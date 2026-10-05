@@ -319,9 +319,9 @@ class Store extends ChangeNotifier {
 
   void _pushWidget() {
     if (kIsWeb) return; // 위젯은 안드로이드 전용
-    // 항목이 바뀔 때마다(내가 저장하면 두 번씩 오기도 해) 바로 계산하면 화면이 버벅이므로, 잠잠해진 뒤 한 번만 보낸다
+    // 항목이 바뀔 때마다(내가 저장하면 두 번씩 오기도 해) 바로 계산하면 화면이 버벅이므로, 잠깐(0.4초) 모아서 한 번만 보낸다. 위젯이 거의 실시간으로 따라간다.
     _pushTimer?.cancel();
-    _pushTimer = Timer(const Duration(seconds: 2), _doPushWidget);
+    _pushTimer = Timer(const Duration(milliseconds: 400), _doPushWidget);
   }
 
   /// 앱을 켜거나 끌 때: 기다리던 위젯 갱신을 바로 보내고, 내용이 그대로여도 위젯을 다시 그리게 한다
@@ -472,6 +472,8 @@ class Store extends ChangeNotifier {
   Future<Item?> toggleDone(Item item, DateTime day, {bool checkAll = false}) async {
     final i = checkAll ? item.withAllChecks(day, true) : item;
     final r = toggledDone(i, day, uid, DateTime.now());
+    // 위젯의 체크 표시부터 바로 바꾼다 (전체 계산은 뒤따라 간다)
+    if (_previewUid == null) unawaited(WidgetSync.patchDone(i.id, dateKey(day), r.marking));
     await save(r.item);
     if (r.marking) _tellPartnerDone(i);
     return i.isRolling ? item : null;
