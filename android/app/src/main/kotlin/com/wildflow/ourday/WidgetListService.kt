@@ -17,7 +17,7 @@ import org.json.JSONObject
 
 /** 위젯 목록 날짜 규칙 (목록을 그리는 쪽과 "오늘 위치로 스크롤"하는 쪽이 같은 기준을 쓴다) */
 object WidgetDates {
-    const val PAST_DAYS = 14
+    const val PAST_DAYS = 366
 
     fun key(offsetDays: Int = 0): String {
         val c = java.util.Calendar.getInstance()

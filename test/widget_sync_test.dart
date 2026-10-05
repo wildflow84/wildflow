@@ -48,8 +48,13 @@ void agendaJsonTests() {
       holidaysOn: (d) => d.day == 5 ? ['개천절 대체공휴일'] : const [],
     );
     final days = jsonDecode(json) as List;
-    expect((days.first as Map)['kind'], 'today');
-    expect((days.first as Map)['label'], startsWith('오늘 ·'));
+    final todayDay = days.firstWhere((d) => (d as Map)['date'] == '2026-10-03') as Map;
+    expect(todayDay['kind'], 'today');
+    expect(todayDay['label'], startsWith('오늘 ·'));
+    // 지난 날도 위에 담긴다 (날짜순)
+    final dates = [for (final d in days) (d as Map)['date'] as String];
+    expect(dates, [...dates]..sort());
+    expect(dates.first.compareTo('2026-10-03') < 0, isTrue);
     final d4 = days.firstWhere((d) => (d as Map)['label'].toString().contains('4일')) as Map;
     final item = (d4['items'] as List).first as Map;
     expect(item['t'], '미용실');
@@ -60,7 +65,6 @@ void agendaJsonTests() {
     expect(d5['kind'], 'holiday');
     expect(d5['note'], contains('개천절'));
     // 자정이 지난 뒤 위젯이 지난 날을 빼는 데 쓰는 날짜, 이동형 표시
-    expect((days.first as Map)['date'], '2026-10-03');
     expect(d4['date'], '2026-10-04');
     expect(item['roll'], false);
   });

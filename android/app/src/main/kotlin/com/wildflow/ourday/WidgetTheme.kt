@@ -53,6 +53,11 @@ class WidgetTheme(
 
 /** 위젯마다 따로 저장하는 설정: 모양(목록/달력), 투명도, 색 */
 class WidgetPrefs(context: Context) {
+    companion object {
+        /** 이만큼 안 쓰면 다음 갱신에서 오늘로 돌려놓는다 (달력은 이번 달, 목록은 오늘 위치) */
+        const val IDLE_RESET_MS = 10 * 60 * 1000L
+    }
+
     private val sp = context.getSharedPreferences("ourday_widget_cfg", Context.MODE_PRIVATE)
 
     fun style(id: Int): String = sp.getString("style_$id", "list") ?: "list"
@@ -70,6 +75,14 @@ class WidgetPrefs(context: Context) {
     fun setMonthOffset(id: Int, offset: Int) {
         sp.edit().putInt("month_$id", offset).apply()
     }
+
+    /** 사용자가 위젯을 눌렀다 (달 넘기기, 항목/체크박스 탭). 한동안 안 쓰면 갱신 때 오늘로 돌려놓는 데 쓴다. */
+    fun markUsed() {
+        sp.edit().putLong("last_use", System.currentTimeMillis()).apply()
+    }
+
+    /** 마지막으로 위젯을 누른 뒤 지난 시간(ms). 한 번도 안 눌렀으면 아주 긴 시간 */
+    fun idleMs(): Long = System.currentTimeMillis() - sp.getLong("last_use", 0L)
 
     fun remove(id: Int) {
         sp.edit().remove("style_$id").remove("opacity_$id").remove("color_$id").remove("month_$id").apply()

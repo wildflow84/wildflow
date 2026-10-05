@@ -13,7 +13,8 @@ import '../models/item.dart';
 class WidgetSync {
   static const _provider = 'OurDayWidget';
   static const _agendaDays = 7;
-  static const _pastDays = 14;
+  static const _pastDays = 366; // 지난 1년
+  static const _jsonMaxPast = 500; // 지난 날 항목 상한 (앞으로 쪽 상한과 따로 센다)
   static const _maxLines = 10;
   static const _jsonDays = 366;
   static const _jsonMaxItems = 600;
@@ -68,6 +69,7 @@ class WidgetSync {
     final df = DateFormat('M월 d일 (E)', 'ko');
     final days = <Map<String, dynamic>>[];
     var count = 0;
+    var pastCount = 0;
     // 지난 [_pastDays]일부터 담는다 (위젯은 오늘 위치에서 시작하고, 위로 올리면 지난 날을 볼 수 있다)
     for (var d = -_pastDays; d < _jsonDays && count < _jsonMaxItems; d++) {
       final day = DateTime(today.year, today.month, today.day + d);
@@ -84,8 +86,13 @@ class WidgetSync {
       final label = d == 0 ? '오늘 · ${df.format(day)}' : df.format(day);
       final list = <Map<String, dynamic>>[];
       for (final i in items) {
-        if (count >= _jsonMaxItems) break;
-        count++;
+        if (d < 0) {
+          if (pastCount >= _jsonMaxPast) break;
+          pastCount++;
+        } else {
+          if (count >= _jsonMaxItems) break;
+          count++;
+        }
         list.add({
           'id': i.id,
           'sp': spaceId,
@@ -110,9 +117,9 @@ class WidgetSync {
     return jsonEncode(days);
   }
 
-  /// 달력형 위젯용: 6개월 전부터 1년 뒤까지(위젯에서 달을 넘겨 볼 수 있게) 일정/할 일이 있는 날
+  /// 달력형 위젯용: 24개월 전부터 1년 뒤까지(위젯에서 달을 넘겨 볼 수 있게) 일정/할 일이 있는 날
   static String eventDays(List<Item> visible, DateTime today) {
-    final start = DateTime(today.year, today.month - 6, 1);
+    final start = DateTime(today.year, today.month - 24, 1);
     final end = DateTime(today.year, today.month + 13, 0);
     final f = DateFormat('yyyyMMdd');
     final out = <String>[];

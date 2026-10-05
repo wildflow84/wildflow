@@ -21,6 +21,7 @@ import org.json.JSONArray
 class WidgetActionActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WidgetPrefs(this).markUsed() // 위젯을 쓰는 중이라는 표시 (바로 뒤 갱신에서 스크롤/달이 되돌려지지 않게)
         val uri = intent?.data
         if (uri != null && uri.scheme == "ourday" && uri.host == "done") {
             flipInWidget(uri)

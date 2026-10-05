@@ -23,7 +23,11 @@ class OurDayWidget : HomeWidgetProvider() {
         appWidgetIds: IntArray,
         widgetData: SharedPreferences
     ) {
+        val cfg = WidgetPrefs(context)
+        val idle = cfg.idleMs() > WidgetPrefs.IDLE_RESET_MS
         appWidgetIds.forEach { id ->
+            // 한동안 안 썼으면 달력을 이번 달로 되돌린다 (목록은 build 안에서 오늘 위치로 스크롤)
+            if (idle) cfg.setMonthOffset(id, 0)
             appWidgetManager.updateAppWidget(id, build(context, id, widgetData))
             if (WidgetPrefs(context).style(id) != "calendar") {
                 appWidgetManager.notifyAppWidgetViewDataChanged(id, R.id.widget_list)
@@ -58,6 +62,7 @@ class OurDayWidget : HomeWidgetProvider() {
             val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
             if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
                 val cfg = WidgetPrefs(context)
+                cfg.markUsed()
                 val next = when (action) {
                     ACTION_PREV -> cfg.monthOffset(id) - 1
                     ACTION_NEXT -> cfg.monthOffset(id) + 1
@@ -184,15 +189,16 @@ class OurDayWidget : HomeWidgetProvider() {
             views.setRemoteAdapter(R.id.widget_list, intent)
             views.setEmptyView(R.id.widget_list, R.id.widget_empty)
             views.setPendingIntentTemplate(R.id.widget_list, pi)
-            // 목록에는 지난 며칠도 들어 있다. 날짜가 바뀐 뒤 처음 그릴 때(또는 지난 날 개수가 달라졌을 때)만 오늘 위치로 스크롤하고,
-            // 그 밖의 갱신에서는 사용자가 올려 둔 위치를 건드리지 않는다.
+            // 목록에는 지난 날짜가 길게 들어 있다. 날짜가 바뀐 뒤 처음이거나, 한동안 위젯을 안 썼으면 오늘 위치로 스크롤하고,
+            // 쓰는 중(최근에 눌렀다)에는 올려 둔 위치를 건드리지 않는다.
             try {
                 val sp = context.getSharedPreferences("OurDayWidgetScroll", Context.MODE_PRIVATE)
                 val agenda = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
                     .getString("agendaJson", "[]") ?: "[]"
                 val idx = WidgetDates.todayRowIndex(agenda)
                 val stamp = WidgetDates.key() + ":" + idx
-                if (sp.getString("day$id", "") != stamp) {
+                val idle = WidgetPrefs(context).idleMs() > WidgetPrefs.IDLE_RESET_MS
+                if (idle || sp.getString("day$id", "") != stamp) {
                     views.setScrollPosition(R.id.widget_list, idx)
                     sp.edit().putString("day$id", stamp).apply()
                 }
