@@ -48,6 +48,15 @@
                 android:text="›"
                 android:textSize="22sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/cal_add"
+                android:layout_width="36dp"
+                android:layout_height="30dp"
+                android:gravity="center"
+                android:text="＋"
+                android:textSize="20sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <LinearLayout
@@ -119,130 +128,333 @@
             android:layout_weight="1"
             android:orientation="horizontal">
             <FrameLayout
+                android:id="@+id/cell_00_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_00_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_00_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_00_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_00_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_00_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_01_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_01_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_01_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_01_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_01_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_01_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_02_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_02_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_02_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_02_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_02_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_02_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_03_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_03_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_03_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_03_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_03_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_03_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_04_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_04_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_04_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_04_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_04_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_04_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_05_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_05_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_05_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_05_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_05_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_05_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_06_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_06_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_06_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_06_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_06_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_06_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
         </LinearLayout>
         <LinearLayout
@@ -251,130 +463,333 @@
             android:layout_weight="1"
             android:orientation="horizontal">
             <FrameLayout
+                android:id="@+id/cell_10_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_10_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_10_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_10_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_10_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_10_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_11_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_11_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_11_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_11_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_11_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_11_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_12_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_12_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_12_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_12_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_12_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_12_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_13_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_13_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_13_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_13_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_13_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_13_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_14_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_14_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_14_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_14_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_14_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_14_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_15_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_15_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_15_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_15_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_15_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_15_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_16_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_16_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_16_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_16_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_16_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_16_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
         </LinearLayout>
         <LinearLayout
@@ -383,130 +798,333 @@
             android:layout_weight="1"
             android:orientation="horizontal">
             <FrameLayout
+                android:id="@+id/cell_20_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_20_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_20_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_20_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_20_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_20_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_21_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_21_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_21_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_21_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_21_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_21_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_22_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_22_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_22_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_22_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_22_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_22_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_23_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_23_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_23_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_23_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_23_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_23_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_24_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_24_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_24_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_24_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_24_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_24_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_25_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_25_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_25_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_25_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_25_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_25_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_26_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_26_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_26_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_26_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_26_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_26_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
         </LinearLayout>
         <LinearLayout
@@ -515,130 +1133,333 @@
             android:layout_weight="1"
             android:orientation="horizontal">
             <FrameLayout
+                android:id="@+id/cell_30_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_30_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_30_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_30_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_30_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_30_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_31_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_31_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_31_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_31_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_31_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_31_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_32_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_32_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_32_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_32_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_32_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_32_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_33_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_33_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_33_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_33_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_33_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_33_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_34_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_34_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_34_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_34_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_34_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_34_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_35_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_35_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_35_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_35_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_35_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_35_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_36_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_36_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_36_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_36_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_36_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_36_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
         </LinearLayout>
         <LinearLayout
@@ -647,130 +1468,333 @@
             android:layout_weight="1"
             android:orientation="horizontal">
             <FrameLayout
+                android:id="@+id/cell_40_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_40_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_40_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_40_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_40_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_40_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_41_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_41_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_41_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_41_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_41_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_41_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_42_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_42_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_42_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_42_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_42_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_42_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_43_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_43_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_43_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_43_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_43_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_43_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_44_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_44_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_44_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_44_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_44_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_44_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_45_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_45_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_45_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_45_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_45_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_45_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_46_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_46_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_46_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_46_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_46_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_46_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
         </LinearLayout>
         <LinearLayout
@@ -779,130 +1803,333 @@
             android:layout_weight="1"
             android:orientation="horizontal">
             <FrameLayout
+                android:id="@+id/cell_50_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_50_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_50_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_50_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_50_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_50_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_51_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_51_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_51_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_51_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_51_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_51_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_52_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_52_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_52_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_52_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_52_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_52_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_53_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_53_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_53_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_53_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_53_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_53_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_54_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_54_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_54_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_54_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_54_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_54_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_55_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_55_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_55_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_55_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_55_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_55_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
             <FrameLayout
+                android:id="@+id/cell_56_r"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1">
                 <ImageView
                     android:id="@+id/cell_56_m"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|center_horizontal"
                     android:src="@drawable/widget_marker"
                     android:visibility="gone" />
-                <TextView
-                    android:id="@+id/cell_56_t"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:textSize="11sp" />
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/cell_56_t"
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:gravity="center"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/cell_56_e1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:layout_marginBottom="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/cell_56_e2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="1dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="8sp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </FrameLayout>
         </LinearLayout>
     </LinearLayout>

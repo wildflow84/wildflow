@@ -144,6 +144,30 @@ class OurDayWidget : HomeWidgetProvider() {
             R.id.cell_40_m, R.id.cell_41_m, R.id.cell_42_m, R.id.cell_43_m, R.id.cell_44_m, R.id.cell_45_m, R.id.cell_46_m,
             R.id.cell_50_m, R.id.cell_51_m, R.id.cell_52_m, R.id.cell_53_m, R.id.cell_54_m, R.id.cell_55_m, R.id.cell_56_m
         )
+        private val CELL_ROOT = intArrayOf(
+            R.id.cell_00_r, R.id.cell_01_r, R.id.cell_02_r, R.id.cell_03_r, R.id.cell_04_r, R.id.cell_05_r, R.id.cell_06_r,
+            R.id.cell_10_r, R.id.cell_11_r, R.id.cell_12_r, R.id.cell_13_r, R.id.cell_14_r, R.id.cell_15_r, R.id.cell_16_r,
+            R.id.cell_20_r, R.id.cell_21_r, R.id.cell_22_r, R.id.cell_23_r, R.id.cell_24_r, R.id.cell_25_r, R.id.cell_26_r,
+            R.id.cell_30_r, R.id.cell_31_r, R.id.cell_32_r, R.id.cell_33_r, R.id.cell_34_r, R.id.cell_35_r, R.id.cell_36_r,
+            R.id.cell_40_r, R.id.cell_41_r, R.id.cell_42_r, R.id.cell_43_r, R.id.cell_44_r, R.id.cell_45_r, R.id.cell_46_r,
+            R.id.cell_50_r, R.id.cell_51_r, R.id.cell_52_r, R.id.cell_53_r, R.id.cell_54_r, R.id.cell_55_r, R.id.cell_56_r
+        )
+        private val CELL_E1 = intArrayOf(
+            R.id.cell_00_e1, R.id.cell_01_e1, R.id.cell_02_e1, R.id.cell_03_e1, R.id.cell_04_e1, R.id.cell_05_e1, R.id.cell_06_e1,
+            R.id.cell_10_e1, R.id.cell_11_e1, R.id.cell_12_e1, R.id.cell_13_e1, R.id.cell_14_e1, R.id.cell_15_e1, R.id.cell_16_e1,
+            R.id.cell_20_e1, R.id.cell_21_e1, R.id.cell_22_e1, R.id.cell_23_e1, R.id.cell_24_e1, R.id.cell_25_e1, R.id.cell_26_e1,
+            R.id.cell_30_e1, R.id.cell_31_e1, R.id.cell_32_e1, R.id.cell_33_e1, R.id.cell_34_e1, R.id.cell_35_e1, R.id.cell_36_e1,
+            R.id.cell_40_e1, R.id.cell_41_e1, R.id.cell_42_e1, R.id.cell_43_e1, R.id.cell_44_e1, R.id.cell_45_e1, R.id.cell_46_e1,
+            R.id.cell_50_e1, R.id.cell_51_e1, R.id.cell_52_e1, R.id.cell_53_e1, R.id.cell_54_e1, R.id.cell_55_e1, R.id.cell_56_e1
+        )
+        private val CELL_E2 = intArrayOf(
+            R.id.cell_00_e2, R.id.cell_01_e2, R.id.cell_02_e2, R.id.cell_03_e2, R.id.cell_04_e2, R.id.cell_05_e2, R.id.cell_06_e2,
+            R.id.cell_10_e2, R.id.cell_11_e2, R.id.cell_12_e2, R.id.cell_13_e2, R.id.cell_14_e2, R.id.cell_15_e2, R.id.cell_16_e2,
+            R.id.cell_20_e2, R.id.cell_21_e2, R.id.cell_22_e2, R.id.cell_23_e2, R.id.cell_24_e2, R.id.cell_25_e2, R.id.cell_26_e2,
+            R.id.cell_30_e2, R.id.cell_31_e2, R.id.cell_32_e2, R.id.cell_33_e2, R.id.cell_34_e2, R.id.cell_35_e2, R.id.cell_36_e2,
+            R.id.cell_40_e2, R.id.cell_41_e2, R.id.cell_42_e2, R.id.cell_43_e2, R.id.cell_44_e2, R.id.cell_45_e2, R.id.cell_46_e2,
+            R.id.cell_50_e2, R.id.cell_51_e2, R.id.cell_52_e2, R.id.cell_53_e2, R.id.cell_54_e2, R.id.cell_55_e2, R.id.cell_56_e2
+        )
 
         /** 위젯 하나를 설정(모양, 투명도, 색)대로 그린다 */
         fun build(context: Context, id: Int, data: SharedPreferences): RemoteViews {
@@ -168,11 +192,13 @@ class OurDayWidget : HomeWidgetProvider() {
             val pi = PendingIntent.getActivity(context, 0, launch ?: Intent(), flags)
 
             if (calendar) {
-                fillCalendar(context, id, views, theme, data)
+                fillCalendar(context, id, views, theme, data, pi)
                 views.setOnClickPendingIntent(R.id.widget_root, pi)
                 views.setOnClickPendingIntent(R.id.cal_prev, actionIntent(context, id, ACTION_PREV, 1))
                 views.setOnClickPendingIntent(R.id.cal_next, actionIntent(context, id, ACTION_NEXT, 2))
                 views.setOnClickPendingIntent(R.id.cal_title, actionIntent(context, id, ACTION_TODAY, 3))
+                views.setTextColor(R.id.cal_add, theme.accent)
+                views.setOnClickPendingIntent(R.id.cal_add, appActionIntent(context, "ourday://add", 0))
             } else {
                 // 목록 클릭은 화면 없는 중간 다리(WidgetActionActivity)가 받아서, 체크박스면 앱을 열지 않고 완료 처리한다
                 val bridge = Intent(context, WidgetActionActivity::class.java)
@@ -206,9 +232,60 @@ class OurDayWidget : HomeWidgetProvider() {
             }
             views.setTextColor(R.id.widget_empty, theme.sub)
             views.setOnClickPendingIntent(R.id.widget_empty, pi)
+            // 새 일정/할 일 추가: 앱이 열리면서 등록 화면이 바로 뜬다
+            views.setInt(R.id.widget_fab_bg, "setColorFilter", theme.accent)
+            views.setInt(R.id.widget_fab_bg, "setImageAlpha", 255)
+            views.setTextColor(R.id.widget_fab_t, theme.onAccent)
+            views.setOnClickPendingIntent(R.id.widget_fab, appActionIntent(context, "ourday://add", 0))
         }
 
-        private fun fillCalendar(context: Context, id: Int, views: RemoteViews, theme: WidgetTheme, data: SharedPreferences) {
+        /** 위젯 안 버튼이 앱의 특정 화면(ourday://add, ourday://day?date=…)을 열도록 하는 인텐트 */
+        private fun appActionIntent(context: Context, uri: String, code: Int): PendingIntent {
+            val i = Intent(context, WidgetActionActivity::class.java)
+            i.data = Uri.parse(uri)
+            return PendingIntent.getActivity(
+                context, code, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
+        /** 칸 안의 일정 칩 두 줄: 개수가 3개 이상이면 둘째 줄은 "+N" */
+        private fun fillChips(views: RemoteViews, id1: Int, id2: Int, cell: org.json.JSONObject?, theme: WidgetTheme) {
+            val list = cell?.optJSONArray("e")
+            val n = cell?.optInt("n", 0) ?: 0
+            if (list == null || list.length() == 0) {
+                views.setViewVisibility(id1, View.GONE)
+                views.setViewVisibility(id2, View.GONE)
+                return
+            }
+            fun chip(id: Int, text: String, color: Int) {
+                views.setViewVisibility(id, View.VISIBLE)
+                views.setTextViewText(id, text)
+                views.setInt(id, "setBackgroundColor", color)
+                views.setTextColor(id, if (isLight(color)) 0xFF222222.toInt() else 0xFFFFFFFF.toInt())
+            }
+            val first = list.getJSONObject(0)
+            chip(id1, first.optString("t"), first.optLong("c", 0xFF4A7BD9L).toInt())
+            if (n > 2) {
+                views.setViewVisibility(id2, View.VISIBLE)
+                views.setTextViewText(id2, "+" + (n - 1))
+                views.setInt(id2, "setBackgroundColor", 0x00000000)
+                views.setTextColor(id2, theme.sub)
+            } else if (list.length() > 1) {
+                val second = list.getJSONObject(1)
+                chip(id2, second.optString("t"), second.optLong("c", 0xFF4A7BD9L).toInt())
+            } else {
+                views.setViewVisibility(id2, View.GONE)
+            }
+        }
+
+        private fun isLight(color: Int): Boolean {
+            val r = (color shr 16) and 0xFF
+            val g = (color shr 8) and 0xFF
+            val b = color and 0xFF
+            return (0.299 * r + 0.587 * g + 0.114 * b) > 170
+        }
+
+        private fun fillCalendar(context: Context, id: Int, views: RemoteViews, theme: WidgetTheme, data: SharedPreferences, openApp: PendingIntent) {
             val events = (data.getString("eventDays", "") ?: "").split(",").filter { it.isNotEmpty() }.toHashSet()
             val offset0 = WidgetPrefs(context).monthOffset(id)
             val now = Calendar.getInstance()
@@ -234,6 +311,12 @@ class OurDayWidget : HomeWidgetProvider() {
             val dowIds = intArrayOf(R.id.dow_0, R.id.dow_1, R.id.dow_2, R.id.dow_3, R.id.dow_4, R.id.dow_5, R.id.dow_6)
             dowIds.forEach { views.setTextColor(it, theme.sub) }
 
+            // 칸마다 그날의 일정 제목(앞의 2개)을 색 칩으로 보여 준다. 앱이 calCells에 {yyyyMMdd: {n, e:[{t,c}]}}로 넣어 준다.
+            val cells = try {
+                org.json.JSONObject(data.getString("calCells", "{}") ?: "{}")
+            } catch (e: Exception) {
+                org.json.JSONObject()
+            }
             for (i in 0 until 42) {
                 val textId = CELL_TEXT[i]
                 val markId = CELL_MARK[i]
@@ -241,10 +324,16 @@ class OurDayWidget : HomeWidgetProvider() {
                 if (day < 1 || day > daysInMonth) {
                     views.setTextViewText(textId, "")
                     views.setViewVisibility(markId, View.GONE)
+                    views.setViewVisibility(CELL_E1[i], View.GONE)
+                    views.setViewVisibility(CELL_E2[i], View.GONE)
+                    views.setOnClickPendingIntent(CELL_ROOT[i], openApp)
                     continue
                 }
                 views.setTextViewText(textId, day.toString())
                 val key = String.format(Locale.US, "%04d%02d%02d", year, month + 1, day)
+                // 칸을 누르면 앱이 그날 화면으로 열린다
+                val dayKey = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, day)
+                views.setOnClickPendingIntent(CELL_ROOT[i], appActionIntent(context, "ourday://day?date=$dayKey", 0))
                 when {
                     day == today -> {
                         views.setViewVisibility(markId, View.VISIBLE)
@@ -263,6 +352,7 @@ class OurDayWidget : HomeWidgetProvider() {
                         views.setTextColor(textId, theme.text)
                     }
                 }
+                fillChips(views, CELL_E1[i], CELL_E2[i], cells.optJSONObject(key), theme)
             }
         }
     }

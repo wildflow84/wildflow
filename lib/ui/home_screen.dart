@@ -60,7 +60,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onWidgetUri(Uri? uri) {
-    if (uri == null || uri.host != 'edit') return;
+    if (uri == null) return;
+    if (uri.host == 'day' || uri.host == 'add') {
+      // 위젯 달력 칸 / + 버튼: 그날 화면을 열거나 등록 화면을 연다
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (uri.host == 'add') {
+          showEditSheet(context, day: dateOnly(DateTime.now()));
+          return;
+        }
+        final d = DateTime.tryParse(uri.queryParameters['date'] ?? '');
+        if (d == null) return;
+        setState(() {
+          _tab = 0;
+          _tabChosen = true;
+          _selected = dateOnly(d);
+          _month = DateTime(d.year, d.month);
+        });
+        _openDaySheet(context, dateOnly(d));
+      });
+      return;
+    }
+    if (uri.host != 'edit') return;
     _pendingEdit = uri;
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryOpenPending());
   }

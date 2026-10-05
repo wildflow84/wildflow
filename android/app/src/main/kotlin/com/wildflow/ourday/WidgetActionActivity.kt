@@ -16,6 +16,7 @@ import org.json.JSONArray
  * 위젯 목록의 클릭을 받는 화면 없는 중간 다리.
  *  - 체크박스(ourday://done?…): 위젯부터 바로 바꾸고(즉시 반영), 앱을 열지 않고 Flutter 백그라운드로 실제 완료 처리
  *  - 항목 줄(ourday://edit?…): 앱을 열어서 그 항목의 편집 화면으로 바로 이동
+ *  - 달력 칸(ourday://day?date=…) / + 버튼(ourday://add): 앱을 열어서 그날 화면 / 등록 화면으로 이동
  *  - 그 밖: 앱 열기
  */
 class WidgetActionActivity : Activity() {
@@ -30,7 +31,7 @@ class WidgetActionActivity : Activity() {
             } catch (e: Exception) {
                 // 보내지 못해도 조용히 닫는다
             }
-        } else if (uri != null && uri.scheme == "ourday" && uri.host == "edit") {
+        } else if (uri != null && uri.scheme == "ourday" && (uri.host == "edit" || uri.host == "day" || uri.host == "add")) {
             // home_widget이 앱으로 넘겨 주는 방식(LAUNCH 액션 + 데이터)으로 열면 Flutter가 uri를 받는다
             val open = Intent(this, MainActivity::class.java)
             open.action = "es.antonborri.home_widget.action.LAUNCH"

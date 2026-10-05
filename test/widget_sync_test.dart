@@ -79,4 +79,23 @@ void agendaJsonTests() {
     expect(it['roll'], true);
     expect(it['can'], true);
   });
+
+  test('달력형 칸 내용: 그날 항목 수와 앞의 2개(제목, 색)', () {
+    final today = DateTime(2026, 10, 3);
+    Item ev(String id, String t, int d) =>
+        Item(id: id, type: ItemType.event, title: t, start: DateTime(2026, 10, d, 9), ownerUid: 'me', allDay: false);
+    final cells = WidgetSync.calendarCells(
+      [ev('a', '미용실', 4), ev('b', '아주아주아주긴일정제목입니다', 4), ev('c', '치과', 4), ev('d', '점심', 7)],
+      today,
+      colorOf: (i) => i.id == 'a' ? 0xFF111111 : 0xFF222222,
+    );
+    final d4 = cells['20261004'] as Map;
+    expect(d4['n'], 3);
+    expect((d4['e'] as List).length, 2);
+    expect(((d4['e'] as List)[0] as Map)['t'], '미용실');
+    expect(((d4['e'] as List)[0] as Map)['c'], 0xFF111111);
+    expect((((d4['e'] as List)[1]) as Map)['t'].toString().length, 10); // 긴 제목은 10자까지
+    expect((cells['20261007'] as Map)['n'], 1);
+    expect(cells.containsKey('20261005'), isFalse);
+  });
 }
