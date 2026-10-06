@@ -71,9 +71,8 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         final d = DateTime.tryParse(uri.queryParameters['date'] ?? '');
         if (d == null) return;
+        // 탭은 건드리지 않는다: 마지막에 쓰던 탭(또는 설정한 시작 화면)으로 열리고, 그 위에 그날 목록만 띄운다
         setState(() {
-          _tab = 0;
-          _tabChosen = true;
           _selected = dateOnly(d);
           _month = DateTime(d.year, d.month);
         });
