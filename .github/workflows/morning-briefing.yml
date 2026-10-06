@@ -1,0 +1,39 @@
+name: morning-briefing
+
+on:
+  schedule:
+    - cron: "0 22 * * *"   # 매일 07:00 KST (UTC 22:00). GitHub 크론은 수 분~수십 분 지연될 수 있음
+  workflow_dispatch: {}    # 수동 실행(= /브리핑)
+
+permissions:
+  contents: write
+
+concurrency: morning-briefing
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Generate & send
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          KAKAO_REFRESH_TOKEN: ${{ secrets.KAKAO_REFRESH_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python briefing/main.py
+      - name: Archive briefing
+        if: always()
+        run: |
+          git config user.name "quantum-bot"
+          git config user.email "quantum-bot@users.noreply.github.com"
+          git add briefings
+          git diff --cached --quiet || (git commit -m "briefing: $(date -u +%F)" && git push)
