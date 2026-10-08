@@ -63,6 +63,10 @@ class Store extends ChangeNotifier {
   /// 내 설정을 한 번이라도 받아왔는지 (시작 화면을 고르는 데 쓴다)
   bool profileLoaded = false;
 
+  /// 항목/카테고리를 한 번이라도 받아왔는지 (백그라운드 위젯 갱신이 데이터가 준비될 때까지 기다리는 데 쓴다)
+  bool itemsLoaded = false;
+  bool categoriesLoaded = false;
+
   /// 앱을 켰을 때 먼저 보여줄 탭: last(마지막으로 본 화면, 기본) / calendar / list / todo
   String get startTab {
     final v = profile['startTab'];
@@ -132,6 +136,7 @@ class Store extends ChangeNotifier {
     final id = spaceId!;
     _itemsSub = repo.watchItems(id).listen((list) {
       items = list;
+      itemsLoaded = true;
       notifyListeners();
       _pushWidget();
       _refillRepeatReminders();
@@ -160,6 +165,7 @@ class Store extends ChangeNotifier {
             return o != 0 ? o : a.name.compareTo(b.name);
           });
       }
+      categoriesLoaded = true;
       notifyListeners();
       _pushWidget(); // 카테고리 이름/색이 바뀌면 위젯도
     });
@@ -225,6 +231,8 @@ class Store extends ChangeNotifier {
     await _catSub?.cancel();
     await _profileSub?.cancel();
     profileLoaded = false;
+    itemsLoaded = false;
+    categoriesLoaded = false;
     _seeded = false;
     categories = defaultCategories;
     defaultVisibility = m.Visibility.shared;
@@ -326,14 +334,14 @@ class Store extends ChangeNotifier {
 
   /// 앱을 켜거나 끌 때: 기다리던 위젯 갱신을 바로 보내고, 내용이 그대로여도 위젯을 다시 그리게 한다
   /// (위젯이 오늘 위치/이번 달로 돌아오고, 날짜가 바뀐 경우도 바로 반영된다)
-  void refreshWidgetNow() {
-    if (kIsWeb || spaceId == null || _previewUid != null) return;
+  Future<void> refreshWidgetNow() {
+    if (kIsWeb || spaceId == null || _previewUid != null) return Future.value();
     _pushTimer?.cancel();
-    _doPushWidget(force: true);
+    return _doPushWidget(force: true);
   }
 
-  void _doPushWidget({bool force = false}) {
-    WidgetSync.push(
+  Future<void> _doPushWidget({bool force = false}) {
+    return WidgetSync.push(
       visibleItems,
       uid,
       colorOf: (i) => colorOf(i).toARGB32(),

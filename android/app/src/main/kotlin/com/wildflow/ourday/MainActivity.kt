@@ -14,5 +14,9 @@ class MainActivity : FlutterActivity() {
         val request = PeriodicWorkRequestBuilder<LocateWorker>(15, TimeUnit.MINUTES).build()
         WorkManager.getInstance(applicationContext)
             .enqueueUniquePeriodicWork("ourday-locate", ExistingPeriodicWorkPolicy.KEEP, request)
+        // 위젯 데이터를 30분마다 앱을 안 열어도 새로 채운다 (홈 화면에 위젯이 없으면 바로 끝남)
+        val refresh = PeriodicWorkRequestBuilder<RefreshWorker>(30, TimeUnit.MINUTES).build()
+        WorkManager.getInstance(applicationContext)
+            .enqueueUniquePeriodicWork("ourday-widget-refresh", ExistingPeriodicWorkPolicy.KEEP, refresh)
     }
 }

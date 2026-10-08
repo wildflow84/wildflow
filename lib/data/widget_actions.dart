@@ -5,10 +5,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/widgets.dart' hide Visibility;
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import '../firebase_options.dart';
 import '../models/item.dart';
 import 'repository.dart';
+import 'store.dart';
 import 'widget_sync.dart';
 
 /// 홈 화면 위젯에서 할 일 체크박스를 눌렀을 때 앱을 열지 않고 백그라운드에서 완료 처리한다.
@@ -16,6 +18,7 @@ import 'widget_sync.dart';
 @pragma('vm:entry-point')
 Future<void> widgetBackgroundCallback(Uri? uri) async {
   if (uri != null && uri.host == 'locate') return _backgroundLocate();
+  if (uri != null && uri.host == 'refresh') return _backgroundRefresh();
   if (uri == null || uri.host != 'done') return;
   final space = uri.queryParameters['space'] ?? '';
   final id = uri.queryParameters['id'] ?? '';
@@ -44,6 +47,35 @@ Future<void> widgetBackgroundCallback(Uri? uri) async {
     }
   } catch (_) {
     // 실패해도 조용히: 위젯은 다음에 앱을 열 때 맞춰진다
+  }
+}
+
+/// 앱을 안 열어도 주기적으로(안드로이드 WorkManager) 불리는 위젯 데이터 갱신.
+/// 상대가 추가한 일정, 다른 기기에서 바꾼 내용, 날짜가 바뀐 뒤의 목록을 위젯에 새로 반영한다.
+/// 앱 화면과 같은 계산을 쓰려고 Store를 잠깐 만들어서 데이터가 올 때까지 기다린 뒤 한 번 밀어 넣고 닫는다.
+Future<void> _backgroundRefresh() async {
+  Store? store;
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    await initializeDateFormatting('ko');
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    }
+    store = Store(Repository());
+    final s = store;
+    final ready = Completer<void>();
+    void check() {
+      if (!ready.isCompleted && s.itemsLoaded && s.profileLoaded && s.categoriesLoaded) ready.complete();
+    }
+
+    s.addListener(check);
+    check();
+    await ready.future.timeout(const Duration(seconds: 25));
+    await s.refreshWidgetNow();
+  } catch (_) {
+    // 로그인이 없거나 네트워크가 없으면 다음 주기에 다시 한다
+  } finally {
+    store?.dispose();
   }
 }
 
