@@ -2,6 +2,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:home_widget/home_widget.dart';
 import 'palette.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -184,6 +185,18 @@ class SettingsScreen extends StatelessWidget {
             // CI가 빌드할 때 커밋 번호를 넣는다. 새로 배포됐는지 확인할 때 쓴다.
             subtitle: Text(const String.fromEnvironment('APP_VERSION', defaultValue: '개발 빌드')),
           ),
+          if (!kIsWeb)
+            FutureBuilder<String?>(
+              future: HomeWidget.getWidgetData<String>('widgetDoneError'),
+              builder: (context, snap) {
+                final err = snap.data ?? '';
+                return ListTile(
+                  leading: Icon(err.isEmpty ? Icons.check_circle_outline : Icons.warning_amber_outlined),
+                  title: const Text('위젯 완료 기록'),
+                  subtitle: Text(err.isEmpty ? '위젯에서 체크한 완료가 저장되지 못한 적 없어' : '마지막 문제: $err'),
+                );
+              },
+            ),
           if (UpdateChecker.supported)
             ListTile(
               leading: const Icon(Icons.system_update),

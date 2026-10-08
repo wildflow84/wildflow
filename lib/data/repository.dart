@@ -164,6 +164,14 @@ class Repository {
     return ref.id;
   }
 
+  /// 반복 일정의 알림 시각 목록만 갱신한다. 항목 전체를 다시 쓰지 않아서, 낡은 목록을 들고 있어도 완료 표시 같은 다른 값을 덮어쓰지 않는다.
+  Future<void> saveRemindFields(String spaceId, Item item) {
+    final map = item.toMap();
+    return _db.collection('spaces').doc(spaceId).collection('items').doc(item.id).update(
+          {'remindAt': map['remindAt'], 'remindTimes': map['remindTimes']},
+        );
+  }
+
   Future<void> delete(String spaceId, String id) =>
       _db.collection('spaces').doc(spaceId).collection('items').doc(id).delete();
 

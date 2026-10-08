@@ -204,7 +204,7 @@ class Store extends ChangeNotifier {
       if (i.ownerUid != uid || i.id.isEmpty || !i.needsRemindRefill(now)) continue;
       // 같은 항목을 한 번 채운 뒤에는 이 접속에서 다시 채우지 않는다 (저장이 다시 이 검사를 부르는 걸 막는다)
       if (!_remindRefilled.add('${i.id}|${i.remindStoredAt?.millisecondsSinceEpoch}')) continue;
-      repo.save(spaceId!, i).catchError((_) => '');
+      repo.saveRemindFields(spaceId!, i).catchError((_) {});
     }
   }
 

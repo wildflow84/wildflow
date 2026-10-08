@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/widgets.dart' hide Visibility;
 import 'package:geolocator/geolocator.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import '../firebase_options.dart';
@@ -24,6 +25,7 @@ Future<void> widgetBackgroundCallback(Uri? uri) async {
   final id = uri.queryParameters['id'] ?? '';
   final date = uri.queryParameters['date'] ?? '';
   if (space.isEmpty || id.isEmpty || date.isEmpty) return;
+  bool? marking;
   try {
     WidgetsFlutterBinding.ensureInitialized();
     if (Firebase.apps.isEmpty) {
@@ -31,23 +33,39 @@ Future<void> widgetBackgroundCallback(Uri? uri) async {
     }
     final auth = FirebaseAuth.instance;
     final user = auth.currentUser ?? await auth.authStateChanges().firstWhere((u) => u != null).timeout(const Duration(seconds: 8));
-    if (user == null) return;
+    if (user == null) throw StateError('로그인 정보를 못 찾았어');
     final repo = Repository();
     final item = await repo.getItem(space, id);
-    if (item == null) return;
+    if (item == null) throw StateError('항목을 못 찾았어 (삭제됐거나 볼 수 없는 항목)');
     final day = DateTime.parse(date);
     // 이동형은 완료하면 다음 날짜로 넘어간다. 이미 넘어간 항목을 또 누르면 한 번 더 넘어가 버리니 막는다.
     if (item.isRolling && dateOnly(item.start) != dateOnly(day)) return;
     final r = toggledDone(item, dateOnly(day), user.uid, DateTime.now());
+    marking = r.marking;
     // 서버 저장을 기다리기 전에 위젯부터 바꿔서 바로 보이게 한다
     await WidgetSync.patchDone(id, date, r.marking);
-    await repo.save(space, r.item);
+    // 저장: 네트워크가 잠깐 안 되어도 기기에 대기열로 남아 나중에 올라가므로, 오래 기다리지 않는다
+    await repo.save(space, r.item).timeout(const Duration(seconds: 12));
     if (r.marking && item.visibility == Visibility.shared) {
       unawaited(repo.notifyComplete(space, id).catchError((_) {}));
     }
-  } catch (_) {
-    // 실패해도 조용히: 위젯은 다음에 앱을 열 때 맞춰진다
+    await _recordWidgetDoneError(''); // 성공하면 지난 오류 표시를 지운다
+  } on TimeoutException {
+    // 저장 요청은 이미 기기에 대기 중이라 연결되면 올라간다. 위젯은 그대로 둔다.
+    await _recordWidgetDoneError('저장 응답이 늦어서 대기 중이야 (연결되면 올라가)');
+  } catch (e) {
+    // 저장 못 한 걸 위젯이 완료로 보여 주면 헷갈리니 원래대로 되돌리고, 이유를 설정 화면에서 볼 수 있게 남긴다
+    if (marking != null) await WidgetSync.patchDone(id, date, !marking);
+    await _recordWidgetDoneError('$e');
   }
+}
+
+/// 위젯 체크박스 저장이 실패한 이유를 남긴다 (설정 → 위젯 완료 기록). 빈 문자열이면 지운다.
+Future<void> _recordWidgetDoneError(String message) async {
+  try {
+    final stamp = message.isEmpty ? '' : '${DateTime.now().toIso8601String().substring(0, 16)} $message';
+    await HomeWidget.saveWidgetData<String>('widgetDoneError', stamp);
+  } catch (_) {}
 }
 
 /// 앱을 안 열어도 주기적으로(안드로이드 WorkManager) 불리는 위젯 데이터 갱신.
