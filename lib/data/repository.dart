@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show ValueNotifier, kIsWeb;
 
 import '../models/category.dart';
 import '../models/item.dart';
@@ -116,6 +116,15 @@ class Repository {
 
   /// 공유 항목 + 내 프라이빗 항목을 합쳐서 흘려준다.
   /// 보안 규칙이 쿼리 조건과 일치해야 해서 쿼리를 둘로 나눈다.
+  /// 항목 목록이 서버와 맞춰졌는지: false면 기기에 저장된 내용만 보고 있거나(오프라인) 내가 바꾼 게 아직 서버에 안 올라갔다.
+  final ValueNotifier<bool> itemsSynced = ValueNotifier<bool>(true);
+
+  /// 연결이 꼬였을 때 네트워크를 껐다 켜서 서버와 다시 맞춘다.
+  Future<void> reconnect() async {
+    await _db.disableNetwork();
+    await _db.enableNetwork();
+  }
+
   Stream<List<Item>> watchItems(String spaceId) {
     final col = _db.collection('spaces').doc(spaceId).collection('items');
     final shared = col.where('visibility', isEqualTo: 'shared').snapshots();
@@ -124,19 +133,23 @@ class Repository {
     late StreamController<List<Item>> ctrl;
     List<Item> a = [], b = [];
     final subs = <StreamSubscription>[];
+    var sharedSynced = false, mineSynced = false;
     void emit() {
       final map = {for (final i in [...a, ...b]) i.id: i};
       ctrl.add(map.values.toList());
+      itemsSynced.value = sharedSynced && mineSynced;
     }
 
     ctrl = StreamController<List<Item>>(
       onListen: () {
         subs.add(shared.listen((s) {
           a = s.docs.map(Item.fromDoc).toList();
+          sharedSynced = !s.metadata.isFromCache && !s.metadata.hasPendingWrites;
           emit();
         }, onError: ctrl.addError));
         subs.add(mine.listen((s) {
           b = s.docs.map(Item.fromDoc).toList();
+          mineSynced = !s.metadata.isFromCache && !s.metadata.hasPendingWrites;
           emit();
         }, onError: ctrl.addError));
       },

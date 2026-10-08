@@ -283,6 +283,22 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
+          if (s.syncWarning)
+            Material(
+              color: kAccentSoft,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+                child: Row(children: [
+                  Icon(Icons.sync_problem, size: 18, color: kAccentDeep),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('서버와 아직 안 맞춰졌어 (오프라인이거나 연결이 불안정해). 보이는 내용이 최신이 아닐 수 있어',
+                        style: TextStyle(fontSize: 12, color: kAccentDeep)),
+                  ),
+                  TextButton(onPressed: s.reconnect, child: const Text('다시 연결')),
+                ]),
+              ),
+            ),
           Expanded(
             child: _tab == 2
                 ? const _TodoTab()

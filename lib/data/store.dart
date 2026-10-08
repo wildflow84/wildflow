@@ -67,6 +67,37 @@ class Store extends ChangeNotifier {
   bool itemsLoaded = false;
   bool categoriesLoaded = false;
 
+  /// 서버와 오래(30초 넘게) 안 맞춰지고 있다: 오프라인이거나 연결이 꼬였을 때. 홈 화면 위에 안내를 띄운다.
+  bool syncWarning = false;
+  Timer? _syncTimer;
+
+  void _onSyncChanged() {
+    final synced = repo.itemsSynced.value;
+    if (synced) {
+      _syncTimer?.cancel();
+      _syncTimer = null;
+      if (syncWarning) {
+        syncWarning = false;
+        notifyListeners();
+      }
+    } else if (!syncWarning && _syncTimer == null) {
+      _syncTimer = Timer(const Duration(seconds: 30), () {
+        _syncTimer = null;
+        if (!repo.itemsSynced.value) {
+          syncWarning = true;
+          notifyListeners();
+        }
+      });
+    }
+  }
+
+  /// 서버와 다시 연결해 본다 (안내의 "다시 연결" 버튼)
+  Future<void> reconnect() async {
+    try {
+      await repo.reconnect();
+    } catch (_) {}
+  }
+
   /// 앱을 켰을 때 먼저 보여줄 탭: last(마지막으로 본 화면, 기본) / calendar / list / todo
   String get startTab {
     final v = profile['startTab'];
@@ -134,6 +165,8 @@ class Store extends ChangeNotifier {
 
   void _start() {
     final id = spaceId!;
+    repo.itemsSynced.removeListener(_onSyncChanged);
+    repo.itemsSynced.addListener(_onSyncChanged);
     _itemsSub = repo.watchItems(id).listen((list) {
       items = list;
       itemsLoaded = true;
@@ -230,6 +263,9 @@ class Store extends ChangeNotifier {
     await _customSub?.cancel();
     await _catSub?.cancel();
     await _profileSub?.cancel();
+    syncWarning = false;
+    _syncTimer?.cancel();
+    _syncTimer = null;
     profileLoaded = false;
     itemsLoaded = false;
     categoriesLoaded = false;
@@ -518,6 +554,8 @@ class Store extends ChangeNotifier {
   @override
   void dispose() {
     _pushTimer?.cancel();
+    _syncTimer?.cancel();
+    repo.itemsSynced.removeListener(_onSyncChanged);
     _authSub?.cancel();
     _stop();
     super.dispose();
