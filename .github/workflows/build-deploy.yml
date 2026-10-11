@@ -3,6 +3,8 @@ name: build-deploy
 on:
   push:
     branches: [main, 'claude/**']
+    # 문서만 바뀐 push는 빌드/배포를 돌리지 않는다 (불필요한 새 버전 알림과 10분 빌드를 막는다)
+    paths-ignore: ['docs/**', '**.md']
   workflow_dispatch:
 
 permissions:
