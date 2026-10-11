@@ -55,7 +55,7 @@ APK는 보통 수십 MB다. 호스팅 용량과 전송량 한도를 확인한다
 ```
 Firebase Hosting이 SPA 규칙(`** → index.html`)을 쓰고 있어도 실제 파일이 있으면 그 파일이 먼저 나간다.
 
-### B. GitHub Releases에 올기기
+### B. GitHub Releases에 올리기
 ```yaml
 - name: 릴리스 만들기
   env: { GH_TOKEN: "${{ github.token }}" }
