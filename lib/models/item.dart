@@ -740,6 +740,15 @@ Item moveItemByDays(Item item, int deltaDays) {
   );
 }
 
+/// 반복 항목의 [from] 회차 하나만 [to] 날짜로 옮긴다 (시각·기간 유지). 나머지 회차는 그대로.
+/// 결과: [하루짜리 새 일정(id 빈 문자열), 그날이 제외된 원본].
+List<Item> moveOccurrence(Item original, DateTime from, DateTime to) {
+  final f = dateOnly(from), t = dateOnly(to);
+  final s = original.start;
+  final start = DateTime(t.year, t.month, t.day, s.hour, s.minute);
+  return applyRepeatEdit(original, original, f, RepeatEdit.thisOnly, occurrenceStart: start);
+}
+
 /// 같은 내용의 새 항목(복제). 완료/반복 기록은 비우고 제목 뒤에 "(복사)"를 붙인다.
 Item copyOfItem(Item i) => Item.fresh(i.copyWith(
       title: '${i.title} (복사)',

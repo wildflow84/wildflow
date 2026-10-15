@@ -482,12 +482,12 @@ class Store extends ChangeNotifier {
   }
 
   /// [notifyShare]: 새로 공유되는 항목이면 상대에게 알림. 반복 일정 수정으로 갈라져 생기는 항목처럼 사용자가 새로 공유한 게 아닐 땐 끈다.
-  Future<void> save(Item i, {bool notifyShare = true}) async {
+  Future<String> save(Item i, {bool notifyShare = true}) async {
     if (_previewUid != null) {
       // 미리보기(Firebase 없음): 로컬 목록만 갱신
       items = [...items.where((x) => x.id != i.id), i];
       notifyListeners();
-      return;
+      return i.id;
     }
     // 상대에게 새로 공유되는 경우(새 같이 보기 항목, 나만 보기 → 같이 보기)에는 알려준다
     final before = i.id.isEmpty ? null : items.where((x) => x.id == i.id).firstOrNull;
@@ -497,8 +497,17 @@ class Store extends ChangeNotifier {
         (before == null || before.visibility != m.Visibility.shared);
     final id = await repo.save(spaceId!, i);
     if (newlyShared) repo.notifyShared(spaceId!, id).catchError((_) {});
+    return id;
   }
   Future<void> delete(Item i) => repo.delete(spaceId!, i.id);
+  Future<void> deleteById(String id) async {
+    if (_previewUid != null) {
+      items = items.where((x) => x.id != id).toList();
+      notifyListeners();
+      return;
+    }
+    await repo.delete(spaceId!, id);
+  }
 
   /// 반복 항목 삭제: 이 날짜만 / 이 날짜 이후 / 전부
   Future<void> deleteRepeating(Item i, DateTime day, RepeatDelete scope) async {

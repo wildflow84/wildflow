@@ -207,6 +207,18 @@ void futureCompleteTests() {
     // 월 경계
     expect(moveItemByDays(e, 20).start, DateTime(2026, 11, 3, 9, 30));
   });
+
+  test('반복 일정의 한 회차만 앞당기기', () {
+    final e = Item(
+        id: 'e', type: ItemType.event, title: '병원', start: DateTime(2026, 10, 1, 9, 30),
+        repeat: Repeat.weekly, allDay: false, ownerUid: 'me');
+    final r = moveOccurrence(e, DateTime(2026, 10, 29), DateTime(2026, 10, 16));
+    expect(r[0].id, '');
+    expect(r[0].isRecurring, false);
+    expect(r[0].start, DateTime(2026, 10, 16, 9, 30));
+    expect(r[1].exceptions, ['2026-10-29']);
+    expect(r[1].isRecurring, true);
+  });
 }
 
 void rollRuleTests() {

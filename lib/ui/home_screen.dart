@@ -17,7 +17,7 @@ import '../models/lunar.dart';
 import '../models/map_links.dart';
 import '../models/category.dart' show subscriptionCategory;
 import '../models/item.dart' as m;
-import '../models/item.dart' show Item, ItemType, dateOnly, isDoneOn, isOverdue, moveItemByDays, rollLabel, timeLabel, chipTimeLabel;
+import '../models/item.dart' show Item, ItemType, dateOnly, isDoneOn, isOverdue, moveItemByDays, moveOccurrence, rollLabel, timeLabel, chipTimeLabel;
 import 'agenda.dart';
 import 'category_manager.dart';
 import 'checklist.dart';
@@ -434,6 +434,22 @@ class _HomeScreenState extends State<HomeScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final delta = dayNumber(to) - dayNumber(from);
     if (delta == 0) return;
+    if (item.isRecurring) {
+      // 반복 일정은 그 회차 하나만 옮긴다 (나머지 회차는 그대로)
+      final r = moveOccurrence(item, from, to);
+      final newId = await s.save(r[0], notifyShare: false);
+      await s.save(r[1]);
+      showTimedSnack(
+        messenger,
+        '"${item.title}" 이 회차만 → ${DateFormat('M월 d일 (E)', 'ko').format(to)}로 이동',
+        actionLabel: '되돌리기',
+        onAction: () async {
+          await s.save(item);
+          if (newId.isNotEmpty) await s.deleteById(newId);
+        },
+      );
+      return;
+    }
     await s.save(moveItemByDays(item, delta));
     showTimedSnack(
       messenger,
@@ -966,7 +982,7 @@ class _DayCell extends StatelessWidget {
       onTap: canEdit ? () => onTapItem(i, day) : () => onTap(day),
       child: chip,
     );
-    if (!canEdit || i.isRecurring) return tappable;
+    if (!canEdit) return tappable;
     return LongPressDraggable<_DragData>(
       data: _DragData(i, day),
       delay: const Duration(milliseconds: 180),
