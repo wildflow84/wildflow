@@ -98,4 +98,15 @@ void agendaJsonTests() {
     expect((cells['20261007'] as Map)['n'], 1);
     expect(cells.containsKey('20261005'), isFalse);
   });
+
+  test('달력형 칸: 공휴일/명절 이름이 들어가고, 공휴일만 있는 날은 점 표시에서 빠진다', () {
+    final today = DateTime(2026, 9, 20);
+    final ev = Item(id: 'a', type: ItemType.event, title: '성묘', start: DateTime(2026, 9, 25, 9), ownerUid: 'me', allDay: false);
+    List<String> hol(DateTime d) => d.month == 9 && d.day >= 24 && d.day <= 26 ? ['추석'] : const [];
+    final cells = WidgetSync.calendarCells([ev], today, holidaysOn: hol);
+    expect((cells['20260925'] as Map)['h'], '추석');
+    expect((cells['20260925'] as Map)['n'], 1);
+    expect((cells['20260924'] as Map)['n'], 0);
+    expect((cells['20260924'] as Map)['h'], '추석');
+  });
 }

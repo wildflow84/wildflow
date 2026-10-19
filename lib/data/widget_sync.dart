@@ -131,16 +131,19 @@ class WidgetSync {
 
   /// 달력형 위젯의 칸 내용: {yyyyMMdd: {n: 그날 항목 수, e: [{t: 제목, c: 색}] (앞의 2개)}}. 항목이 있는 날만.
   /// 일정이 있는 날 표시(점)도 이 키로 만든다.
-  static Map<String, dynamic> calendarCells(List<Item> visible, DateTime today, {int Function(Item)? colorOf}) {
+  static Map<String, dynamic> calendarCells(List<Item> visible, DateTime today,
+      {int Function(Item)? colorOf, List<String> Function(DateTime)? holidaysOn}) {
     final start = DateTime(today.year, today.month - 24, 1);
     final end = DateTime(today.year, today.month + 13, 0);
     final out = <String, dynamic>{};
     String two(int v) => v.toString().padLeft(2, '0');
     for (var d = start; !d.isAfter(end); d = DateTime(d.year, d.month, d.day + 1)) {
       final items = _on(visible, d);
-      if (items.isEmpty) continue;
+      final hol = holidaysOn?.call(d) ?? const <String>[];
+      if (items.isEmpty && hol.isEmpty) continue;
       out['${d.year}${two(d.month)}${two(d.day)}'] = {
         'n': items.length,
+        if (hol.isNotEmpty) 'h': hol.first, // 공휴일/명절 이름 (칸에 빨간 숫자 + 첫 칩)
         'e': [
           for (final i in items.take(2))
             {'t': i.title.length > 10 ? i.title.substring(0, 10) : i.title, 'c': colorOf?.call(i) ?? 0xFF4A7BD9},
@@ -190,9 +193,10 @@ class WidgetSync {
       final agenda = agendaJson(visible, today,
           colorOf: colorOf, categoryName: categoryName, holidaysOn: holidaysOn, spaceId: spaceId);
       await Future<void>.delayed(const Duration(milliseconds: 20)); // 무거운 계산 사이에 화면이 한 프레임 그릴 틈을 준다
-      final cells = calendarCells(visible, today, colorOf: colorOf);
+      final cells = calendarCells(visible, today, colorOf: colorOf, holidaysOn: holidaysOn);
       final cellsJson = jsonEncode(cells);
-      final days = cells.keys.join(',');
+      // 일정 있는 날 표시(점)는 공휴일만 있는 날을 뺀다
+      final days = [for (final e in cells.entries) if (((e.value as Map)['n'] as int) > 0) e.key].join(',');
       // 내용이 그대로면 위젯을 다시 그리게 하지 않는다
       final sig = '${agenda.hashCode}/${cellsJson.hashCode}/${today.day}';
       if (!force && sig == _lastSig) return;

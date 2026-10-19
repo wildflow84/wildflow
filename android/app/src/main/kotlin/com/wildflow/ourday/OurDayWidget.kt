@@ -251,8 +251,19 @@ class OurDayWidget : HomeWidgetProvider() {
         /** 칸 안의 일정 칩 두 줄: 개수가 3개 이상이면 둘째 줄은 "+N" */
         private fun fillChips(views: RemoteViews, id1: Int, id2: Int, cell: org.json.JSONObject?, theme: WidgetTheme) {
             val list = cell?.optJSONArray("e")
+            val holiday = cell?.optString("h", "") ?: ""
             val n = cell?.optInt("n", 0) ?: 0
-            if (list == null || list.length() == 0) {
+            // 공휴일/명절 칩이 있으면 맨 앞에 두고, 일정 칩이 그 뒤를 잇는다
+            val chips = ArrayList<Pair<String, Int>>()
+            if (holiday.isNotEmpty()) chips.add(Pair(holiday, 0xFF3FA796.toInt()))
+            if (list != null) {
+                for (k in 0 until list.length()) {
+                    val o = list.getJSONObject(k)
+                    chips.add(Pair(o.optString("t"), o.optLong("c", 0xFF4A7BD9L).toInt()))
+                }
+            }
+            val total = n + (if (holiday.isNotEmpty()) 1 else 0)
+            if (chips.isEmpty()) {
                 views.setViewVisibility(id1, View.GONE)
                 views.setViewVisibility(id2, View.GONE)
                 return
@@ -263,16 +274,14 @@ class OurDayWidget : HomeWidgetProvider() {
                 views.setInt(id, "setBackgroundColor", color)
                 views.setTextColor(id, if (isLight(color)) 0xFF222222.toInt() else 0xFFFFFFFF.toInt())
             }
-            val first = list.getJSONObject(0)
-            chip(id1, first.optString("t"), first.optLong("c", 0xFF4A7BD9L).toInt())
-            if (n > 2) {
+            chip(id1, chips[0].first, chips[0].second)
+            if (total > 2) {
                 views.setViewVisibility(id2, View.VISIBLE)
-                views.setTextViewText(id2, "+" + (n - 1))
+                views.setTextViewText(id2, "+" + (total - 1))
                 views.setInt(id2, "setBackgroundColor", 0x00000000)
                 views.setTextColor(id2, theme.sub)
-            } else if (list.length() > 1) {
-                val second = list.getJSONObject(1)
-                chip(id2, second.optString("t"), second.optLong("c", 0xFF4A7BD9L).toInt())
+            } else if (chips.size > 1) {
+                chip(id2, chips[1].first, chips[1].second)
             } else {
                 views.setViewVisibility(id2, View.GONE)
             }
@@ -351,6 +360,10 @@ class OurDayWidget : HomeWidgetProvider() {
                         views.setViewVisibility(markId, View.GONE)
                         views.setTextColor(textId, theme.text)
                     }
+                }
+                // 공휴일/명절은 날짜 숫자를 빨갛게 (오늘 표시 칸은 흰 글자 유지)
+                if (day != today && !(cells.optJSONObject(key)?.optString("h", "").isNullOrEmpty())) {
+                    views.setTextColor(textId, theme.red)
                 }
                 fillChips(views, CELL_E1[i], CELL_E2[i], cells.optJSONObject(key), theme)
             }
