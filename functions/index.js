@@ -413,10 +413,10 @@ const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const digest = require('./digest');
 
-const DIGEST_TOKEN = defineSecret('DIGEST_TOKEN');
-
 // CI 가 시크릿(DIGEST_TOKEN)이 아직 없다고 판단하면 DIGEST_DISABLED=1 로 배포해서 이 함수만 뺀다 (다른 함수 배포가 막히지 않게).
 if (process.env.DIGEST_DISABLED !== '1') {
+  // 시크릿 선언도 이 안에 둔다: 선언만 있어도 배포 도구가 시크릿을 조회하다 권한 오류가 나면 다른 함수 배포까지 막힌다.
+  const DIGEST_TOKEN = defineSecret('DIGEST_TOKEN');
   exports.dailyDigest = onRequest(
     { secrets: [DIGEST_TOKEN], invoker: 'public', cors: false },
     digest.createDigestHandler({
