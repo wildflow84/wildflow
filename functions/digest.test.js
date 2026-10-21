@@ -285,6 +285,20 @@ test('인증: 서버에 토큰이 설정돼 있지 않으면 빈 토큰으로도
   }
 });
 
+test('인증: 서버 토큰이 너무 짧으면 같은 값을 보내도 거절 (닫힌 쪽으로 실패), 로그에는 상태만', async () => {
+  const { handler, logs } = makeHandler({ getToken: () => 'short' });
+  const res = fakeRes();
+  await handler(fakeReq({ auth: 'Bearer short', query: { member: '민아' } }), res);
+  assert.equal(res.statusCode, 401);
+  assert.ok(logs.some((l) => l.includes('auth=denied') && l.includes('serverToken=missing')));
+  const ok = makeHandler();
+  const r2 = fakeRes();
+  await ok.handler(fakeReq({ auth: `Bearer ${TOKEN}`, query: { member: '민아' } }), r2);
+  assert.equal(r2.statusCode, 200);
+  assert.ok(ok.logs.some((l) => l.includes('auth=ok')));
+  assert.ok(!ok.logs.join('\n').includes(TOKEN));
+});
+
 test('GET 만 허용 (다른 메서드는 405)', async () => {
   const { handler } = makeHandler();
   for (const method of ['POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD']) {

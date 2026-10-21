@@ -117,12 +117,15 @@ function buildDigest({ dateKey, nowMs, memberUid, memberName, names, docs, categ
   return { date: dateKey, member: memberName, holidays, events: events.map(strip), todos: todos.map(strip) };
 }
 
+const MIN_TOKEN_LENGTH = 16; // 서버에 저장된 토큰이 이보다 짧거나 비어 있으면 모든 요청을 거절한다
+
 /** 상수 시간 토큰 비교 (길이가 달라도 같은 시간이 걸리게 해시로 비교) */
 function tokenMatches(provided, expected) {
   if (typeof provided !== 'string' || typeof expected !== 'string' || !provided || !expected) return false;
+  if (expected.length < MIN_TOKEN_LENGTH) return false;
   const a = crypto.createHash('sha256').update(provided).digest();
   const b = crypto.createHash('sha256').update(expected).digest();
-  return crypto.timingSafeEqual(a, b);
+  return crypto.timingSafeEqual(a, b) === true;
 }
 
 function bearerOf(req) {
@@ -150,7 +153,13 @@ function createDigestHandler({ getToken, findMember, loadSpace, now = Date.now, 
       res.set('Allow', 'GET');
       return send(res, 405, { error: 'GET만 쓸 수 있어' });
     }
-    if (!tokenMatches(bearerOf(req), getToken())) {
+    // 인증: 서버 토큰이 설정돼 있고, 요청의 Bearer 토큰이 같아야 한다. 그 외에는 모두 거절(닫힌 쪽으로 실패).
+    const expected = getToken();
+    const provided = bearerOf(req);
+    const authorized = tokenMatches(provided, expected) === true;
+    // 값은 절대 남기지 않고, 상태만 남긴다 (서버 토큰 설정 여부 / 헤더 유무 / 결과)
+    log(`dailyDigest auth=${authorized ? 'ok' : 'denied'} serverToken=${typeof expected === 'string' && expected.length >= MIN_TOKEN_LENGTH ? 'set' : 'missing'} header=${provided ? 'present' : 'absent'}`);
+    if (!authorized) {
       res.set('WWW-Authenticate', 'Bearer');
       return send(res, 401, { error: '인증이 필요해' });
     }
@@ -221,6 +230,6 @@ async function loadSpaceFromFirestore(db, spaceId) {
 }
 
 module.exports = {
-  buildDigest, createDigestHandler, tokenMatches, todayKeyKst,
+  buildDigest, createDigestHandler, tokenMatches, todayKeyKst, MIN_TOKEN_LENGTH,
   findMemberInFirestore, loadSpaceFromFirestore, DEFAULT_CATEGORY_NAMES, SUBSCRIPTION_CATEGORY_NAME,
 };

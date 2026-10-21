@@ -165,12 +165,9 @@ jobs:
         run: |
           project=$(jq -r .PROJECT_ID firebase_config.json)
           gcloud auth activate-service-account --key-file="$RUNNER_TEMP/sa.json" --quiet
-          for fn in nudge notifyComplete notifyShared syncSubscription removeSubscription searchPlaces removeMember allowMember dailyDigest; do
+          for fn in nudge notifyComplete notifyShared syncSubscription removeSubscription searchPlaces removeMember allowMember; do
             svc=$(echo "$fn" | tr 'A-Z' 'a-z')
             echo "== $fn ($svc) =="
-            if [ "$fn" = dailyDigest ] && ! gcloud run services describe "$svc" --region=asia-northeast3 --project="$project" >/dev/null 2>&1; then
-              echo "dailyDigest 는 아직 배포 전이라 건너뜀"; continue
-            fi
             gcloud run services add-iam-policy-binding "$svc" --region=asia-northeast3 --project="$project" \
               --member=allUsers --role=roles/run.invoker --quiet --format='value(etag)' || echo "::warning::$fn 호출 권한 설정 실패"
           done
