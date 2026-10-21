@@ -402,3 +402,28 @@ exports.allowMember = onCall(PUBLIC_CALL, async (req) => {
   });
   return { allowed: c.targetUid };
 });
+
+// ---------------------------------------------------------------------------
+// 오늘의 요약 (읽기 전용): 다른 서비스(가족 아침 브리핑 자동화)가 하루 한 번 불러간다.
+// GET /dailyDigest?member=민아&date=2026-10-21   헤더 Authorization: Bearer <DIGEST_TOKEN>
+// 같이 보기(shared) 항목만 돌려주고, 나만 보기(private)는 어떤 경우에도 내보내지 않는다. 자세한 건 docs/DAILY_DIGEST.md
+// ---------------------------------------------------------------------------
+const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
+const logger = require('firebase-functions/logger');
+const digest = require('./digest');
+
+const DIGEST_TOKEN = defineSecret('DIGEST_TOKEN');
+
+// CI 가 시크릿(DIGEST_TOKEN)이 아직 없다고 판단하면 DIGEST_DISABLED=1 로 배포해서 이 함수만 뺀다 (다른 함수 배포가 막히지 않게).
+if (process.env.DIGEST_DISABLED !== '1') {
+  exports.dailyDigest = onRequest(
+    { secrets: [DIGEST_TOKEN], invoker: 'public', cors: false },
+    digest.createDigestHandler({
+      getToken: () => DIGEST_TOKEN.value(),
+      findMember: (member) => digest.findMemberInFirestore(db, member),
+      loadSpace: (spaceId) => digest.loadSpaceFromFirestore(db, spaceId),
+      log: (msg) => logger.info(msg),
+    }),
+  );
+}
