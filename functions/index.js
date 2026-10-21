@@ -418,8 +418,8 @@ if (process.env.DIGEST_DISABLED !== '1') {
   // 시크릿 선언도 이 안에 둔다: 선언만 있어도 배포 도구가 시크릿을 조회하다 권한 오류가 나면 다른 함수 배포까지 막힌다.
   const DIGEST_TOKEN = defineSecret('DIGEST_TOKEN');
   exports.dailyDigest = onRequest(
-    // 인증 점검이 끝날 때까지는 Cloud Run 앞단에서도 닫아 둔다 (invoker: 'private'). 점검이 끝나면 'public' 으로 바꾼다.
-    { secrets: [DIGEST_TOKEN], invoker: 'private', cors: false },
+    // Cloud Run 앞단은 열어 두고(자동화가 구글 로그인 없이 부른다), 함수 안에서 Bearer 토큰으로 막는다.
+    { secrets: [DIGEST_TOKEN], invoker: 'public', cors: false },
     digest.createDigestHandler({
       getToken: () => DIGEST_TOKEN.value(),
       findMember: (member) => digest.findMemberInFirestore(db, member),
