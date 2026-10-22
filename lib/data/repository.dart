@@ -44,6 +44,16 @@ class Repository {
 
   Future<void> signOut() => _auth.signOut();
 
+  /// 기기에 저장된 값으로 바로 읽은 내 space (서버를 기다리지 않는다). 저장된 게 없으면 null.
+  Future<String?> cachedSpaceId() async {
+    try {
+      final doc = await _db.collection('users').doc(user!.uid).get(const GetOptions(source: Source.cache));
+      return doc.data()?['spaceId'] as String?;
+    } catch (_) {
+      return null; // 캐시에 없음
+    }
+  }
+
   /// 로그인한 사용자가 속한 space. 없으면 null.
   Future<String?> mySpaceId() async {
     final doc = await _db.collection('users').doc(user!.uid).get();

@@ -10,6 +10,22 @@ int dayNumber(DateTime d) => DateTime.utc(d.year, d.month, d.day).difference(_ep
 
 DateTime dateFromDayNumber(int dn) => DateTime(1900, 1, 1 + dn);
 
+/// 일수 -> (연, 월, 일). DateTime 을 만들지 않는 정수 계산이라 반복 규칙을 수천 번 검사할 때 훨씬 빠르다.
+(int, int, int) civilFromDayNumber(int dn) {
+  final z = dn - 25567 + 719468; // 1900-01-01 은 1970-01-01 의 25567일 전
+  final era = (z >= 0 ? z : z - 146096) ~/ 146097;
+  final doe = z - era * 146097;
+  final yoe = (doe - doe ~/ 1460 + doe ~/ 36524 - doe ~/ 146096) ~/ 365;
+  final doy = doe - (365 * yoe + yoe ~/ 4 - yoe ~/ 100);
+  final mp = (5 * doy + 2) ~/ 153;
+  final d = doy - (153 * mp + 2) ~/ 5 + 1;
+  final m = mp < 10 ? mp + 3 : mp - 9;
+  return (yoe + era * 400 + (m <= 2 ? 1 : 0), m, d);
+}
+
+/// 일수의 요일 (1=월 ... 7=일). 1900-01-01 이 월요일이다.
+int weekdayOfDayNumber(int dn) => dn % 7 + 1;
+
 class LunarDate {
   final int year, month, day;
   final bool leap;
@@ -70,8 +86,9 @@ List<_LunarYear> _build() {
 DateTime get lunarRangeStart => dateFromDayNumber(_years.first.starts.first);
 DateTime get lunarRangeEnd => dateFromDayNumber(_years.last.end - 1);
 
-LunarDate? solarToLunar(DateTime date) {
-  final dn = dayNumber(date);
+LunarDate? solarToLunar(DateTime date) => solarToLunarDn(dayNumber(date));
+
+LunarDate? solarToLunarDn(int dn) {
   if (dn < _years.first.starts.first || dn >= _years.last.end) return null;
   var lo = 0, hi = _years.length - 1;
   while (lo < hi) {
@@ -91,6 +108,11 @@ LunarDate? solarToLunar(DateTime date) {
 }
 
 DateTime? lunarToSolar(int year, int month, int day, {bool leap = false}) {
+  final dn = lunarToSolarDn(year, month, day, leap: leap);
+  return dn == null ? null : dateFromDayNumber(dn);
+}
+
+int? lunarToSolarDn(int year, int month, int day, {bool leap = false}) {
   final idx = year - lunarTableFirstYear;
   if (idx < 0 || idx >= _years.length) return null;
   final y = _years[idx];
@@ -98,7 +120,7 @@ DateTime? lunarToSolar(int year, int month, int day, {bool leap = false}) {
     if (y.numbers[i] == month && y.leaps[i] == leap) {
       final next = i + 1 < y.starts.length ? y.starts[i + 1] : y.end;
       if (day < 1 || day > next - y.starts[i]) return null;
-      return dateFromDayNumber(y.starts[i] + day - 1);
+      return y.starts[i] + day - 1;
     }
   }
   return null;

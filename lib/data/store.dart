@@ -154,6 +154,16 @@ class Store extends ChangeNotifier {
     loading = true;
     notifyListeners();
     try {
+      // 앱을 켤 때 서버 응답을 기다리지 않는다: 기기에 저장된 내 공간으로 바로 시작하고, 서버 확인은 뒤에서 한다.
+      final cached = await repo.cachedSpaceId();
+      if (cached != null) {
+        spaceId = cached;
+        _start();
+        loading = false;
+        notifyListeners();
+        unawaited(_verifySpace(u.uid));
+        return;
+      }
       spaceId = await repo.mySpaceId();
       if (spaceId != null) _start();
     } catch (e) {
@@ -161,6 +171,18 @@ class Store extends ChangeNotifier {
     }
     loading = false;
     notifyListeners();
+  }
+
+  /// 저장된 값으로 시작한 뒤 서버의 실제 공간과 다르면(다른 기기에서 바꿨거나 내보내졌다) 맞춘다. 오프라인이면 그대로 둔다.
+  Future<void> _verifySpace(String forUid) async {
+    try {
+      final real = await repo.mySpaceId();
+      if (user?.uid != forUid || real == spaceId) return;
+      await _stop();
+      spaceId = real;
+      if (real != null) _start();
+      notifyListeners();
+    } catch (_) {}
   }
 
   void _start() {
@@ -382,7 +404,7 @@ class Store extends ChangeNotifier {
       uid,
       colorOf: (i) => colorOf(i).toARGB32(),
       categoryName: (i) => categoriesOf(i).first.name,
-      holidaysOn: (d) => [for (final m in cal.marksOn(d)) if (m.isHoliday) m.name],
+      customDays: customDays, // 계산은 별도 격리에서 한다 (앱 화면이 멈추지 않게)
       spaceId: spaceId ?? '',
       force: force,
     );

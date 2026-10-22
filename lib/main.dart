@@ -24,8 +24,11 @@ final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('ko');
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // 서로 기다릴 필요가 없는 두 가지를 동시에 준비한다 (앱이 뜨는 시간 단축)
+  await Future.wait([
+    initializeDateFormatting('ko'),
+    Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
+  ]);
   Push.listenForeground(messengerKey);
   if (!kIsWeb) {
     // 홈 화면 위젯의 체크박스(앱을 열지 않고 완료 처리)

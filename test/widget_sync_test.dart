@@ -3,7 +3,11 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:ourday/data/widget_sync.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:ourday/models/item.dart';
+import 'package:ourday/models/kr_calendar.dart' show CustomDay;
+import 'package:ourday/models/lunar.dart' show dayNumber;
+import 'package:ourday/models/recurrence.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('ko'));
@@ -108,5 +112,96 @@ void agendaJsonTests() {
     expect((cells['20260925'] as Map)['n'], 1);
     expect((cells['20260924'] as Map)['n'], 0);
     expect((cells['20260924'] as Map)['h'], '추석');
+  });
+
+  group('날짜별 항목 표 (성능 개선)', () {
+    List<Item> sample() {
+      final items = <Item>[];
+      for (var i = 0; i < 40; i++) {
+        items.add(Item(
+            id: 's$i', type: i.isEven ? ItemType.event : ItemType.todo, title: 's$i',
+            start: DateTime(2026, 1 + i % 12, 1 + i % 27, 9), ownerUid: 'u', allDay: false,
+            end: i % 7 == 0 ? DateTime(2026, 1 + i % 12, 3 + i % 27) : null));
+      }
+      const rules = [
+        Recurrence(freq: Freq.daily, interval: 3),
+        Recurrence(freq: Freq.weekly, interval: 2, weekdays: [1, 3, 7]),
+        Recurrence(freq: Freq.monthly, monthDays: [31]),
+        Recurrence(freq: Freq.monthly, monthDays: [-1]),
+        Recurrence(freq: Freq.monthly, nth: 2, nthWeekday: 2),
+        Recurrence(freq: Freq.yearly, clampMonthEnd: true),
+        Recurrence(freq: Freq.yearly, lunar: true),
+        Recurrence(freq: Freq.monthly, lunar: true),
+        Recurrence(freq: Freq.weekly, count: 12),
+        Recurrence(freq: Freq.daily, count: 30, interval: 2),
+      ];
+      for (var i = 0; i < rules.length; i++) {
+        items.add(Item(id: 'r$i', type: ItemType.event, title: 'r$i', start: DateTime(2025, 2, 10 + i), ownerUid: 'u', rule: rules[i]));
+      }
+      items.add(Item(id: 'x1', type: ItemType.event, title: 'x', start: DateTime(2026, 1, 1), ownerUid: 'u',
+          rule: const Recurrence(freq: Freq.daily), repeatUntil: DateTime(2026, 12, 20),
+          exceptions: ['2026-10-05', '2026-10-06', '2026-11-30']));
+      items.add(Item(id: 'x2', type: ItemType.event, title: 'x', start: DateTime(2025, 1, 1), ownerUid: 'u',
+          rule: Recurrence(freq: Freq.weekly, until: DateTime(2026, 10, 1))));
+      items.add(Item(id: 'x3', type: ItemType.event, title: 'x', start: DateTime(2026, 3, 1), ownerUid: 'u', repeat: Repeat.monthly));
+      items.add(Item(id: 'x4', type: ItemType.event, title: 'x', start: DateTime(2026, 3, 9), ownerUid: 'u', end: DateTime(2026, 3, 2)));
+      return items;
+    }
+
+    test('날짜별 표가 날마다 occursOn 으로 거른 결과와 같다', () {
+      final items = sample();
+      final today = DateTime(2026, 10, 22);
+      final (from, to) = WidgetSync.rangeFor(today);
+      final idx = WidgetSync.dayIndex(items, from, to);
+      var checked = 0;
+      for (var d = from; !d.isAfter(to); d = DateTime(d.year, d.month, d.day + 1)) {
+        final want = {for (final i in items) if (occursOn(i, d)) i.id};
+        final got = {for (final i in idx[dayNumber(d)] ?? const <Item>[]) i.id};
+        expect(got, want, reason: '$d');
+        checked += want.length;
+      }
+      expect(checked, greaterThan(500)); // 비어 있는 비교가 아니다
+    });
+
+    test('같은 날 안의 순서: 일정 먼저, 그다음 시작 시각, 같으면 id 순', () {
+      final a = Item(id: 'b', type: ItemType.todo, title: 'a', start: DateTime(2026, 10, 22, 8), ownerUid: 'u', allDay: false);
+      final b = Item(id: 'a', type: ItemType.event, title: 'b', start: DateTime(2026, 10, 22, 12), ownerUid: 'u', allDay: false);
+      final c = Item(id: 'c', type: ItemType.event, title: 'c', start: DateTime(2026, 10, 22, 12), ownerUid: 'u', allDay: false);
+      final idx = WidgetSync.dayIndex([c, a, b], DateTime(2026, 10, 22), DateTime(2026, 10, 22));
+      expect([for (final i in idx[dayNumber(DateTime(2026, 10, 22))]!) i.id], ['a', 'c', 'b']);
+    });
+
+    test('별도 격리에서 계산한 결과가 같은 자리에서 계산한 것과 같다 (격리로 보낼 수 있다)', () async {
+      final items = sample();
+      final today = DateTime(2026, 10, 22);
+      final input = WidgetPayloadInput(
+        visible: items, today: today, spaceId: 's',
+        colors: {for (final i in items) i.id: 0xFF123456},
+        categories: {for (final i in items) i.id: '가족'},
+        customDays: [CustomDay(id: 'c', date: DateTime(2026, 10, 25), name: '쉬는날')],
+      );
+      final inIsolate = await compute(buildWidgetPayload, input);
+      final here = buildWidgetPayload(input);
+      expect(inIsolate.agenda, here.agenda);
+      expect(inIsolate.cellsJson, here.cellsJson);
+      expect(inIsolate.days, here.days);
+      expect(inIsolate.body, here.body);
+      expect(inIsolate.agenda, contains('쉬는날')); // 사용자 지정 휴일도 격리 안에서 반영
+      expect(inIsolate.agenda, contains('"color":${0xFF123456}'));
+    });
+
+    test('항목이 많아도 위젯 데이터 계산이 빠르다', () {
+      final items = [...sample(), ...sample().map((i) => Item(
+            id: 'z${i.id}', type: i.type, title: i.title, start: i.start, ownerUid: 'u', allDay: i.allDay, end: i.end, rule: i.rule, repeat: i.repeat,
+            exceptions: i.exceptions, repeatUntil: i.repeatUntil))];
+      for (var k = 0; k < 150; k++) {
+        items.add(Item(id: 'm$k', type: ItemType.event, title: 'm', start: DateTime(2026, 1 + k % 12, 1 + k % 27, 9), ownerUid: 'u', allDay: false));
+      }
+      final sw = Stopwatch()..start();
+      buildWidgetPayload(WidgetPayloadInput(
+          visible: items, today: DateTime(2026, 10, 22), spaceId: 's', colors: const {}, categories: const {}, customDays: const []));
+      // 예전 방식(날마다 모든 항목 검사)은 이 정도 양에서 수 초(JIT)가 걸렸다
+      expect(sw.elapsedMilliseconds, lessThan(2500), reason: '${sw.elapsedMilliseconds}ms');
+    });
   });
 }

@@ -1,4 +1,5 @@
-import 'lunar.dart' show dayNumber, solarToLunar, lunarToSolar;
+import 'lunar.dart'
+    show dayNumber, dateFromDayNumber, civilFromDayNumber, weekdayOfDayNumber, solarToLunar, solarToLunarDn, lunarToSolarDn;
 
 /// 구글 캘린더(RFC 5545 RRULE)와 같은 구조의 반복 규칙.
 ///
@@ -110,36 +111,45 @@ class Recurrence {
       ].join('|');
 
   // ---------- 발생 계산 ----------
+  // 정수 일수(dayNumber) 기반으로 계산한다: DateTime 을 만들지 않아서 달력/위젯이 수천 날을 검사해도 빠르다.
+  // DateTime 을 받는 메서드는 같은 계산을 감싼 것이다 (결과는 test/recurrence_golden_test.dart 기준값과 같다).
   static DateTime _d(DateTime x) => DateTime(x.year, x.month, x.day);
-  static int _daysIn(int y, int m) => DateTime(y, m + 1, 0).day;
+  static const _monthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  static int _daysIn(int y, int m) => m == 2 && _leap(y) ? 29 : _monthDays[m - 1];
   static bool _leap(int y) => (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
-  static int _weekStart(DateTime d) => dayNumber(d) - (d.weekday % 7); // 일요일 기준 주 시작
+  static int _weekStartDn(int dn) => dn - (weekdayOfDayNumber(dn) % 7); // 일요일 기준 주 시작
 
   /// [start]에서 시작하는 규칙이 [day]에 해당하는지. (종료 조건, 예외 날짜는 보지 않음)
-  bool matches(DateTime start, DateTime day) {
-    final s = _d(start), d = _d(day);
-    if (d.isBefore(s)) return false;
-    if (lunar && (freq == Freq.yearly || freq == Freq.monthly)) return _lunarMatch(s, d);
+  bool matches(DateTime start, DateTime day) => matchesDn(dayNumber(start), dayNumber(day));
+
+  /// [matches] 의 정수 일수 판 (시작일 [sdn], 확인할 날 [dn])
+  bool matchesDn(int sdn, int dn) {
+    if (dn < sdn) return false;
+    if (lunar && (freq == Freq.yearly || freq == Freq.monthly)) return _lunarMatch(sdn, dn);
     switch (freq) {
       case Freq.daily:
-        return (dayNumber(d) - dayNumber(s)) % interval == 0;
+        return (dn - sdn) % interval == 0;
       case Freq.weekly:
-        final days = weekdays.isEmpty ? [s.weekday] : weekdays;
-        if (!days.contains(d.weekday)) return false;
-        return ((_weekStart(d) - _weekStart(s)) ~/ 7) % interval == 0;
+        final wd = weekdayOfDayNumber(dn);
+        if (weekdays.isEmpty ? wd != weekdayOfDayNumber(sdn) : !weekdays.contains(wd)) return false;
+        return ((_weekStartDn(dn) - _weekStartDn(sdn)) ~/ 7) % interval == 0;
       case Freq.monthly:
-        final months = (d.year - s.year) * 12 + d.month - s.month;
+        final (sy, sm, sd) = civilFromDayNumber(sdn);
+        final (y, m, d) = civilFromDayNumber(dn);
+        final months = (y - sy) * 12 + m - sm;
         if (months % interval != 0) return false;
-        return isNthWeekday ? _nthMatch(s, d) : _dateMatch(s, d);
+        return isNthWeekday ? _nthMatch(sdn, dn, y, m, d) : _dateMatch(sd, y, m, d);
       case Freq.yearly:
-        if ((d.year - s.year) % interval != 0) return false;
-        if (d.month == s.month && d.day == s.day) return true;
-        return clampMonthEnd && s.month == 2 && s.day == 29 && d.month == 2 && d.day == 28 && !_leap(d.year);
+        final (sy, sm, sd) = civilFromDayNumber(sdn);
+        final (y, m, d) = civilFromDayNumber(dn);
+        if ((y - sy) % interval != 0) return false;
+        if (m == sm && d == sd) return true;
+        return clampMonthEnd && sm == 2 && sd == 29 && m == 2 && d == 28 && !_leap(y);
     }
   }
 
-  bool _lunarMatch(DateTime s, DateTime d) {
-    final ls = solarToLunar(s), ld = solarToLunar(d);
+  bool _lunarMatch(int sdn, int dn) {
+    final ls = solarToLunarDn(sdn), ld = solarToLunarDn(dn);
     if (ls == null || ld == null) return false;
     if (freq == Freq.yearly) {
       if ((ld.year - ls.year) % interval != 0) return false;
@@ -147,56 +157,65 @@ class Recurrence {
     }
     if (ld.day == ls.day) return true;
     // 30일이 없는 달(29일까지)은 29일에
-    return ls.day == 30 && ld.day == 29 && lunarToSolar(ld.year, ld.month, 30, leap: ld.leap) == null;
+    return ls.day == 30 && ld.day == 29 && lunarToSolarDn(ld.year, ld.month, 30, leap: ld.leap) == null;
   }
 
-  bool _dateMatch(DateTime s, DateTime d) {
-    final days = monthDays.isEmpty ? [s.day] : monthDays;
-    final last = _daysIn(d.year, d.month);
-    for (final md in days) {
-      if (md == -1 && d.day == last) return true;
+  bool _dateMatch(int startDay, int y, int m, int d) {
+    final last = _daysIn(y, m);
+    if (monthDays.isEmpty) {
+      return startDay == d || (clampMonthEnd && startDay > last && d == last);
+    }
+    for (final md in monthDays) {
+      if (md == -1 && d == last) return true;
       if (md > 0) {
-        if (md == d.day) return true;
-        if (clampMonthEnd && md > last && d.day == last) return true;
+        if (md == d) return true;
+        if (clampMonthEnd && md > last && d == last) return true;
       }
     }
     return false;
   }
 
-  bool _nthMatch(DateTime s, DateTime d) {
-    if (d.weekday != (nthWeekday ?? s.weekday)) return false;
-    final last = _daysIn(d.year, d.month);
-    if (nth == -1) return d.day + 7 > last;
-    return ((d.day - 1) ~/ 7) + 1 == nth;
+  bool _nthMatch(int sdn, int dn, int y, int m, int d) {
+    if (weekdayOfDayNumber(dn) != (nthWeekday ?? weekdayOfDayNumber(sdn))) return false;
+    final last = _daysIn(y, m);
+    if (nth == -1) return d + 7 > last;
+    return ((d - 1) ~/ 7) + 1 == nth;
   }
 
-  static final Map<String, DateTime?> _lastCache = {};
+  static final Map<String, int?> _lastCache = {};
 
   /// 횟수 종료일 때 마지막 발생일. 횟수 종료가 아니면 null.
   DateTime? lastOccurrence(DateTime start) {
+    final dn = lastOccurrenceDn(dayNumber(start));
+    return dn == null ? null : dateFromDayNumber(dn);
+  }
+
+  /// [lastOccurrence] 의 정수 일수 판. 횟수 종료가 아니거나 못 찾으면 null.
+  int? lastOccurrenceDn(int sdn) {
     if (count == null) return null;
-    final s = _d(start);
-    return _lastCache.putIfAbsent('$_id#${dayNumber(s)}', () {
+    return _lastCache.putIfAbsent('$_id#$sdn', () {
       var left = count!;
-      var d = s;
+      var d = sdn;
+      final untilDn = until == null ? null : dayNumber(until!);
       for (var i = 0; i < 366 * 120; i++) {
-        if (until != null && d.isAfter(_d(until!))) return null;
-        if (matches(s, d) && --left == 0) return d;
-        d = DateTime(d.year, d.month, d.day + 1);
+        if (untilDn != null && d > untilDn) return null;
+        if (matchesDn(sdn, d) && --left == 0) return d;
+        d++;
       }
       return null;
     });
   }
 
   /// 종료 조건까지 포함한 발생 여부 (예외 날짜는 보지 않음).
-  bool occursOn(DateTime start, DateTime day) {
-    final d = _d(day), s = _d(start);
-    if (d.isBefore(s)) return false;
-    if (until != null && d.isAfter(_d(until!))) return false;
-    if (!matches(s, d)) return false;
+  bool occursOn(DateTime start, DateTime day) => occursOnDn(dayNumber(start), dayNumber(day));
+
+  bool occursOnDn(int sdn, int dn) {
+    if (dn < sdn) return false;
+    if (until != null && dn > dayNumber(until!)) return false;
+    if (!matchesDn(sdn, dn)) return false;
     if (count != null) {
-      final last = lastOccurrence(s);
-      if (last == null || d.isAfter(last)) return false;
+      final last = lastOccurrenceDn(sdn);
+      if (last == null || dn > last) return false;
     }
     return true;
   }
@@ -204,10 +223,9 @@ class Recurrence {
   /// [start] 이후(포함) 규칙에 맞는 첫 날짜. 구글처럼 시작일이 규칙과 안 맞으면 첫 발생일로 옮길 때 쓴다.
   DateTime firstOnOrAfter(DateTime start) {
     final s = _d(start);
-    var d = s;
+    final sdn = dayNumber(s);
     for (var i = 0; i < 366 * 9; i++) {
-      if (matches(s, d)) return d;
-      d = DateTime(d.year, d.month, d.day + 1);
+      if (matchesDn(sdn, sdn + i)) return dateFromDayNumber(sdn + i);
     }
     return s;
   }
@@ -215,12 +233,13 @@ class Recurrence {
   /// [anchor]를 기준으로 [after] 다음 날부터 처음 맞는 날짜. 종료일이 지났거나 찾지 못하면 null.
   /// (이동형 반복: 완료하면 다음 일정으로 옮길 때 쓴다. 횟수 종료는 호출하는 쪽에서 센다.)
   DateTime? nextAfter(DateTime anchor, DateTime after) {
-    final a = _d(anchor);
-    var d = DateTime(after.year, after.month, after.day + 1);
+    final adn = dayNumber(anchor);
+    final untilDn = until == null ? null : dayNumber(until!);
+    var d = dayNumber(after) + 1;
     for (var i = 0; i < 366 * 9; i++) {
-      if (until != null && d.isAfter(_d(until!))) return null;
-      if (matches(a, d)) return d;
-      d = DateTime(d.year, d.month, d.day + 1);
+      if (untilDn != null && d > untilDn) return null;
+      if (matchesDn(adn, d)) return dateFromDayNumber(d);
+      d++;
     }
     return null;
   }
