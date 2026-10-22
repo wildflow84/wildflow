@@ -155,6 +155,14 @@ jobs:
             export DIGEST_DISABLED=1
             echo "::notice::DIGEST_TOKEN 시크릿이 아직 없어서 dailyDigest 는 이번 배포에서 뺐어. docs/DAILY_DIGEST.md 순서대로 시크릿을 만든 뒤 배포하면 돼."
           fi
+          # 브리핑 파일 기록(onItemWriteBriefing, dailyBriefingFile)도 같은 방식: GITHUB_TOKEN 시크릿을 아직 못 읽고 함수도 없으면 이번 배포에서만 뺀다.
+          if gcloud secrets describe GITHUB_TOKEN --project="$project" >/dev/null 2>&1 \
+             || gcloud run services describe onitemwritebriefing --region=asia-northeast3 --project="$project" >/dev/null 2>&1; then
+            echo "브리핑 파일 기록 함수도 같이 배포해."
+          else
+            export BRIEFING_DISABLED=1
+            echo "::notice::GITHUB_TOKEN 시크릿이 아직 없어서(또는 배포 계정이 못 읽어서) 브리핑 파일 기록은 이번 배포에서 뺐어. docs/BRIEFING_DIGEST.md 순서대로 하면 돼."
+          fi
           npx -y firebase-tools@latest deploy --only functions --project "$project" --non-interactive --force
 
       # 호출형 함수는 앱이 보낸 로그인 토큰을 함수 안에서 검사한다(req.auth). Cloud Run 앞단 호출 권한이

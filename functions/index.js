@@ -428,3 +428,50 @@ if (process.env.DIGEST_DISABLED !== '1') {
     }),
   );
 }
+
+// ---------------------------------------------------------------------------
+// 브리핑용 다이제스트 파일 기록: 일정/할 일이 바뀔 때마다(그리고 매일 00:05 KST) GitHub 저장소의 calendar/digest.md 를 최신으로 다시 쓴다.
+// 공유(shared) 항목만 쓴다. 토큰(GITHUB_TOKEN 시크릿)이 없으면 아무것도 하지 않는다. 자세한 건 docs/BRIEFING_DIGEST.md
+// ---------------------------------------------------------------------------
+// CI 가 시크릿(GITHUB_TOKEN)을 아직 못 읽는다고 판단하면 BRIEFING_DISABLED=1 로 배포해서 이 함수들만 뺀다.
+if (process.env.BRIEFING_DISABLED !== '1') {
+  const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+  const briefing = require('./briefing');
+  const briefingRun = require('./briefing_run');
+  const GITHUB_TOKEN = defineSecret('GITHUB_TOKEN');
+  const DEBOUNCE_MS = Number(process.env.BRIEFING_DEBOUNCE_MS) || 45 * 1000;
+  const stateRef = db.doc('serverState/briefing'); // 서버만 쓰는 문서 (firestore.rules 에 없어서 앱에서는 못 읽고 못 쓴다)
+
+  const runNow = (onlySpaceId) =>
+    briefingRun.runBriefing({ db, token: GITHUB_TOKEN.value(), onlySpaceId, log: (m) => logger.info(m) });
+
+  exports.onItemWriteBriefing = onDocumentWritten(
+    { document: 'spaces/{spaceId}/items/{itemId}', secrets: [GITHUB_TOKEN], timeoutSeconds: 120 },
+    async (event) => {
+      try {
+        const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+        const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+        if (!briefing.isRelevantChange(before, after)) return;
+        await briefing.debounced({
+          store: {
+            setLast: (id) => stateRef.set({ lastEventId: id, lastEventAt: FieldValue.serverTimestamp() }, { merge: true }),
+            getLast: async () => ((await stateRef.get()).data() || {}).lastEventId,
+          },
+          eventId: event.id,
+          sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+          debounceMs: DEBOUNCE_MS,
+          run: () => runNow(event.params.spaceId),
+        });
+      } catch (e) {
+        logger.error(`briefing trigger error ${e && e.name ? e.name : 'unknown'}`); // 앱 동작과 무관: 삼킨다
+      }
+    },
+  );
+
+  exports.dailyBriefingFile = onSchedule(
+    { schedule: '5 0 * * *', timeZone: 'Asia/Seoul', secrets: [GITHUB_TOKEN], timeoutSeconds: 120 },
+    async () => {
+      await runNow();
+    },
+  );
+}

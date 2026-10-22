@@ -66,6 +66,7 @@ function toItem(id, data) {
     checksByDate: m.checksByDate && typeof m.checksByDate === 'object' ? m.checksByDate : {},
     assignee: typeof m.assignee === 'string' ? m.assignee : '',
     dday: m.dday === true,
+    lastDoneMs: m.lastDoneAt ? millis(m.lastDoneAt) : 0,
     subscriptionId: typeof m.subscriptionId === 'string' && m.subscriptionId ? m.subscriptionId : null,
   };
   item.effectiveRule = rule || legacyRule(item.repeat, start.dn);
