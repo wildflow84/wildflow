@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Polestar Auto Off</string>
+    <string name="service_description">차량 설정 화면을 읽고 지정한 운전 보조 옵션을 자동으로 끕니다.</string>
+</resources>

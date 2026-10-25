@@ -1,0 +1,16 @@
+{
+  "cooldownSec": 120,
+  "maxAttempts": 3,
+  "stepTimeoutMs": 8000,
+  "stepDelayMs": 1000,
+  "steps": [
+    { "op": "open_settings" },
+    { "op": "click", "optional": true,
+      "any": ["Driver assistance", "Driving assistance", "Driver support", "운전자 지원", "운전 보조", "주행 보조", "운전자 보조"] },
+    { "op": "set_off",
+      "any": ["Lane keeping aid", "Lane keeping assist", "차선 유지 보조장치", "차선 유지 보조", "차선 유지"] },
+    { "op": "set_off",
+      "any": ["Speed limit warning", "Speed limit alert", "속도 제한 경고", "제한 속도 경고", "속도 경고"] },
+    { "op": "home" }
+  ]
+}
