@@ -16,6 +16,7 @@ import android.widget.Toast
 class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var logView: TextView
+    private lateinit var recordButton: Button
     private val handler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,11 +28,19 @@ class MainActivity : Activity() {
         status = TextView(this).apply { textSize = 18f }
         root.addView(status)
 
-        fun button(label: String, onClick: () -> Unit) {
-            root.addView(Button(this).apply {
+        fun button(label: String, onClick: () -> Unit): Button {
+            val b = Button(this).apply {
                 text = label
                 setOnClickListener { onClick() }
-            })
+            }
+            root.addView(b)
+            return b
+        }
+
+        recordButton = button("좌표 기록 모드") {
+            val svc = AutoOffService.instance
+            if (svc == null) toast("접근성 서비스가 꺼져 있어요") else svc.setRecording(!svc.recording)
+            refresh()
         }
 
         button("접근성 서비스 켜기") {
@@ -71,7 +80,13 @@ class MainActivity : Activity() {
     }
 
     private fun refresh() {
-        status.text = if (AutoOffService.instance != null) "서비스: 켜짐" else "서비스: 꺼짐"
+        val svc = AutoOffService.instance
+        status.text = if (svc != null) "서비스: 켜짐" else "서비스: 꺼짐"
+        recordButton.text = if (svc?.recording == true) {
+            "좌표 기록 모드 끄기 (켜짐, 5분 뒤 자동 꺼짐)"
+        } else {
+            "좌표 기록 모드 켜기"
+        }
         logView.text = Logger.read(this)
     }
 

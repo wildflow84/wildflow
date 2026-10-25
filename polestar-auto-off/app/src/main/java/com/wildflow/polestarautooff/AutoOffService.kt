@@ -5,10 +5,13 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
+import java.util.Locale
 
 class AutoOffService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
@@ -33,7 +36,63 @@ class AutoOffService : AccessibilityService() {
         handler.postDelayed({ trigger("service-connected", force = false) }, 5000)
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
+    /** While on, taps made by hand are logged with their screen position as ready-to-paste script steps. */
+    @Volatile
+    var recording = false
+        private set
+
+    private val stopRecording = Runnable { setRecording(false) }
+
+    fun setRecording(on: Boolean) {
+        handler.removeCallbacks(stopRecording)
+        recording = on
+        Logger.log(this, if (on) "RECORD on (auto-off in 5 min)" else "RECORD off")
+        if (on) handler.postDelayed(stopRecording, 300_000)
+    }
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (!recording || event == null) return
+        when (event.eventType) {
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ->
+                if (event.packageName != packageName) {
+                    Logger.log(this, "WINDOW ${event.packageName} ${event.className} ${event.text}")
+                }
+            AccessibilityEvent.TYPE_VIEW_CLICKED -> logClick(event)
+        }
+    }
+
+    private fun logClick(event: AccessibilityEvent) {
+        val node = event.source
+        if (node == null) {
+            Logger.log(this, "CLICK without source pkg=${event.packageName} class=${event.className} " +
+                "(custom-drawn view, position unknown)")
+            return
+        }
+        if (node.packageName == packageName) return
+        val r = Rect()
+        node.getBoundsInScreen(r)
+        val dm = resources.displayMetrics
+        val fx = r.exactCenterX() / dm.widthPixels
+        val fy = r.exactCenterY() / dm.heightPixels
+
+        // Name the tapped thing by its own text, else by the nearest enclosing text.
+        val labels = linkedSetOf<String>()
+        var scope: AccessibilityNodeInfo? = node
+        for (i in 0..2) {
+            val s = scope ?: break
+            Nodes.walk(s) { n ->
+                listOfNotNull(n.text, n.contentDescription).forEach { if (labels.size < 4) labels.add(it.toString()) }
+            }
+            if (labels.isNotEmpty()) break
+            scope = s.parent
+        }
+        Logger.log(
+            this,
+            "CLICK pkg=${node.packageName} labels=$labels checkable=${node.isCheckable} checked=${node.isChecked} " +
+                "bounds=${r.left},${r.top},${r.right},${r.bottom} center=(${r.centerX()},${r.centerY()}) " +
+                String.format(Locale.US, "-> {\"op\":\"tap_if_on\",\"x\":%.3f,\"y\":%.3f}", fx, fy),
+        )
+    }
 
     override fun onInterrupt() = Unit
 
