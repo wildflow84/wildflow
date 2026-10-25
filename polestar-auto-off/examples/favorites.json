@@ -1,0 +1,15 @@
+{
+  "_comment": "PLACEHOLDER coordinates. Take real ones from the 'bounds=' values in a screen dump (centre = (left+right)/2, (top+bottom)/2). Values <= 1.0 are fractions of the screen, larger values are pixels. Copy to /sdcard/Android/data/com.wildflow.polestarautooff/files/script.json to use.",
+  "cooldownSec": 120,
+  "maxAttempts": 3,
+  "stepTimeoutMs": 10000,
+  "stepDelayMs": 1000,
+  "steps": [
+    { "op": "tap", "x": 0.95, "y": 0.05 },
+    { "op": "tap_if_on", "x": 0.30, "y": 0.50,
+      "confirm": ["확인", "끄기", "OK", "Turn off"] },
+    { "op": "tap_if_on", "x": 0.40, "y": 0.50,
+      "confirm": ["확인", "끄기", "OK", "Turn off"] },
+    { "op": "back" }
+  ]
+}

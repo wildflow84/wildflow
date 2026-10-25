@@ -1,6 +1,7 @@
 package com.wildflow.polestarautooff
 
 import android.accessibilityservice.AccessibilityService
+import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
 
 object Nodes {
@@ -65,6 +66,36 @@ object Nodes {
         return null
     }
 
+    /** The switch under a screen point: the smallest node containing it, or its single checkable descendant/ancestor. */
+    fun toggleAt(roots: List<AccessibilityNodeInfo>, x: Int, y: Int): AccessibilityNodeInfo? {
+        var best: AccessibilityNodeInfo? = null
+        var bestArea = Long.MAX_VALUE
+        val r = Rect()
+        for (root in roots) {
+            walk(root) { n ->
+                n.getBoundsInScreen(r)
+                if (r.contains(x, y)) {
+                    val area = r.width().toLong() * r.height()
+                    if (area < bestArea) {
+                        best = n
+                        bestArea = area
+                    }
+                }
+            }
+        }
+        val node = best ?: return null
+        if (node.isCheckable) return node
+        val below = mutableListOf<AccessibilityNodeInfo>()
+        walk(node) { if (it.isCheckable) below.add(it) }
+        if (below.size == 1) return below[0]
+        var up: AccessibilityNodeInfo? = node.parent
+        repeat(2) {
+            if (up?.isCheckable == true) return up
+            up = up?.parent
+        }
+        return null
+    }
+
     fun click(n: AccessibilityNodeInfo): Boolean {
         var cur: AccessibilityNodeInfo? = n
         while (cur != null) {
@@ -91,7 +122,9 @@ object Nodes {
     /** Text dump of the visible UI tree, for tuning labels in script.json. */
     fun dump(roots: List<AccessibilityNodeInfo>): String {
         val sb = StringBuilder()
+        val bounds = Rect()
         fun rec(n: AccessibilityNodeInfo, depth: Int) {
+            n.getBoundsInScreen(bounds)
             val flags = buildString {
                 if (n.isClickable) append('c')
                 if (n.isCheckable) append(if (n.isChecked) 'K' else 'k')
@@ -103,6 +136,8 @@ object Nodes {
             n.text?.let { sb.append(" text=\"").append(it).append('"') }
             n.contentDescription?.let { sb.append(" desc=\"").append(it).append('"') }
             n.viewIdResourceName?.let { sb.append(" id=").append(it) }
+            sb.append(" bounds=").append(bounds.left).append(',').append(bounds.top)
+                .append(',').append(bounds.right).append(',').append(bounds.bottom)
             sb.append('\n')
             for (i in 0 until n.childCount) n.getChild(i)?.let { rec(it, depth + 1) }
         }

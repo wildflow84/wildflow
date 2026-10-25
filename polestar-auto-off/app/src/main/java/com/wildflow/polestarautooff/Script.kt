@@ -11,6 +11,14 @@ data class Step(
     val optional: Boolean = false,
     val ms: Long = 0,
     val pkg: String? = null,
+    // Coordinates: values <= 1.0 are fractions of the screen, anything larger is pixels.
+    val x: Double? = null,
+    val y: Double? = null,
+    val x2: Double? = null,
+    val y2: Double? = null,
+    val confirmX: Double? = null,
+    val confirmY: Double? = null,
+    val blind: Boolean = false,
 )
 
 data class Script(
@@ -48,6 +56,13 @@ data class Script(
                     optional = s.optBoolean("optional"),
                     ms = s.optLong("ms"),
                     pkg = s.optString("pkg").ifEmpty { null },
+                    x = if (s.has("x")) s.getDouble("x") else null,
+                    y = if (s.has("y")) s.getDouble("y") else null,
+                    x2 = if (s.has("x2")) s.getDouble("x2") else null,
+                    y2 = if (s.has("y2")) s.getDouble("y2") else null,
+                    confirmX = if (s.has("confirmX")) s.getDouble("confirmX") else null,
+                    confirmY = if (s.has("confirmY")) s.getDouble("confirmY") else null,
+                    blind = s.optBoolean("blind"),
                 )
             }
             return Script(
