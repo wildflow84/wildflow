@@ -35,6 +35,8 @@ APK 설치, `WRITE_SECURE_SETTINGS` 권한 부여, 접근성 서비스 활성화
 2. 대상 화면에서 직접 덤프하려면 "10초 뒤 현재 화면 덤프"를 누르고 그 화면으로 이동. ADB가 되면 `scripts/dump_ui.sh`도 가능.
 3. `script.json`의 `any` 라벨을 실제 문구로 고침. 앱을 다시 빌드하지 않으려면 `/sdcard/Android/data/com.wildflow.polestarautooff/files/script.json`에 같은 형식으로 넣으면 그 파일이 우선.
 
-스텝 종류: `open_settings`, `launch`(`pkg`), `click`(`any`), `set_off`(`any`), `back`, `home`, `wait`(`ms`). `optional: true`면 못 찾아도 건너뜀.
+스텝 종류: `open_settings`, `launch`(`pkg`), `click`(`any`), `set_off`(`any`, `confirm`), `back`, `home`, `wait`(`ms`). `optional: true`면 못 찾아도 건너뜀.
+
+`set_off`의 `confirm`은 끌 때 뜨는 확인 팝업 버튼 라벨 목록. 스위치를 누른 뒤에만 이 라벨과 **정확히 일치하는** 버튼을 찾아 누름(부분 일치는 안 씀). 팝업 문구가 다르면 여기에 추가.
 
 옵션이 스위치가 아니라 "끔/경고/보조" 같은 선택지라면 `set_off` 대신 `click`을 두 번(항목 → "끔") 쓰면 됨. 이 경우는 이미 꺼져 있어도 눌러서 문제는 없지만 불필요한 조작이 생김.

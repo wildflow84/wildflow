@@ -22,8 +22,12 @@ object Nodes {
         for (i in 0 until n.childCount) n.getChild(i)?.let { walk(it, visit) }
     }
 
-    /** Exact label match wins over a substring match. */
-    fun find(roots: List<AccessibilityNodeInfo>, aliases: List<String>): AccessibilityNodeInfo? {
+    /** Exact label match wins over a substring match; exactOnly drops the substring fallback. */
+    fun find(
+        roots: List<AccessibilityNodeInfo>,
+        aliases: List<String>,
+        exactOnly: Boolean = false,
+    ): AccessibilityNodeInfo? {
         val wanted = aliases.map(::norm)
         var partial: AccessibilityNodeInfo? = null
         for (r in roots) {
@@ -33,7 +37,7 @@ object Nodes {
                     for (l in labelsOf(n)) {
                         if (wanted.any { it == l }) {
                             exact = n
-                        } else if (partial == null && wanted.any { l.contains(it) }) {
+                        } else if (!exactOnly && partial == null && wanted.any { l.contains(it) }) {
                             partial = n
                         }
                     }

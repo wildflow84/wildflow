@@ -113,6 +113,15 @@ class ScriptRunner(
         val roots = Nodes.roots(svc)
         val label = Nodes.find(roots, step.any) ?: return scrollAndRetry(roots)
         val name = label.text ?: label.contentDescription
+        // Turning a safety option off may raise a confirmation dialog. Some UIs flip the switch before the
+        // dialog is answered, so look for the dialog button before trusting the switch state.
+        if (lastClick != 0L && step.confirm.isNotEmpty()) {
+            val button = Nodes.find(roots, step.confirm, exactOnly = true)
+            if (button != null && Nodes.click(button)) {
+                log("step ${idx + 1}: confirmed '${button.text ?: button.contentDescription}'")
+                return R.RETRY
+            }
+        }
         val toggle = Nodes.findToggle(label)
         if (toggle == null) {
             log("no single switch next to '$name'")
@@ -123,8 +132,10 @@ class ScriptRunner(
             return R.DONE
         }
         // The screen is re-read every tick; only click again if the first click had time to take effect and didn't.
+        // With a confirmation dialog in play the switch stays on until it is answered, so wait longer.
         val now = SystemClock.uptimeMillis()
-        if (now - lastClick > 2000) {
+        val retryAfterMs = if (step.confirm.isEmpty()) 2000 else 6000
+        if (now - lastClick > retryAfterMs) {
             val ok = Nodes.click(toggle)
             lastClick = now
             log("step ${idx + 1}: '$name' is on, clicked switch (ok=$ok)")

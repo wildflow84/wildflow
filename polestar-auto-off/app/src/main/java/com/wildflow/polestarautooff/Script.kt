@@ -7,6 +7,7 @@ import java.io.File
 data class Step(
     val op: String,
     val any: List<String> = emptyList(),
+    val confirm: List<String> = emptyList(),
     val optional: Boolean = false,
     val ms: Long = 0,
     val pkg: String? = null,
@@ -36,10 +37,14 @@ data class Script(
             val arr = o.getJSONArray("steps")
             val steps = (0 until arr.length()).map { i ->
                 val s = arr.getJSONObject(i)
-                val a = s.optJSONArray("any")
+                fun strings(key: String): List<String> {
+                    val a = s.optJSONArray(key) ?: return emptyList()
+                    return (0 until a.length()).map { a.getString(it) }
+                }
                 Step(
                     op = s.getString("op"),
-                    any = if (a == null) emptyList() else (0 until a.length()).map { a.getString(it) },
+                    any = strings("any"),
+                    confirm = strings("confirm"),
                     optional = s.optBoolean("optional"),
                     ms = s.optLong("ms"),
                     pkg = s.optString("pkg").ifEmpty { null },
