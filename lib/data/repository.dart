@@ -137,30 +137,41 @@ class Repository {
 
   Stream<List<Item>> watchItems(String spaceId) {
     final col = _db.collection('spaces').doc(spaceId).collection('items');
-    final shared = col.where('visibility', isEqualTo: 'shared').snapshots();
-    final mine = col.where('ownerUid', isEqualTo: user!.uid).snapshots();
+    // includeMetadataChanges: 기기에 저장된 내용으로 먼저 보여 준 뒤 서버가 "같은 내용"이라고 확인해 주는 것(메타데이터만 바뀜)도 알려 줘야
+    // 서버와 맞춰졌다는 걸 알 수 있다. 이게 없으면 내용이 안 바뀐 날은 계속 "안 맞춰졌다"로 남는다.
+    final shared = col.where('visibility', isEqualTo: 'shared').snapshots(includeMetadataChanges: true);
+    final mine = col.where('ownerUid', isEqualTo: user!.uid).snapshots(includeMetadataChanges: true);
 
     late StreamController<List<Item>> ctrl;
     List<Item> a = [], b = [];
     final subs = <StreamSubscription>[];
     var sharedSynced = false, mineSynced = false;
-    void emit() {
+    var gotShared = false, gotMine = false;
+    void emit({required bool dataChanged}) {
+      itemsSynced.value = sharedSynced && mineSynced;
+      // 내용이 그대로인 메타데이터 알림은 화면/위젯을 다시 계산하지 않게 목록은 흘리지 않는다
+      if (!dataChanged) return;
       final map = {for (final i in [...a, ...b]) i.id: i};
       ctrl.add(map.values.toList());
-      itemsSynced.value = sharedSynced && mineSynced;
     }
 
     ctrl = StreamController<List<Item>>(
       onListen: () {
         subs.add(shared.listen((s) {
-          a = s.docs.map(Item.fromDoc).toList();
+          final first = !gotShared;
+          gotShared = true;
           sharedSynced = !s.metadata.isFromCache && !s.metadata.hasPendingWrites;
-          emit();
+          final changed = first || s.docChanges.isNotEmpty;
+          if (changed) a = s.docs.map(Item.fromDoc).toList();
+          emit(dataChanged: changed);
         }, onError: ctrl.addError));
         subs.add(mine.listen((s) {
-          b = s.docs.map(Item.fromDoc).toList();
+          final first = !gotMine;
+          gotMine = true;
           mineSynced = !s.metadata.isFromCache && !s.metadata.hasPendingWrites;
-          emit();
+          final changed = first || s.docChanges.isNotEmpty;
+          if (changed) b = s.docs.map(Item.fromDoc).toList();
+          emit(dataChanged: changed);
         }, onError: ctrl.addError));
       },
       onCancel: () async {
