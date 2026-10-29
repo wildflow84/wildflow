@@ -33,6 +33,7 @@ functions/   서버 함수(Node 22, 서울 리전): nudge, notifyShared, notifyC
 android/.../OurDayWidget.kt   홈화면 위젯
 firestore.rules / firestore.indexes.json   보안 규칙(공유·프라이빗·구성원)과 인덱스
 tool/rules-test               보안 규칙 에뮬레이터 테스트(로컬)
+lib/features/                 달력 말고 붙이는 기능들 (기능 메뉴, 쿠폰 판매 — docs/COUPONS.md)
 TEST_CHECKLIST.md             대희 아빠가 직접 확인할 항목 목록
 ```
 

@@ -73,6 +73,8 @@ class Item {
   final int? annivYear;
   /// 일정 구독(.ics)에서 가져온 항목이면 그 구독의 id. 서버가 12시간마다 원본대로 갱신한다.
   final String? subscriptionId;
+  /// 쿠폰 판매 할 일이면 그 쿠폰의 번호(정규화). 서버가 만들고, 이 할 일을 완료하면 쿠폰이 판매 완료가 된다.
+  final String? couponId;
   /// 알림: 시작(마감) 몇 분 전에 알릴지. null이면 알림 없음. 종일 항목은 그날 오전 9시 기준(1440=전날 오전 9시).
   final int? remindMinutes;
   /// 서버에 저장돼 있는 반복 알림의 다음 시각과 마지막 시각 (앱이 알림 목록을 새로 채울 때인지 가늠하는 데 쓴다)
@@ -163,6 +165,7 @@ class Item {
         departMode: i.departMode,
         annivYear: i.annivYear,
         subscriptionId: null, // 복제본은 구독과 무관
+        couponId: null, // 복제본은 쿠폰과 무관
         remindMinutes: i.remindMinutes,
       );
 
@@ -265,6 +268,7 @@ class Item {
     this.departMode = 'car',
     this.annivYear,
     this.subscriptionId,
+    this.couponId,
     this.remindMinutes,
     this.remindStoredAt,
     this.remindStoredLast,
@@ -352,6 +356,7 @@ class Item {
         departMode: departMode ?? this.departMode,
         annivYear: clearAnniv ? null : (annivYear ?? this.annivYear),
         subscriptionId: subscriptionId,
+        couponId: couponId,
         remindMinutes: clearRemind ? null : (remindMinutes ?? this.remindMinutes),
         remindStoredAt: remindStoredAt,
         remindStoredLast: remindStoredLast,
@@ -395,6 +400,7 @@ class Item {
         'departFrom': departFrom == null ? null : Timestamp.fromDate(departFrom!),
         'annivYear': annivYear,
         'subscriptionId': subscriptionId,
+        if (couponId != null) 'couponId': couponId, // 없으면 쓰지 않는다 (서버가 넣은 값을 지우지 않게)
         'remindMinutes': remindMinutes,
         'remindAt': remindAt == null ? null : Timestamp.fromDate(remindAt!),
         'remindTimes': [for (final t in remindTimes(DateTime.now())) Timestamp.fromDate(t)],
@@ -443,6 +449,7 @@ class Item {
       departMode: m['departMode'] == 'walk' ? 'walk' : 'car',
       annivYear: (m['annivYear'] as num?)?.toInt(),
       subscriptionId: m['subscriptionId'] as String?,
+      couponId: m['couponId'] as String?,
       remindMinutes: (m['remindMinutes'] as num?)?.toInt(),
       remindStoredAt: (m['remindAt'] as Timestamp?)?.toDate(),
       remindStoredLast: () {

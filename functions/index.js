@@ -475,3 +475,99 @@ if (process.env.BRIEFING_DISABLED !== '1') {
     },
   );
 }
+
+// ---------------------------------------------------------------------------
+// 쿠폰 판매: 민아가 쿠폰 스크린샷을 올리면 번호를 읽어 저장하고, 대희 아빠의 그날 할 일로 만든다.
+// 할 일을 완료하면 판매 완료, 같은 번호를 또 올리면 "이미 판매한 쿠폰"으로 막는다. 자세한 건 docs/COUPONS.md
+// 번호 읽기는 구글 Cloud Vision API (켜져 있지 않으면 번호를 직접 입력하게 한다).
+// ---------------------------------------------------------------------------
+const couponLib = require('./coupon');
+const { getApp } = require('firebase-admin/app');
+const { onDocumentWritten: onCouponItemWritten } = require('firebase-functions/v2/firestore');
+
+async function couponMember(uid, spaceId) {
+  if (!uid) throw new HttpsError('unauthenticated', '로그인이 필요해');
+  if (typeof spaceId !== 'string' || !spaceId) throw new HttpsError('invalid-argument', '잘못된 요청이야');
+  const snap = await db.doc(`spaces/${spaceId}`).get();
+  const space = snap.data() || {};
+  if (!(space.members || []).includes(uid)) throw new HttpsError('permission-denied', '이 공간의 멤버가 아니야');
+  return space;
+}
+
+function couponImageBuffer(b64) {
+  if (typeof b64 !== 'string' || b64.length < 100 || b64.length > couponLib.MAX_IMAGE_B64) {
+    throw new HttpsError('invalid-argument', '스크린샷이 너무 크거나 비어 있어');
+  }
+  const buf = Buffer.from(b64, 'base64');
+  const jpeg = buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+  const png = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+  if (!jpeg && !png) throw new HttpsError('invalid-argument', '이미지 파일(JPG/PNG)이 아니야');
+  return { buf, mime: jpeg ? 'image/jpeg' : 'image/png' };
+}
+
+/** 스크린샷에서 쿠폰번호 후보를 읽는다. 읽지 못해도 오류가 아니라 빈 후보를 돌려줘서 직접 입력하게 한다. */
+exports.scanCoupon = onCall({ ...PUBLIC_CALL, timeoutSeconds: 60 }, async (req) => {
+  const { spaceId, imageBase64 } = req.data || {};
+  await couponMember(req.auth && req.auth.uid, spaceId);
+  couponImageBuffer(imageBase64);
+  const r = await couponLib.readText({
+    imageBase64,
+    getToken: async () => (await getApp().options.credential.getAccessToken()).access_token,
+  });
+  if (!r.ok) return { candidates: [], ocr: r.reason };
+  const candidates = couponLib.extractCouponCandidates(r.text);
+  return { candidates, ocr: candidates.length > 0 ? 'ok' : 'empty' };
+});
+
+/** 쿠폰 등록: 같은 번호가 이미 있으면 막고(이미 판매 / 판매 대기), 없으면 쿠폰 + 스크린샷 + 대희 아빠의 할 일을 만든다. */
+exports.registerCoupon = onCall({ ...PUBLIC_CALL, timeoutSeconds: 60 }, async (req) => {
+  const uid = req.auth && req.auth.uid;
+  const { spaceId, number, imageBase64 } = req.data || {};
+  const space = await couponMember(uid, spaceId);
+  const n = couponLib.normalizeCoupon(number);
+  if (!n) throw new HttpsError('invalid-argument', '쿠폰번호를 확인해줘 (영문/숫자 6~32자)');
+  const img = couponImageBuffer(imageBase64);
+  const names = space.names || {};
+  const sellerUid = couponLib.sellerOf(space.members);
+  let res;
+  try {
+    res = await couponLib.runRegister({
+      db,
+      timestamp: (ms) => Timestamp.fromMillis(ms),
+      now: () => FieldValue.serverTimestamp(),
+      spaceId, number: n, imageBuffer: img.buf, mime: img.mime,
+      requester: { uid, name: names[uid] || '' }, sellerUid, nowMs: Date.now(),
+    });
+  } catch (e) {
+    if (e instanceof couponLib.CouponError) throw new HttpsError('already-exists', e.message, { code: e.code, ...e.details });
+    throw e;
+  }
+  // 판매하는 사람에게 알림 (실패해도 등록은 그대로)
+  try {
+    if (sellerUid && sellerUid !== uid) {
+      const prefs = (await db.doc(`users/${sellerUid}`).get()).data() || {};
+      if (lib.acceptsShared(prefs)) {
+        await pushTo(sellerUid, prefs, { title: `${names[uid] || '상대'}이(가) 쿠폰 판매를 요청했어`, body: `쿠폰 ${couponLib.maskCoupon(n)}` }, { itemId: res.itemId, spaceId });
+      }
+    }
+  } catch (e) {
+    logger.error('coupon push failed');
+  }
+  return res;
+});
+
+/** 판매 할 일을 완료하면 쿠폰이 판매 완료가 되고(완료를 풀면 되돌림), 할 일을 지우면(아직 안 팔았다면) 등록이 취소된다. */
+exports.onItemWriteCoupon = onCouponItemWritten({ document: 'spaces/{spaceId}/items/{itemId}', timeoutSeconds: 60 }, async (event) => {
+  try {
+    const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+    const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+    const transition = couponLib.couponTransition(before, after);
+    if (!transition) return;
+    await couponLib.applyTransition({
+      db, spaceId: event.params.spaceId, itemId: event.params.itemId, transition,
+      soldBy: after && after.lastDoneBy, now: () => FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    logger.error(`coupon trigger error ${e && e.name ? e.name : 'unknown'}`);
+  }
+});

@@ -57,6 +57,20 @@ const fs = require('fs');
   await t('내보낸 사람(banned)이 다시 참여 차단', () => assertFails(eve.doc('spaces/spaceW').update({ members: arrayUnion('eve'), 'names.eve': 'e' })));
   await t('참여하면서 banned 비우기 차단', () => assertFails(eve.doc('spaces/spaceW').update({ members: arrayUnion('eve'), banned: [] })));
 
+  // ---- 쿠폰 판매: 읽기만 가능, 쓰기는 서버 함수만 ----
+  await env.withSecurityRulesDisabled(async (c) => {
+    await c.firestore().doc(`spaces/${SP}/coupons/C123456789`).set({ status: 'pending', itemId: 'i1' });
+    await c.firestore().doc(`spaces/${SP}/couponImages/C123456789`).set({ mime: 'image/jpeg' });
+  });
+  await t('멤버가 쿠폰 읽기 허용', () => assertSucceeds(mina.doc(`spaces/${SP}/coupons/C123456789`).get()));
+  await t('멤버가 쿠폰 스크린샷 읽기 허용', () => assertSucceeds(dad.doc(`spaces/${SP}/couponImages/C123456789`).get()));
+  await t('외부인이 쿠폰 읽기 차단', () => assertFails(stranger.doc(`spaces/${SP}/coupons/C123456789`).get()));
+  await t('외부인이 쿠폰 스크린샷 읽기 차단', () => assertFails(stranger.doc(`spaces/${SP}/couponImages/C123456789`).get()));
+  await t('멤버가 쿠폰을 직접 만들기 차단', () => assertFails(mina.doc(`spaces/${SP}/coupons/NEW1234567`).set({ status: 'pending' })));
+  await t('멤버가 쿠폰을 판매 완료로 바꾸기 차단', () => assertFails(dad.doc(`spaces/${SP}/coupons/C123456789`).update({ status: 'sold' })));
+  await t('멤버가 쿠폰 지우기 차단', () => assertFails(mina.doc(`spaces/${SP}/coupons/C123456789`).delete()));
+  await t('멤버가 쿠폰 스크린샷 쓰기 차단', () => assertFails(mina.doc(`spaces/${SP}/couponImages/C123456789`).set({ mime: 'x' })));
+
   for (const r of results) console.log(r.join('  '));
   const failed = results.filter(r => r[0] === 'FAIL').length;
   console.log(`\n${results.length - failed}/${results.length} 통과`);

@@ -16,6 +16,7 @@ import '../models/kr_calendar.dart';
 import '../models/lunar.dart';
 import '../models/map_links.dart';
 import '../models/category.dart' show subscriptionCategory;
+import '../features/features_screen.dart';
 import '../models/item.dart' as m;
 import '../models/item.dart' show Item, ItemType, dateOnly, isDoneOn, isOverdue, moveItemByDays, moveOccurrence, rollLabel, timeLabel, chipTimeLabel;
 import 'agenda.dart';
@@ -236,6 +237,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ])
             : Text(_tab == 1 ? '다가오는 일정' : '할 일'),
         actions: [
+          IconButton(
+            tooltip: '기능',
+            icon: const Icon(Icons.apps_rounded),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FeaturesScreen())),
+          ),
           IconButton(
             tooltip: '검색',
             icon: const Icon(Icons.search),

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../data/place_photo.dart';
+import '../features/coupons/coupon_screen.dart' show saveCouponImage;
 import '../data/place_search.dart';
 import '../data/store.dart';
 import '../models/category.dart' show subscriptionCategory;
@@ -889,6 +890,15 @@ class _EditSheetState extends State<_EditSheet> {
               controller: _note,
               decoration: const InputDecoration(labelText: '메모', border: OutlineInputBorder()),
             ),
+            if (widget.item?.couponId != null) ...[
+              const SizedBox(height: 12),
+              // 쿠폰 판매 할 일: 스크린샷을 바로 저장해서 판매한다. 이 할 일을 완료하면 판매 완료.
+              OutlinedButton.icon(
+                onPressed: () => saveCouponImage(context, widget.item!.couponId!),
+                icon: const Icon(Icons.download),
+                label: const Text('쿠폰 스크린샷 저장'),
+              ),
+            ],
             const SizedBox(height: 12),
             ChecklistEditor(initial: _checklist, showChecks: _rule == null, onChanged: (l) => _checklist = l),
             SwitchListTile(

@@ -56,6 +56,16 @@ service cloud.firestore {
         allow read, write: if isMember();
       }
 
+      // 쿠폰 판매: 읽기만 가능하다. 쓰기는 서버 함수(registerCoupon, 완료 처리)만 한다.
+      match /coupons/{couponId} {
+        allow read: if isMember();
+        allow write: if false;
+      }
+      match /couponImages/{couponId} {
+        allow read: if isMember();
+        allow write: if false;
+      }
+
       match /items/{itemId} {
         // 공유 항목은 멤버 모두, 프라이빗은 소유자만 읽을 수 있다.
         allow read: if isMember()

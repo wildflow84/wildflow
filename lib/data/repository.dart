@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert' show base64Encode;
+import 'dart:typed_data' show Uint8List;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -8,6 +10,7 @@ import 'package:flutter/foundation.dart' show ValueNotifier, kIsWeb;
 import '../models/category.dart';
 import '../models/item.dart';
 import '../models/kr_calendar.dart';
+import '../features/coupons/coupon.dart';
 import '../models/subscription.dart';
 
 /// Firestore 구조
@@ -311,6 +314,45 @@ class Repository {
       .set({'fcmTokens': FieldValue.arrayRemove([token])}, SetOptions(merge: true));
 
   FirebaseFunctions get _fn => FirebaseFunctions.instanceFor(region: 'asia-northeast3');
+
+  // ---- 쿠폰 판매 ----
+  Stream<List<Coupon>> watchCoupons(String spaceId) => _db
+      .collection('spaces')
+      .doc(spaceId)
+      .collection('coupons')
+      .snapshots()
+      .map((s) => s.docs.map(Coupon.fromDoc).toList());
+
+  /// 쿠폰 스크린샷 (등록할 때 서버가 저장한 것). 없으면 null.
+  Future<Uint8List?> couponImage(String spaceId, String couponId) async {
+    final doc = await _db.collection('spaces').doc(spaceId).collection('couponImages').doc(couponId).get();
+    final data = doc.data()?['data'];
+    return data is Blob ? data.bytes : null;
+  }
+
+  /// 스크린샷에서 쿠폰번호 후보를 읽는다 (못 읽으면 빈 목록 + ocr 사유).
+  Future<CouponScan> scanCoupon(String spaceId, Uint8List image) async {
+    final r = await _fn
+        .httpsCallable('scanCoupon', options: HttpsCallableOptions(timeout: const Duration(seconds: 60)))
+        .call({'spaceId': spaceId, 'imageBase64': base64Encode(image)});
+    final m = Map<String, dynamic>.from(r.data as Map);
+    return CouponScan([for (final c in (m['candidates'] as List? ?? const [])) '$c'], '${m['ocr'] ?? ''}');
+  }
+
+  /// 쿠폰 등록. 이미 판매했거나 판매 대기 중인 번호면 [CouponAlreadyException].
+  Future<void> registerCoupon(String spaceId, String number, Uint8List image) async {
+    try {
+      await _fn
+          .httpsCallable('registerCoupon', options: HttpsCallableOptions(timeout: const Duration(seconds: 60)))
+          .call({'spaceId': spaceId, 'number': number, 'imageBase64': base64Encode(image)});
+    } on FirebaseFunctionsException catch (e) {
+      if (e.code == 'already-exists') {
+        final d = e.details is Map ? Map<String, dynamic>.from(e.details as Map) : const <String, dynamic>{};
+        throw CouponAlreadyException(sold: d['code'] == 'already-sold', message: e.message ?? '');
+      }
+      rethrow;
+    }
+  }
 
   /// 같이 보기 항목 재촉. 돌려주는 값: {count, max}
   Future<Map<String, dynamic>> nudge(String spaceId, String itemId) async {
