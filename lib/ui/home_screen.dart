@@ -232,8 +232,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                const _SharedToggle(),
               ])
             : Text(_tab == 1 ? '다가오는 일정' : '할 일'),
         actions: [
@@ -479,7 +477,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// 내 항목은 항상 보이고, 상대가 올린 같이 보기 항목만 이 알약 버튼으로 켜고 끈다.
 /// 넓은 화면(PC)에서 하단 탭이 끝까지 늘어나지 않게 가운데로 모은다.
 class _BottomBar extends StatelessWidget {
   final Widget child;
@@ -492,50 +489,6 @@ class _BottomBar extends StatelessWidget {
       child: Center(
         heightFactor: 1,
         child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 480), child: child),
-      ),
-    );
-  }
-}
-
-class _SharedToggle extends StatelessWidget {
-  const _SharedToggle();
-
-  @override
-  Widget build(BuildContext context) {
-    final s = context.watch<Store>();
-    final on = s.showShared;
-    final partner = s.names.entries.where((e) => e.key != s.uid).map((e) => e.value).firstOrNull;
-    final accent = Theme.of(context).colorScheme.primary;
-    final narrow = MediaQuery.sizeOf(context).width < 400;
-    return Tooltip(
-      message: '공유 캘린더 보기 ${on ? '켜짐' : '꺼짐'}${partner == null ? '' : ' · $partner의 같이 보기 항목'}',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () => s.toggleFilter('partner'),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: EdgeInsets.symmetric(horizontal: narrow ? 8 : 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: on ? accent.withValues(alpha: 0.22) : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: on ? accent : kFaint),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(on ? Icons.people : Icons.people_outline,
-                  size: 17, color: on ? accent : kMuted),
-              if (!narrow) ...[
-                const SizedBox(width: 6),
-                Text('공유',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: on ? accent : kMuted)),
-              ],
-            ]),
-          ),
-        ),
       ),
     );
   }
