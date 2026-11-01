@@ -52,6 +52,33 @@ class CalcEngine(
     val expression: String
         get() = if (justEvaluated) lastExpr else tokens.joinToString(" ")
 
+    /** 삼성 계산기처럼 한 줄에 보여줄 전체 수식 (예: 12×34×567+98). 결과 직후엔 결과만. */
+    val line: String
+        get() = when {
+            error -> ERROR
+            justEvaluated -> current
+            tokens.isEmpty() && current.isEmpty() -> "0"
+            else -> tokens.joinToString("") + current
+        }
+
+    /** 결과 직후 위에 작게 보여줄 지난 수식. */
+    val previous: String
+        get() = if (justEvaluated && !error) lastExpr else ""
+
+    fun decimal() {
+        if (error) clear()
+        if (magicArmed) return
+        if (justEvaluated) { current = ""; justEvaluated = false; lastExpr = "" }
+        if (current.contains('.') || current.length >= MAX_DIGITS) return
+        current = if (current.isEmpty()) "0." else "$current."
+    }
+
+    fun percent() {
+        if (error || magicArmed || current.isEmpty()) return
+        val v = runCatching { BigDecimal(current).divide(BigDecimal(100)) }.getOrNull() ?: return
+        current = v.stripTrailingZeros().toPlainString()
+    }
+
     fun clear() {
         tokens.clear(); current = ""; justEvaluated = false; error = false
         lastExpr = ""; magicArmed = false; forced = null

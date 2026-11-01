@@ -65,4 +65,27 @@ class CalcEngineTest {
         e.type("12×34+56=")
         assertEquals("464", e.display)
     }
+
+    @Test fun lineShowsWholeExpression() {
+        val e = CalcEngine()
+        e.type("12×34+5")
+        assertEquals("12×34+5", e.line)
+        e.equals()
+        assertEquals("413", e.line)
+        assertEquals("12 × 34 + 5 =", e.previous)
+    }
+
+    @Test fun decimalAndPercent() {
+        val e = CalcEngine()
+        e.type("0"); e.decimal(); e.type("5+2=")
+        assertEquals("2.5", e.line)
+        e.clear(); e.type("50"); e.percent()
+        assertEquals("0.5", e.line)
+    }
+
+    @Test fun magicLineShowsTypedDigits() {
+        val e = CalcEngine(at(2026, 11, 1, 17, 53))
+        e.type("12×34×567+123")
+        assertEquals("12×34×567+261", e.line)
+    }
 }
