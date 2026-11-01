@@ -40,7 +40,7 @@ class MainActivity : Activity() {
             gravity = Gravity.END or Gravity.CENTER_VERTICAL
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
             maxLines = 1
-            setAutoSizeTextTypeUniformWithConfiguration(24, 72, 2, android.util.TypedValue.COMPLEX_UNIT_SP)
+            textSize = 64f
         }
         root.addView(exprView, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(displayView, LinearLayout.LayoutParams(-1, 0, 1.4f))
@@ -73,7 +73,7 @@ class MainActivity : Activity() {
         val isOp = label in listOf("÷", "×", "−", "+", "=")
         val isFn = label == "C" || label == "⌫"
         val bg = GradientDrawable().apply {
-            cornerRadius = dp(40).toFloat()
+            setCornerRadius(dp(40).toFloat())
             setColor(
                 when {
                     isOp -> Color.parseColor("#FF9500")
@@ -85,7 +85,7 @@ class MainActivity : Activity() {
         return Button(this).apply {
             text = label
             textSize = 28f
-            isAllCaps = false
+            setAllCaps(false)
             setTextColor(if (isFn) Color.BLACK else Color.WHITE)
             background = bg
             stateListAnimator = null
@@ -104,7 +104,15 @@ class MainActivity : Activity() {
 
     private fun refresh() {
         exprView.text = engine.expression
-        displayView.text = engine.display
+        val text = engine.display
+        displayView.text = text
+        displayView.textSize = when {
+            text.length <= 7 -> 64f
+            text.length <= 9 -> 52f
+            text.length <= 11 -> 44f
+            text.length <= 13 -> 36f
+            else -> 30f
+        }
     }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
