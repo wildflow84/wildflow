@@ -60,8 +60,6 @@ function toItem(id, data) {
     rule,
     repeatUntil: repeatUntilMs ? kstParts(repeatUntilMs).dn : null,
     exceptions: list(m.exceptions),
-    rollEvery: typeof m.rollEvery === 'number' ? m.rollEvery : 0,
-    rollRule: m.rollRule && typeof m.rollRule === 'object' ? ruleFromMap(m.rollRule) : null,
     checklist: Array.isArray(m.checklist) ? m.checklist.filter((c) => c && typeof c === 'object').map((c) => ({ text: String(c.t ?? ''), done: c.d === true })) : [],
     checksByDate: m.checksByDate && typeof m.checksByDate === 'object' ? m.checksByDate : {},
     assignee: typeof m.assignee === 'string' ? m.assignee : '',
@@ -71,7 +69,6 @@ function toItem(id, data) {
   };
   item.effectiveRule = rule || legacyRule(item.repeat, start.dn);
   item.isRecurring = item.effectiveRule != null;
-  item.isRolling = item.rollRule != null || item.rollEvery > 0;
   return item;
 }
 

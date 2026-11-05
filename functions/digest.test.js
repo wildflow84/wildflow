@@ -183,21 +183,22 @@ test('할 일: 오늘 마감 + 지난 미완료(overdue), 완료한 지난 건 �
   assert.deepEqual(r.todos.map((t) => t.title).slice(-2), ['아침지남', '오늘3시']);
 });
 
-test('완료 판정: 반복 할 일은 doneDates 에 그날이 있어야 완료, 이동형 반복은 다음 1회만', () => {
+test('완료 판정: 반복 할 일은 doneDates 에 그날이 있어야 완료, 없앤 이동형 옛 데이터는 일반 할 일', () => {
   const rec = td('매일약', { ownerUid: 'mina', start: ts('2026-10-01'), rule: { freq: 'daily', interval: 1 }, doneDates: ['2026-10-20'] });
   const recDone = td('매일약2', { ownerUid: 'mina', start: ts('2026-10-01'), rule: { freq: 'daily', interval: 1 }, doneDates: ['2026-10-21'] });
-  const roll = td('이동형', { ownerUid: 'mina', start: ts('2026-10-21'), rollEvery: 2, rollUnit: 'day', doneDates: ['2026-10-19'] });
-  const rollLater = td('이동형나중', { ownerUid: 'mina', start: ts('2026-10-25'), rollRule: { freq: 'weekly', interval: 1, weekdays: [7] } });
-  const rollOverdue = td('이동형밀림', { ownerUid: 'mina', start: ts('2026-10-17'), rollEvery: 1, rollUnit: 'day' });
-  const r = run([rec, recDone, roll, rollLater, rollOverdue]);
+  // 예전 "완료하면 다음 일정으로 이동" 데이터(rollEvery/rollRule 필드가 남아 있다)는 이제 그냥 그 날짜의 일반 할 일이다
+  const legacy = td('옛이동형', { ownerUid: 'mina', start: ts('2026-10-21'), rollEvery: 2, rollUnit: 'day', doneDates: ['2026-10-19'] });
+  const legacyLater = td('옛이동형나중', { ownerUid: 'mina', start: ts('2026-10-25'), rollRule: { freq: 'weekly', interval: 1, weekdays: [7] } });
+  const legacyOverdue = td('옛이동형밀림', { ownerUid: 'mina', start: ts('2026-10-17'), rollEvery: 1, rollUnit: 'day' });
+  const r = run([rec, recDone, legacy, legacyLater, legacyOverdue]);
   const by = Object.fromEntries(r.todos.map((t) => [t.title, t]));
   assert.equal(by['매일약'].done, false);
   assert.equal(by['매일약'].overdue, false); // 반복 항목은 overdue 로 치지 않는다
   assert.equal(by['매일약2'].done, true);
-  assert.equal(by['이동형'].done, false);
-  assert.equal(by['이동형밀림'].overdue, true);
-  assert.ok(!by['이동형나중']); // 아직 다음 회차가 아니다
-  assert.equal(r.todos.filter((t) => t.title.startsWith('이동형')).length, 2);
+  assert.equal(by['옛이동형'].done, false);
+  assert.equal(by['옛이동형밀림'].overdue, true);
+  assert.ok(!by['옛이동형나중']); // 아직 그 날짜가 아니다
+  assert.equal(r.todos.filter((t) => t.title.startsWith('옛이동형')).length, 2);
 });
 
 test('체크리스트 남은 수와 D-day', () => {

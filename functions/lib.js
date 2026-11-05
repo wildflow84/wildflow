@@ -2,9 +2,9 @@
 
 const NUDGE_MAX = 3; // 항목당 재촉 최대 횟수
 
-/** 반복(규칙/이동형) 항목인지 */
+/** 반복 규칙이 있는 항목인지 */
 function isRepeating(item) {
-  return !!(item.rule || item.rollRule || (item.rollEvery || 0) > 0 || (item.repeat && item.repeat !== 'none'));
+  return !!(item.rule || (item.repeat && item.repeat !== 'none'));
 }
 
 function millis(ts) {

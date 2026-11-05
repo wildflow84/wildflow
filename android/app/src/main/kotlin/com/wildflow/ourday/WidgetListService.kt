@@ -200,7 +200,7 @@ class WidgetListService : RemoteViewsService() {
                 edit.data = Uri.parse("ourday://edit?id=" + Uri.encode(id) + "&date=" + Uri.encode(dk))
             }
             v.setOnClickFillInIntent(R.id.row_root, edit)
-            if (todo && item.optBoolean("can") && !(done && item.optBoolean("roll")) && id.isNotEmpty() && space.isNotEmpty() && dk.isNotEmpty()) {
+            if (todo && item.optBoolean("can") && id.isNotEmpty() && space.isNotEmpty() && dk.isNotEmpty()) {
                 val done = Intent()
                 done.data = Uri.parse(
                     "ourday://done?space=" + Uri.encode(space) + "&id=" + Uri.encode(id) + "&date=" + Uri.encode(dk)

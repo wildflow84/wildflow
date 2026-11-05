@@ -18,7 +18,7 @@ test('재촉은 같은 회차에서 최대 3번', () => {
 test('날짜가 바뀌거나 완료 상태가 바뀌면 재촉 횟수가 새로 시작', () => {
   const base = { start: ts(1000), done: false, nudgeKey: '1000|0', nudgeCount: 3 };
   assert.equal(lib.nudgeState(base).allowed, false);
-  assert.equal(lib.nudgeState({ ...base, start: ts(2000) }).allowed, true); // 이동형이 다음 날짜로
+  assert.equal(lib.nudgeState({ ...base, start: ts(2000) }).allowed, true); // 시작 날짜가 바뀌면 새 회차
   assert.equal(lib.nudgeState({ ...base, done: true }).count, 0);
 });
 
@@ -32,11 +32,11 @@ test('상대가 재촉을 끄면 받지 않는다 (기본은 켜짐)', () => {
 test('완료 알림: 기본 켜짐, 반복 항목은 따로 켜야 함', () => {
   const once = { type: 'todo' };
   const weekly = { type: 'todo', rule: { freq: 'weekly' } };
-  const rolling = { type: 'todo', rollEvery: 1 };
+  const legacyRolling = { type: 'todo', rollEvery: 1 }; // 없앤 "이동형" 옛 데이터: 이제 일반 할 일로 본다
   assert.equal(lib.acceptsComplete({}, once), true);
   assert.equal(lib.acceptsComplete({ notifyComplete: false }, once), false);
   assert.equal(lib.acceptsComplete({}, weekly), false);
-  assert.equal(lib.acceptsComplete({}, rolling), false);
+  assert.equal(lib.acceptsComplete({}, legacyRolling), true);
   assert.equal(lib.acceptsComplete({ notifyCompleteRepeating: true }, weekly), true);
   assert.equal(lib.acceptsComplete({ notifyComplete: false, notifyCompleteRepeating: true }, weekly), false);
   assert.equal(lib.isRepeating({ repeat: 'weekly' }), true);

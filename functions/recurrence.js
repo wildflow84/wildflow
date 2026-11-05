@@ -1,5 +1,5 @@
 'use strict';
-// 반복 규칙 계산: lib/models/recurrence.dart 의 JS 판 (matches / occursOn / lastOccurrence / nextAfter).
+// 반복 규칙 계산: lib/models/recurrence.dart 의 JS 판 (matches / occursOn / lastOccurrence).
 // 날짜는 모두 일수(dn, lunar.js 참고)다.
 const { dayNumber, ymd, parseKey, solarToLunar, lunarToSolar } = require('./lunar');
 
@@ -128,17 +128,6 @@ function ruleOccursOn(r, start, day) {
   return true;
 }
 
-/** [anchor] 기준으로 [after] 다음 날부터 처음 맞는 날짜. 없으면 null */
-function nextAfter(r, anchor, after) {
-  let d = after + 1;
-  for (let i = 0; i < 366 * 9; i++) {
-    if (r.until != null && d > r.until) return null;
-    if (matches(r, anchor, d)) return d;
-    d++;
-  }
-  return null;
-}
-
 /** 이전 버전의 단순 반복을 같은 의미의 규칙으로 (legacyRule) */
 function legacyRule(repeat, startDn) {
   const base = { interval: 1, weekdays: [], monthDays: [], nth: null, nthWeekday: null, clampMonthEnd: false, until: null, count: null, lunar: false };
@@ -156,4 +145,4 @@ function legacyRule(repeat, startDn) {
   }
 }
 
-module.exports = { ruleFromMap, matches, ruleOccursOn, lastOccurrence, nextAfter, legacyRule, dayNumber };
+module.exports = { ruleFromMap, matches, ruleOccursOn, lastOccurrence, legacyRule, dayNumber };

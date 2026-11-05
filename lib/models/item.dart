@@ -13,9 +13,6 @@ enum Repeat { none, daily, weekly, monthly, yearly }
 /// 반복 일정 삭제 범위
 enum RepeatDelete { thisOnly, following, all }
 
-/// 이동형 반복의 단위
-enum RollUnit { day, week, month, year }
-
 /// 일정(event)과 할 일(todo)을 한 컬렉션에서 다룬다.
 class Item {
   final String id;
@@ -48,16 +45,6 @@ class Item {
 
   /// 반복에서 빠진 날짜(yyyy-MM-dd). "이 날짜만 삭제"로 추가된다.
   final List<String> exceptions;
-
-  /// 이동형 반복 (약 먹기처럼 "항상 하나만" 존재하는 할 일).
-  /// [rollEvery] > 0 이면 완료 처리할 때 완료되는 대신 날짜가 다음 일정으로 옮겨진다.
-  final int rollEvery;
-  final RollUnit rollUnit;
-  final bool rollFromCompletion; // true: 완료한 날 기준, false: 예정일 기준 (기본)
-
-  /// 이동형 반복에 구글 캘린더식 규칙을 쓰는 경우 (예: 매주 목요일, 평일, 매월 마지막 날).
-  /// 달력에는 다음 1회만 보이고, 완료하면 규칙에 맞는 다음 날짜로 옮겨진다. [rule]과는 별개다.
-  final Recurrence? rollRule;
 
   /// 체크리스트 (장보기, 준비물 등). 같이 보기 항목이면 둘 다 보면서 체크한다.
   final List<CheckEntry> checklist;
@@ -151,10 +138,6 @@ class Item {
         rule: i.rule,
         repeatUntil: i.repeatUntil,
         exceptions: i.exceptions,
-        rollEvery: i.rollEvery,
-        rollUnit: i.rollUnit,
-        rollFromCompletion: i.rollFromCompletion,
-        rollRule: i.rollRule,
         lastDoneBy: i.lastDoneBy,
         lastDoneAt: i.lastDoneAt,
         checklist: i.checklist,
@@ -222,8 +205,6 @@ class Item {
   int get checksLeft => checklist.where((c) => !c.done).length;
   bool get hasChecklist => checklist.isNotEmpty;
 
-  bool get isRolling => rollRule != null || rollEvery > 0;
-
   /// 실제로 적용되는 반복 규칙. 옛 데이터(repeat만 있는 항목)는 같은 의미의 규칙으로 바꿔서 쓴다.
   Recurrence? get effectiveRule => rule ?? legacyRule(repeat, start);
 
@@ -254,10 +235,6 @@ class Item {
     this.rule,
     this.repeatUntil,
     this.exceptions = const [],
-    this.rollEvery = 0,
-    this.rollUnit = RollUnit.day,
-    this.rollFromCompletion = false,
-    this.rollRule,
     this.lastDoneBy,
     this.lastDoneAt,
     this.checklist = const [],
@@ -301,11 +278,6 @@ class Item {
     DateTime? repeatUntil,
     bool clearRepeatUntil = false,
     List<String>? exceptions,
-    int? rollEvery,
-    RollUnit? rollUnit,
-    bool? rollFromCompletion,
-    Recurrence? rollRule,
-    bool clearRollRule = false,
     String? lastDoneBy,
     DateTime? lastDoneAt,
     List<CheckEntry>? checklist,
@@ -342,10 +314,6 @@ class Item {
         rule: clearRule ? null : (rule ?? this.rule),
         repeatUntil: clearRepeatUntil ? null : (repeatUntil ?? this.repeatUntil),
         exceptions: exceptions ?? this.exceptions,
-        rollEvery: rollEvery ?? this.rollEvery,
-        rollUnit: rollUnit ?? this.rollUnit,
-        rollFromCompletion: rollFromCompletion ?? this.rollFromCompletion,
-        rollRule: clearRollRule ? null : (rollRule ?? this.rollRule),
         lastDoneBy: lastDoneBy ?? this.lastDoneBy,
         lastDoneAt: lastDoneAt ?? this.lastDoneAt,
         checklist: checklist ?? this.checklist,
@@ -385,10 +353,6 @@ class Item {
         'rule': rule?.toMap(),
         'repeatUntil': repeatUntil == null ? null : Timestamp.fromDate(repeatUntil!),
         'exceptions': exceptions,
-        'rollEvery': rollEvery,
-        'rollUnit': rollUnit.name,
-        'rollFrom': rollFromCompletion ? 'completion' : 'schedule',
-        'rollRule': rollRule?.toMap(),
         'lastDoneBy': lastDoneBy,
         'lastDoneAt': lastDoneAt == null ? null : Timestamp.fromDate(lastDoneAt!),
         'checklist': [for (final c in checklist) c.toMap()],
@@ -433,10 +397,6 @@ class Item {
       rule: m['rule'] is Map ? Recurrence.fromMap(Map<String, dynamic>.from(m['rule'] as Map)) : null,
       repeatUntil: (m['repeatUntil'] as Timestamp?)?.toDate(),
       exceptions: List<String>.from(m['exceptions'] ?? const []),
-      rollEvery: (m['rollEvery'] as num?)?.toInt() ?? 0,
-      rollUnit: byName(RollUnit.values, m['rollUnit'], RollUnit.day),
-      rollFromCompletion: m['rollFrom'] == 'completion',
-      rollRule: m['rollRule'] is Map ? Recurrence.fromMap(Map<String, dynamic>.from(m['rollRule'] as Map)) : null,
       lastDoneBy: m['lastDoneBy'] as String?,
       lastDoneAt: (m['lastDoneAt'] as Timestamp?)?.toDate(),
       checklist: [
@@ -525,58 +485,6 @@ bool isDoneOn(Item item, DateTime day) =>
     item.isRecurring ? item.doneDates.contains(dateKey(day)) : item.done;
 
 
-DateTime _addRoll(DateTime d, int every, RollUnit unit) {
-  switch (unit) {
-    case RollUnit.day:
-      return DateTime(d.year, d.month, d.day + every);
-    case RollUnit.week:
-      return DateTime(d.year, d.month, d.day + 7 * every);
-    case RollUnit.month:
-      final last = DateTime(d.year, d.month + every + 1, 0).day; // 31일 -> 짧은 달 말일로 보정
-      return DateTime(d.year, d.month + every, d.day > last ? last : d.day);
-    case RollUnit.year:
-      final last = DateTime(d.year + every, d.month + 1, 0).day; // 2/29 보정
-      return DateTime(d.year + every, d.month, d.day > last ? last : d.day);
-  }
-}
-
-/// 이동형 반복 항목을 [today]에 완료했을 때의 다음 날짜.
-///  - 규칙형(rollRule): 예정일·오늘 중 더 늦은 날 다음으로 규칙에 처음 맞는 날. (매주 목요일, 매월 마지막 날 등)
-///  - 간격형 / 예정일 기준(기본): 예정일 + 간격. 밀려서 이미 지난 날짜가 되면 오늘 이후가 될 때까지 건너뛴다.
-///  - 간격형 / 완료한 날 기준: (오늘과 예정일 중 더 늦은 날) + 간격.
-///    약 먹기: 오늘 먹으면 내일, 며칠 밀려서 먹어도 내일, **내일 것을 미리 오늘 먹으면 모레**.
-DateTime nextRollDate(Item item, DateTime today) {
-  final t = dateOnly(today);
-  final due = dateOnly(item.start);
-  final rule = item.rollRule;
-  if (rule != null) {
-    // 규칙대로: 예정일과 오늘 중 더 늦은 날 다음으로 처음 맞는 날. (미리 완료하면 그 다음 회차로 한 칸 전진)
-    final after = due.isAfter(t) ? due : t;
-    return rule.nextAfter(due, after) ?? due;
-  }
-  if (item.rollFromCompletion) {
-    final base = due.isAfter(t) ? due : t; // 미리 완료하면 예정일 기준으로 한 칸 전진
-    return _addRoll(base, item.rollEvery, item.rollUnit);
-  }
-  var next = _addRoll(due, item.rollEvery, item.rollUnit);
-  while (!next.isAfter(t)) {
-    next = _addRoll(next, item.rollEvery, item.rollUnit);
-  }
-  return next;
-}
-
-/// 예: 매일, 3일마다, 매주, 2주마다, 매월, 매년
-String rollLabel(Item item) {
-  if (item.rollRule != null) return item.rollRule!.describe(item.start);
-  final e = item.rollEvery;
-  const unit = {RollUnit.day: '일', RollUnit.week: '주', RollUnit.month: '개월', RollUnit.year: '년'};
-  if (e == 1) {
-    return const {RollUnit.day: '매일', RollUnit.week: '매주', RollUnit.month: '매월', RollUnit.year: '매년'}[item.rollUnit]!;
-  }
-  return '$e${unit[item.rollUnit]}마다';
-}
-
-
 String _hhmm(DateTime d) =>
     '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
@@ -602,11 +510,9 @@ class DoneToggle {
 }
 
 /// 완료 체크를 누른 결과를 계산한다 (저장은 호출한 쪽이). 앱과 홈 화면 위젯이 같은 규칙을 쓴다.
-///  - 이동형 반복: 완료 대신 다음 일정으로 넘어간다
 ///  - 단일 항목: 완료 토글
 ///  - 규칙 반복: 그 날짜의 완료 기록을 토글
 DoneToggle toggledDone(Item i, DateTime day, String uid, DateTime now) {
-  if (i.isRolling) return DoneToggle(rollNextItem(i, now, uid), true);
   if (!i.isRecurring) {
     return DoneToggle(i.copyWith(done: !i.done, lastDoneBy: uid, lastDoneAt: now), !i.done);
   }
@@ -615,48 +521,6 @@ DoneToggle toggledDone(Item i, DateTime day, String uid, DateTime now) {
   final marking = !dd.contains(k);
   marking ? dd.add(k) : dd.remove(k);
   return DoneToggle(i.copyWith(doneDates: dd, lastDoneBy: uid, lastDoneAt: now), marking);
-}
-
-/// 이동형 반복 완료 후의 새 시작 일시: 다음 날짜로 옮기되 시각은 유지한다.
-DateTime rollStart(Item item, DateTime today) {
-  final d = nextRollDate(item, today);
-  return item.allDay ? d : DateTime(d.year, d.month, d.day, item.start.hour, item.start.minute);
-}
-
-/// 이동형 반복 항목을 [now]에 완료했을 때의 새 항목.
-///  - 다음 날짜가 있으면 시작일을 옮긴다(시각 유지). 횟수 종료가 있으면 1 줄인다.
-///  - 규칙이 끝났으면(종료일 지남/횟수 소진) 완료 처리한다.
-Item rollNextItem(Item item, DateTime now, String? byUid) {
-  final log = [...item.doneDates, dateKey(now)];
-  final trimmed = log.length > 60 ? log.sublist(log.length - 60) : log; // 최근 60회만
-  final rule = item.rollRule;
-  if (rule != null) {
-    final due = dateOnly(item.start);
-    final t = dateOnly(now);
-    final after = due.isAfter(t) ? due : t;
-    final next = rule.nextAfter(due, after);
-    final remaining = rule.count == null ? null : rule.count! - 1;
-    if (next == null || (remaining != null && remaining <= 0)) {
-      return item.copyWith(done: true, doneDates: trimmed, lastDoneBy: byUid, lastDoneAt: now);
-    }
-    return item.copyWith(
-      start: item.allDay ? next : DateTime(next.year, next.month, next.day, item.start.hour, item.start.minute),
-      rollRule: remaining == null ? rule : rule.copyWith(count: remaining),
-      done: false,
-      doneDates: trimmed,
-      lastDoneBy: byUid,
-      lastDoneAt: now,
-      checklist: allChecked(item.checklist, false), // 다음 회차는 새로 체크
-    );
-  }
-  return item.copyWith(
-    start: rollStart(item, now),
-    done: false,
-    doneDates: trimmed,
-    lastDoneBy: byUid,
-    lastDoneAt: now,
-    checklist: allChecked(item.checklist, false),
-  );
 }
 
 /// 캘린더 칸 칩 앞에 붙이는 짧은 시각. 일정은 "15:00", 할 일은 마감이라 "~15:00".
@@ -715,8 +579,6 @@ List<Item> applyRepeatEdit(Item original, Item edited, DateTime day, RepeatEdit 
         exceptions: const [],
         doneDates: const [],
         checksByDate: const {},
-        clearRollRule: true,
-        rollEvery: 0,
         done: false,
       );
       return [

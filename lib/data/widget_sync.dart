@@ -162,7 +162,6 @@ class WidgetSync {
           'can': i.type == ItemType.todo && i.id.isNotEmpty && spaceId.isNotEmpty && i.checksLeftOn(day) == 0,
           't': i.title,
           'todo': i.type == ItemType.todo,
-          'roll': i.isRolling, // 이동형은 완료하면 다음 날짜로 넘어가서 위젯에서 되돌릴 수 없다
           'done': isDoneOn(i, day),
           'time': timeLabel(i) ?? '',
           'place': i.location,
@@ -216,7 +215,7 @@ class WidgetSync {
   }
 
   /// 목록형 위젯 데이터에서 항목 하나의 완료 표시만 바로 고쳐서 위젯을 다시 그리게 한다 (앱/위젯에서 체크한 직후 즉시 반영).
-  /// 전체 계산은 뒤따라 오는 일반 갱신이 맞춰 준다. 이동형 할 일은 완료하면 다음 날짜로 넘어가므로 누른 결과([done])를 그대로 쓴다.
+  /// 전체 계산은 뒤따라 오는 일반 갱신이 맞춰 준다.
   static Future<void> patchDone(String id, String dateKey, bool done) async {
     if (kIsWeb || id.isEmpty) return;
     try {

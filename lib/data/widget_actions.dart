@@ -38,8 +38,6 @@ Future<void> widgetBackgroundCallback(Uri? uri) async {
     final item = await repo.getItem(space, id);
     if (item == null) throw StateError('항목을 못 찾았어 (삭제됐거나 볼 수 없는 항목)');
     final day = DateTime.parse(date);
-    // 이동형은 완료하면 다음 날짜로 넘어간다. 이미 넘어간 항목을 또 누르면 한 번 더 넘어가 버리니 막는다.
-    if (item.isRolling && dateOnly(item.start) != dateOnly(day)) return;
     final r = toggledDone(item, dateOnly(day), user.uid, DateTime.now());
     marking = r.marking;
     // 서버 저장을 기다리기 전에 위젯부터 바꿔서 바로 보이게 한다

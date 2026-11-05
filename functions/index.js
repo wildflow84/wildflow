@@ -174,7 +174,7 @@ async function syncOne(spaceId, subId) {
         writes.push((b) => b.set(ref, {
           ...source, done: false, doneDates: [], categories: ['subscription'],
           visibility: sub.visibility || 'shared', ownerUid: sub.ownerUid, repeat: 'none',
-          rollEvery: 0, rollUnit: 'day', rollFrom: 'schedule', color: null, checklist: [], exceptions: [],
+          color: null, checklist: [], exceptions: [],
         }));
       }
     }

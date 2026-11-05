@@ -18,7 +18,7 @@ import '../models/map_links.dart';
 import '../models/category.dart' show subscriptionCategory;
 import '../features/features_screen.dart';
 import '../models/item.dart' as m;
-import '../models/item.dart' show Item, ItemType, dateOnly, isDoneOn, isOverdue, moveItemByDays, moveOccurrence, rollLabel, timeLabel, chipTimeLabel;
+import '../models/item.dart' show Item, ItemType, dateOnly, isDoneOn, isOverdue, moveItemByDays, moveOccurrence, timeLabel, chipTimeLabel;
 import 'agenda.dart';
 import 'category_manager.dart';
 import 'checklist.dart';
@@ -934,7 +934,6 @@ class _DayCell extends StatelessWidget {
       isTodo: i.type == ItemType.todo,
       done: isDoneOn(i, day),
       isPrivate: i.visibility == m.Visibility.private,
-      isRolling: i.isRolling,
     );
     final tappable = GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -985,7 +984,6 @@ class _Chip extends StatelessWidget {
   final Color color;
   final bool isTodo, done, isPrivate;
   final String? ownerInitial; // 상대가 만든 항목이면 이름 첫 글자
-  final bool isRolling;
   const _Chip({
     required this.text,
     required this.color,
@@ -993,7 +991,6 @@ class _Chip extends StatelessWidget {
     this.done = false,
     this.isPrivate = false,
     this.ownerInitial,
-    this.isRolling = false,
   });
 
   @override
@@ -1023,7 +1020,6 @@ class _Chip extends StatelessWidget {
           ),
         if (isTodo) Icon(done ? Icons.check_circle : Icons.radio_button_unchecked, size: 9),
         if (isPrivate) const Icon(Icons.lock, size: 8),
-        if (isRolling && MediaQuery.sizeOf(context).width >= 600) const Icon(Icons.autorenew, size: 9),
         Expanded(
           child: Text(text,
               maxLines: 1,
@@ -1190,7 +1186,6 @@ class ItemTile extends StatelessWidget {
           _Meta(dot: s.categoriesOf(item).first.color, text: s.categoriesOf(item).first.name),
           if (item.dday) _Meta(icon: Icons.hourglass_bottom, text: m.ddayLabel(day, DateTime.now())),
           if (m.anniversaryLabel(item, day) != null) _Meta(icon: Icons.cake_outlined, text: m.anniversaryLabel(item, day)!),
-          if (item.isRolling) _Meta(icon: Icons.autorenew, text: rollLabel(item)),
           if (item.isRecurring) _Meta(icon: Icons.repeat, text: item.effectiveRule!.describe(item.start)),
           if (item.visibility == m.Visibility.private) const _Meta(icon: Icons.lock_outline, text: '나만'),
           if (item.type == ItemType.todo && item.assignee.isNotEmpty)

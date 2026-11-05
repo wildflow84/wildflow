@@ -71,7 +71,10 @@ service cloud.firestore {
         allow read: if isMember()
           && (resource.data.visibility == 'shared' || resource.data.ownerUid == request.auth.uid);
 
-        allow create: if isMember() && request.resource.data.ownerUid == request.auth.uid;
+        // 만들기: 내 이름으로. 같이 보기 항목은 상대가 만든 항목의 반복 일정을 "이 일정만" 고칠 때 갈라지는 새 항목이
+        // 원래 만든 사람 이름으로 생기므로, 같이 보기는 멤버 누구나 만들 수 있다.
+        allow create: if isMember() && (request.resource.data.ownerUid == request.auth.uid
+          || request.resource.data.visibility == 'shared');
 
         // 수정: 소유자는 모두 가능. 같이 보기(shared) 항목은 상대도 고칠 수 있지만
         // 소유자와 공개 범위는 바꿀 수 없다. (공개 범위 변경으로 상대 항목이 사라지는 것을 막음)
@@ -83,8 +86,9 @@ service cloud.firestore {
             && request.resource.data.ownerUid == resource.data.ownerUid)
         );
 
-        // 삭제는 소유자만
-        allow delete: if isMember() && resource.data.ownerUid == request.auth.uid;
+        // 삭제: 소유자는 모두, 같이 보기(shared) 항목은 상대도 지울 수 있다. 프라이빗은 소유자만 (상대는 읽지도 못한다).
+        allow delete: if isMember() && (resource.data.ownerUid == request.auth.uid
+          || resource.data.visibility == 'shared');
       }
     }
   }

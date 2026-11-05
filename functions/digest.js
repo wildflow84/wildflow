@@ -80,7 +80,6 @@ function buildDigest({ dateKey, nowMs, memberUid, memberName, names, docs, categ
       const done = calc.isDoneOn(item, dn);
       const overdue = !done && calc.isOverdue(item, refMs);
       if (!calc.occursOn(item, dn) && !overdue) continue;
-      // 이동형 반복은 문서에 다음 1회만 들어 있다 (완료하면 날짜가 다음으로 넘어간다)
       const shownDn = item.isRecurring ? dn : item.start.dn;
       todos.push({
         id: item.id,

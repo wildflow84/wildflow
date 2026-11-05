@@ -29,7 +29,7 @@ Future<void> main() async {
   Item ev(String t, DateTime s, {DateTime? e, String c = 'default', Repeat r = Repeat.none, String owner = 'me', m.Visibility v = m.Visibility.shared, bool timed = false}) =>
       Item(id: t + s.toString(), type: ItemType.event, title: t, start: s, end: e, categories: [c], repeat: r, ownerUid: owner, visibility: v, allDay: !timed, location: timed ? '판교 사옥' : '');
   Item todo(String t, DateTime s, {String c = 'default', Repeat r = Repeat.none, String owner = 'me', bool done = false, m.Visibility v = m.Visibility.shared, bool roll = false}) =>
-      Item(id: t + s.toString(), type: ItemType.todo, title: t, start: s, categories: [c], repeat: r, ownerUid: owner, done: done, visibility: v, rollEvery: roll ? 1 : 0);
+      Item(id: t + s.toString(), type: ItemType.todo, title: t, start: s, categories: [c], repeat: r, ownerUid: owner, done: done, visibility: v);
   final items = [
     ev('오키나와 여행', DateTime(2026, 10, 14), e: DateTime(2026, 10, 17), c: 'travel'),
     ev('Arsenal vs Leeds', DateTime(2026, 10, 10), c: 'family'),
@@ -45,7 +45,7 @@ Future<void> main() async {
     todo('펀드 적립', DateTime(2026, 9, 29), c: 'money', r: Repeat.monthly),
     todo('정기 적금 확인', DateTime(2026, 10, 1), c: 'money', r: Repeat.weekly),
     todo('면도기 청소', DateTime(2026, 10, 2), done: true),
-    m.Item(id: 'rr', type: ItemType.todo, title: '목요일 점검', start: DateTime(2026, 10, 8), ownerUid: 'me', categories: const ['work'], rollRule: const Recurrence(freq: Freq.weekly, weekdays: [4])),
+    m.Item(id: 'rr', type: ItemType.todo, title: '목요일 점검', start: DateTime(2026, 10, 8), ownerUid: 'me', categories: const ['work']),
     todo('아침 약', DateTime(2026, 10, 2), c: 'family', v: m.Visibility.private, roll: true),
     todo('저녁 약', DateTime(2026, 10, 2), c: 'family', v: m.Visibility.private, roll: true),
     todo('아이 예방접종', DateTime(2026, 10, 30), c: 'kid'),
@@ -103,8 +103,7 @@ Widget _start() {
           day: DateTime(2026, 10, 8),
           item: m.Item(
               id: 'rr', type: ItemType.todo, title: '목요일 점검', start: DateTime(2026, 10, 8),
-              ownerUid: 'me', categories: const ['work'],
-              rollRule: const Recurrence(freq: Freq.weekly, weekdays: [4]))));
+              ownerUid: 'me', categories: const ['work'])));
     case 'edit-roll':
       return const _OpenEdit(roll: true);
     case 'categories':
@@ -128,7 +127,7 @@ class _OpenEditState extends State<_OpenEdit> {
       final item = widget.roll
           ? m.Item(
               id: 'r', type: ItemType.todo, title: '아침 약', start: DateTime(2026, 10, 2), ownerUid: 'me',
-              categories: const ['family', 'kid'], rollEvery: 1, visibility: m.Visibility.private)
+              categories: const ['family', 'kid'], visibility: m.Visibility.private)
           : widget.timed
               ? m.Item(
                   id: 't', type: ItemType.event, title: '정기점검', start: DateTime(2026, 10, 7, 15, 0),

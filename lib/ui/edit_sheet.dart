@@ -85,14 +85,8 @@ class _EditSheetState extends State<_EditSheet> {
   late bool _visTouched = widget.item != null; // 직접 바꾸면 카테고리 기본값으로 덮어쓰지 않는다
   late int? _color = widget.item?.color; // null이면 카테고리 색
   // 반복: 빠른 선택(구글 캘린더처럼 시작 날짜에서 값이 정해짐) 또는 맞춤 규칙
-  late RepeatPreset _preset = presetOf(widget.item?.rollRule ?? widget.item?.effectiveRule, widget.item?.start ?? _start);
-  late Recurrence? _custom = widget.item?.rollRule ?? widget.item?.effectiveRule;
-  // 이동형: 완료하면 날짜가 다음 일정으로 넘어간다. 반복 규칙(위 "반복")을 고르면 그 규칙대로,
-  // 고르지 않으면 아래 "매 N일/주/개월/년마다"로 옮긴다. 기준은 예정일이 기본.
-  late bool _rolling = widget.item?.isRolling ?? false;
-  late int _rollEvery = (widget.item?.rollEvery ?? 0) > 0 ? widget.item!.rollEvery : 1;
-  late m.RollUnit _rollUnit = widget.item?.rollUnit ?? m.RollUnit.day;
-  late bool _rollFromCompletion = widget.item?.rollFromCompletion ?? false;
+  late RepeatPreset _preset = presetOf(widget.item?.effectiveRule, widget.item?.start ?? _start);
+  late Recurrence? _custom = widget.item?.effectiveRule;
 
   /// 현재 선택한 반복 규칙 (없으면 반복 안 함)
   Recurrence? get _rule => _preset == RepeatPreset.none
@@ -232,11 +226,8 @@ class _EditSheetState extends State<_EditSheet> {
   Future<void> _save() async {
     if (_title.text.trim().isEmpty) return;
     final s = context.read<Store>();
-    // 이동형(할 일만): 반복 규칙은 "일반 반복"이 아니라 이동 규칙으로 저장한다
-    final isRoll = _type == ItemType.todo && _rolling;
-    final rollRule = isRoll ? _rule : null; // 규칙형 이동
-    final rule = isRoll ? null : _rule;
-    final startRule = rollRule ?? rule;
+    final rule = _rule;
+    final startRule = rule;
     var startDate = startRule == null ? dateOnly(_start) : startRule.firstOnOrAfter(_start);
     final startDt = _allDay
         ? startDate
@@ -291,15 +282,9 @@ class _EditSheetState extends State<_EditSheet> {
       repeat: repeatFor(rule),
       rule: rule,
       clearRule: rule == null,
-      // 간격형 이동은 규칙을 고르지 않았을 때만
-      rollEvery: isRoll && rollRule == null ? _rollEvery : 0,
-      rollUnit: _rollUnit,
-      rollFromCompletion: _rollFromCompletion,
-      rollRule: rollRule,
-      clearRollRule: rollRule == null,
     );
     final orig = widget.item;
-    if (orig != null && orig.isRecurring && !isRoll) {
+    if (orig != null && orig.isRecurring) {
       // 반복 항목: 이 일정만 / 이후 모두 / 전체 중 고른 범위로 저장
       final scope = await _askEditScope(orig);
       if (scope == null) return;
@@ -391,7 +376,7 @@ class _EditSheetState extends State<_EditSheet> {
     final bar = Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Row(children: [
-              if (widget.item != null && isOwner)
+              if (widget.item != null) // 같이 보기 항목은 상대가 만든 것도 지울 수 있다 (프라이빗은 열리지도 않는다)
                 TextButton(
                   onPressed: () async {
                     final s = context.read<Store>();
@@ -714,77 +699,6 @@ class _EditSheetState extends State<_EditSheet> {
                   ],
                 ]),
               ),
-            if (_type == ItemType.todo) ...[
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('완료하면 다음 일정으로 이동'),
-                subtitle: const Text('캘린더에는 다음 1개만 보이고, 완료하면 날짜가 자동으로 넘어가. 약 먹기, 정기 점검 같은 확인용.',
-                    style: TextStyle(fontSize: 12)),
-                value: _rolling,
-                onChanged: (v) => setState(() => _rolling = v),
-              ),
-              if (_rolling && _rule != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Icon(Icons.autorenew, size: 16, color: kMuted),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        '"${_rule!.describe(_start)}" 규칙대로, 완료하면 다음 날짜로 이동해.',
-                        style: TextStyle(color: kMuted, fontSize: 12),
-                      ),
-                    ),
-                  ]),
-                ),
-              if (_rolling && _rule == null) ...[
-                Padding(
-                  padding: EdgeInsets.only(bottom: 8),
-                  child: Text('위에서 반복(예: 매주 목요일)을 고르면 그 규칙대로 이동하고, 고르지 않으면 아래 간격으로 이동해.',
-                      style: TextStyle(color: kMuted, fontSize: 12)),
-                ),
-                Row(children: [
-                  const Text('매'),
-                  const SizedBox(width: 8),
-                  DropdownButton<int>(
-                    value: _rollEvery,
-                    items: [for (var n = 1; n <= 31; n++) DropdownMenuItem(value: n, child: Text('$n'))],
-                    onChanged: (v) => setState(() => _rollEvery = v!),
-                  ),
-                  const SizedBox(width: 8),
-                  DropdownButton<m.RollUnit>(
-                    value: _rollUnit,
-                    items: const [
-                      DropdownMenuItem(value: m.RollUnit.day, child: Text('일')),
-                      DropdownMenuItem(value: m.RollUnit.week, child: Text('주')),
-                      DropdownMenuItem(value: m.RollUnit.month, child: Text('개월')),
-                      DropdownMenuItem(value: m.RollUnit.year, child: Text('년')),
-                    ],
-                    onChanged: (v) => setState(() => _rollUnit = v!),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text('마다'),
-                ]),
-                const SizedBox(height: 8),
-                SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(value: false, label: Text('예정일 기준')),
-                    ButtonSegment(value: true, label: Text('완료한 날 기준')),
-                  ],
-                  selected: {_rollFromCompletion},
-                  onSelectionChanged: (v) => setState(() => _rollFromCompletion = v.first),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    _rollFromCompletion
-                        ? '늦게 완료하면 완료한 날부터 다시 세어. (약 먹기에 알맞아)'
-                        : '늦게 완료해도 원래 주기를 유지해. (월세, 정기 점검에 알맞아)',
-                    style: TextStyle(color: kMuted, fontSize: 12),
-                  ),
-                ),
-              ],
-            ],
             const SizedBox(height: 12),
             () {
               // 알림: 종일은 그날/전날 오전 9시, 시각이 있으면 정각/몇 분 전/하루 전

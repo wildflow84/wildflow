@@ -230,20 +230,6 @@ class Recurrence {
     return s;
   }
 
-  /// [anchor]를 기준으로 [after] 다음 날부터 처음 맞는 날짜. 종료일이 지났거나 찾지 못하면 null.
-  /// (이동형 반복: 완료하면 다음 일정으로 옮길 때 쓴다. 횟수 종료는 호출하는 쪽에서 센다.)
-  DateTime? nextAfter(DateTime anchor, DateTime after) {
-    final adn = dayNumber(anchor);
-    final untilDn = until == null ? null : dayNumber(until!);
-    var d = dayNumber(after) + 1;
-    for (var i = 0; i < 366 * 9; i++) {
-      if (untilDn != null && d > untilDn) return null;
-      if (matchesDn(adn, d)) return dateFromDayNumber(d);
-      d++;
-    }
-    return null;
-  }
-
   // ---------- 설명 ----------
   static const _wdShort = ['월', '화', '수', '목', '금', '토', '일'];
   static String wdShort(int weekday) => _wdShort[weekday - 1];

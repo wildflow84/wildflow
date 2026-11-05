@@ -541,17 +541,14 @@ class Store extends ChangeNotifier {
     }
   }
 
-  /// 완료 토글. 이동형 반복은 완료 대신 날짜가 다음 일정으로 넘어간다.
-  /// 되돌리기용으로 변경 전 항목을 돌려준다 (이동형일 때만).
-  /// [checkAll]: 남은 체크리스트를 모두 체크하면서 완료한다.
-  Future<Item?> toggleDone(Item item, DateTime day, {bool checkAll = false}) async {
+  /// 완료 토글. [checkAll]: 남은 체크리스트를 모두 체크하면서 완료한다.
+  Future<void> toggleDone(Item item, DateTime day, {bool checkAll = false}) async {
     final i = checkAll ? item.withAllChecks(day, true) : item;
     final r = toggledDone(i, day, uid, DateTime.now());
     // 위젯의 체크 표시부터 바로 바꾼다 (전체 계산은 뒤따라 간다)
     if (_previewUid == null) unawaited(WidgetSync.patchDone(i.id, dateKey(day), r.marking));
     await save(r.item);
     if (r.marking) _tellPartnerDone(i);
-    return i.isRolling ? item : null;
   }
 
   /// 같이 보기 항목을 완료했다고 상대에게 알린다 (상대 설정에 따라 서버가 보낼지 정함). 실패해도 무시.
@@ -578,9 +575,6 @@ class Store extends ChangeNotifier {
 
   /// 체크리스트 한 줄 체크/해제
   Future<void> setCheck(Item i, DateTime day, int index, bool done) => save(i.withCheck(day, index, done));
-
-  /// 이동형 완료 되돌리기
-  Future<void> undoRoll(Item previous) => save(previous);
 
   @override
   void dispose() {

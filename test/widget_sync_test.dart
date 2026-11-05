@@ -70,18 +70,6 @@ void agendaJsonTests() {
     expect(d5['note'], contains('개천절'));
     // 자정이 지난 뒤 위젯이 지난 날을 빼는 데 쓰는 날짜, 이동형 표시
     expect(d4['date'], '2026-10-04');
-    expect(item['roll'], false);
-  });
-
-  test('이동형 할 일은 위젯 JSON에 roll 표시', () {
-    final today = DateTime(2026, 10, 3);
-    final roll = Item(
-        id: 'r', type: ItemType.todo, title: '약', start: DateTime(2026, 10, 3), ownerUid: 'me',
-        rollEvery: 1, rollUnit: RollUnit.day);
-    final days = jsonDecode(WidgetSync.agendaJson([roll], today, spaceId: 's')) as List;
-    final it = ((days.first as Map)['items'] as List).first as Map;
-    expect(it['roll'], true);
-    expect(it['can'], true);
   });
 
   test('달력형 칸 내용: 그날 항목 수와 앞의 2개(제목, 색)', () {

@@ -98,13 +98,13 @@ test('이름 정규화: 공백 제거, 담당자가 있으면 담당자, 모르�
 });
 
 // ---------- 반복 / 음력 / 멀티데이 ----------
-test('반복: 매주, 예외 날짜, 종료일, 멀티데이, 이동형은 다음 1회만', () => {
+test('반복: 매주, 예외 날짜, 종료일, 멀티데이 (없앤 이동형 옛 데이터는 그 날짜 하루만)', () => {
   const docs = [
     ev('매주목', { allDay: true, start: ts('2026-10-01'), rule: { freq: 'weekly', interval: 1, weekdays: [4] }, exceptions: ['2026-10-29'] }),
     ev('종료됨', { allDay: true, start: ts('2026-10-01'), rule: { freq: 'daily', interval: 1 }, repeatUntil: ts('2026-10-23') }),
     ev('출장', { allDay: true, start: ts('2026-10-23'), end: ts('2026-10-25') }),
     ev('긴회의', { start: ts('2026-10-24', 14), end: ts('2026-10-25', 11, 0) }),
-    td('약먹기', { start: ts('2026-10-26'), rollEvery: 1, rollUnit: 'day' }),
+    td('약먹기', { start: ts('2026-10-26'), rollEvery: 1, rollUnit: 'day' }), // 옛 이동형 데이터: 일반 할 일
   ];
   const text = body(docs);
   assert.ok(section(text, '2026-10-22').includes('- [E] 종일 | 매주목 | 대희아빠 |'));
@@ -118,7 +118,7 @@ test('반복: 매주, 예외 날짜, 종료일, 멀티데이, 이동형은 다�
   // 여러 날 시각 일정: 첫날만 시각, 나머지 날은 종일
   assert.ok(section(text, '2026-10-24').includes('- [E] 14:00 | 긴회의 | 대희아빠 |'));
   assert.ok(section(text, '2026-10-25').includes('- [E] 종일 | 긴회의 | 대희아빠 |'));
-  // 이동형 반복 할 일은 문서에 있는 다음 날짜에 한 번만
+  // 옛 이동형 데이터는 반복이 아니라 그 날짜에 한 번만 나온다
   const rolling = text.split('\n').filter((l) => l.includes('약먹기'));
   assert.equal(rolling.length, 1);
   assert.ok(section(text, '2026-10-26').some((l) => l.includes('약먹기')));

@@ -57,15 +57,6 @@ void main() {
     expect(it.copyWith(title: 'a').checklist.length, 2); // 다른 필드를 바꿔도 유지
   });
 
-  test('이동형을 완료하면 다음 회차 체크리스트는 새로 시작', () {
-    final it = Item(
-        id: 'x', type: ItemType.todo, title: '약', start: DateTime(2026, 10, 3), ownerUid: 'me',
-        rollEvery: 1, checklist: const [CheckEntry('아침', done: true), CheckEntry('저녁', done: true)]);
-    final next = rollNextItem(it, DateTime(2026, 10, 3), 'me');
-    expect(next.checklist.every((c) => !c.done), true);
-    expect(next.checklist.length, 2);
-  });
-
   test('toggleDone checkAll / setCheck', () async {
     final st = Store.preview(Repository(), uid: 'me', names: {'me': '나'}, items: [
       _todo(checklist: const [CheckEntry('a'), CheckEntry('b')]),
