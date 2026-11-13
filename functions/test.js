@@ -69,6 +69,19 @@ test('공유 알림: 기본 켜짐, 끄면 안 감, 같은 항목은 1분에 한
   assert.match(m.title, /민아.*일정.*공유/);
 });
 
+test('공유 알림에 일정 날짜(시작일, 한국시간)를 보여준다', () => {
+  const at = (ms) => ({ toMillis: () => ms });
+  // 2026-11-14(토) 15:30 KST
+  const ev = { type: 'event', title: '병원', allDay: false, start: at(Date.UTC(2026, 10, 14, 6, 30)), end: at(Date.UTC(2026, 10, 16, 6, 30)) };
+  assert.equal(lib.shareMessage('민아', ev).body, '"병원" · 11월 14일(토) 오후 3:30');
+  // 종일(여러 날): 시작 날짜만. KST 자정 = 전날 15:00 UTC
+  const all = { type: 'event', title: '여행', allDay: true, start: at(Date.UTC(2026, 10, 19, 15, 0)), end: at(Date.UTC(2026, 10, 22, 15, 0)) };
+  assert.equal(lib.shareMessage('민아', all).body, '"여행" · 11월 20일(금)');
+  const todo = { type: 'todo', title: '장보기', assignee: 'you', allDay: true, start: at(Date.UTC(2026, 10, 13, 15, 0)) };
+  assert.equal(lib.shareMessage('민아', todo, 'you').body, '"장보기" · 11월 14일(토)');
+  assert.equal(lib.shareMessage('민아', { type: 'event', title: 'x' }).body, '"x"');
+});
+
 test('상대에게 맡긴 할 일은 맡겼다고 알림', () => {
   const item = { type: 'todo', title: '장보기', assignee: 'you' };
   assert.match(lib.shareMessage('나', item, 'you').title, /맡겼어/);

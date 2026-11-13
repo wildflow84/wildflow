@@ -61,13 +61,34 @@ function nudgeMessage(actorName, item, count) {
   };
 }
 
+const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+
+/** 알림에 보여줄 날짜 문구 (한국시간). 여러 날에 걸쳐도 시작 날짜만. 시간이 있으면 시각도 붙인다. */
+function whenLabel(item) {
+  const raw = item && item.start;
+  const ms = raw && typeof raw.toMillis === 'function' ? raw.toMillis() : typeof raw === 'number' ? raw : null;
+  if (ms === null || Number.isNaN(ms)) return '';
+  const t = new Date(ms + 9 * 3600 * 1000);
+  let out = `${t.getUTCMonth() + 1}월 ${t.getUTCDate()}일(${DOW[t.getUTCDay()]})`;
+  if (item.allDay === false) {
+    const h = t.getUTCHours();
+    const m = t.getUTCMinutes();
+    const ap = h < 12 ? '오전' : '오후';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    out += ` ${ap} ${h12}:${String(m).padStart(2, '0')}`;
+  }
+  return out;
+}
+
 function shareMessage(actorName, item, partnerUid) {
   const kind = item.type === 'todo' ? '할 일' : '일정';
+  const when = whenLabel(item);
+  const body = when ? `"${item.title}" · ${when}` : `"${item.title}"`;
   // 상대에게 맡긴 할 일이면 그렇게 알려준다
   if (item.type === 'todo' && partnerUid && item.assignee === partnerUid) {
-    return { title: `${actorName}이(가) 할 일을 맡겼어`, body: `"${item.title}"` };
+    return { title: `${actorName}이(가) 할 일을 맡겼어`, body };
   }
-  return { title: `${actorName}이(가) ${kind}을(를) 공유했어`, body: `"${item.title}"` };
+  return { title: `${actorName}이(가) ${kind}을(를) 공유했어`, body };
 }
 
 function completeMessage(actorName, item) {
@@ -233,6 +254,7 @@ module.exports = {
   acceptsShared,
   canNotifyShared,
   shareMessage,
+  whenLabel,
   SHARE_COOLDOWN_MS,
   nudgeMessage,
   completeMessage,
